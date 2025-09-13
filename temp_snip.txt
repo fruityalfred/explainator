@@ -1,0 +1,37 @@
+            document.getElementById('categoryColor2').addEventListener('input', updateColorPreview);
+        });
+        
+        function initializeDefaultLayout() {
+            const container = document.getElementById('mainContainer');
+            const t = translations[currentLanguage];
+            
+            const column1 = createColumnElement(t.initialColumn1, columnIdCounter++);
+            const column2 = createColumnElement(t.initialColumn2, columnIdCounter++);
+            
+            container.innerHTML = '';
+            container.appendChild(column1);
+            container.appendChild(column2);
+            
+            const addBtn = document.createElement('div');
+            addBtn.className = 'add-column';
+            addBtn.onclick = addNewColumn;
+            addBtn.innerHTML = '<span>+</span>';
+            container.appendChild(addBtn);
+        }
+        
+        function createColumnElement(title, id) {
+            const column = document.createElement('div');
+            const t = translations[currentLanguage];
+            column.className = 'column';
+            column.setAttribute('data-column-id', id);
+            column.setAttribute('data-split-state', 'normal');
+            column.innerHTML = `
+                <div class="column-header" draggable="true">
+                    ${title}
+                    <span class="header-btn color-column-btn" title="${t.columnColor}" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="showColumnColorPicker(this)">🖌️</span>
+                    <span class="header-btn split-column-btn" title="${t.splitColumnTooltip}" onclick="toggleColumnSplit(this)">⫼</span>
+                    <span class="header-btn delete-column" onclick="deleteColumn(this)">×</span>
+                </div>
+                <div class="resize-handle"></div>
+                <div class="column-content">
+                    <div class="section-group" draggable="true">

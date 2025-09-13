@@ -1,4 +1,7 @@
 <!DOCTYPE html>
+
+                    ${title}
+<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -105,8 +108,8 @@
         
         .column {
             min-width: 200px;
-            max-width: 900px; /* Increased max width by 100px */
-            width: 400px; /* Increased default width by 100px */
+            max-width: none; /* remove width cap */
+            width: 400px; /* default width */
             background: white;
             border: 2px solid #8B4513;
             border-radius: 8px;
@@ -118,11 +121,11 @@
         
         /* Split column layout */
         .column.split-column {
-            width: 600px; /* Wider for split layout - 2 columns */
+            /* legacy class no longer fixes width */
         }
 
         .column.split-column-3 {
-            width: 800px; /* Even wider for 3-column split layout */
+            /* legacy class no longer fixes width */
         }
         
         .column-split-content {
@@ -131,6 +134,15 @@
             flex: 1;
             padding: 10px;
         }
+
+        .column-part {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e0e0;
+            padding-right: 10px;
+        }
+        .column-part:last-child { border-right: none; padding-right: 0; padding-left: 10px; }
         
         .column-half {
             flex: 1;
@@ -190,23 +202,38 @@
             transition: all 0.3s;
         }
         
-        .column-header .split-column-btn {
+            display: none; /* legacy toggle hidden in favor of counter */
+        }
+
+        .split-counter {
             position: absolute;
-            right: 40px;
+            left: 10px;
+            right: auto;
             top: 50%;
             transform: translateY(-50%);
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
             background: rgba(255,255,255,0.2);
             border: 1px solid rgba(255,255,255,0.3);
             color: white;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
+            border-radius: 12px;
+            padding: 2px 6px;
+            user-select: none;
+            z-index: 1;
         }
+        .split-counter button {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid rgba(255,255,255,0.4);
+            background: rgba(255,255,255,0.25);
+            color: white;
+            cursor: pointer;
+            line-height: 18px;
+            font-weight: 700;
+        }
+        .split-counter .value { min-width: 16px; text-align: center; font-weight: 700; }
         
         .section-delete {
             position: absolute;
@@ -238,10 +265,10 @@
         
         .resize-handle {
             position: absolute;
-            right: -5px;
+            right: -6px;
             top: 0;
             bottom: 0;
-            width: 10px;
+            width: 12px;
             cursor: ew-resize;
             background: transparent;
         }
@@ -747,7 +774,6 @@
 .column, .column-header { overflow: visible !important; }
 .column-header .header-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
 .column-header .delete-column { right:10px; font-size:16px; }
-.column-header .split-column-btn { right:40px; }
 .column-header .color-column-btn { right:70px; }
 .column-color-picker { z-index:30000; position:absolute; top:110%; right:0; background:#fff; border:2px solid #ddd; border-radius:6px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:12000; display:none; min-width:220px; }
 .column-color-picker.show{ display:block; }
@@ -1188,9 +1214,8 @@
             column.setAttribute('data-split-state', 'normal');
             column.innerHTML = `
                 <div class="column-header" draggable="true">
-                    ${title}
+                     ${title} 
                     <span class="header-btn color-column-btn" title="${t.columnColor}" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="showColumnColorPicker(this)">🖌️</span>
-                    <span class="header-btn split-column-btn" title="${t.splitColumnTooltip}" onclick="toggleColumnSplit(this)">⫼</span>
                     <span class="header-btn delete-column" onclick="deleteColumn(this)">×</span>
                 </div>
                 <div class="resize-handle"></div>
@@ -1206,22 +1231,36 @@
                     <button class="add-section-btn" onclick="addSection(this)">+ ${t.newSection}</button>
                 </div>
             `;
+            // Ensure split counter exists and reflects current parts
+            try {
+                const header = column.querySelector('.column-header');
+                const del = header.querySelector('.delete-column');
+                let counter = header.querySelector('.split-counter');
+                if (!counter) {
+                    counter = document.createElement('span');
+                    counter.className = 'split-counter';
+                    counter.setAttribute('title', t.splitColumnTooltip);
+                    counter.innerHTML = '\n                        <button onclick="decrementSplit(this); event.stopPropagation();" onmousedown="event.stopPropagation();">-</button>\n                        <span class="value">1</span>\n                        <button onclick="incrementSplit(this); event.stopPropagation();" onmousedown="event.stopPropagation();">+</button>\n                    ';
+                    header.insertBefore(counter, del);
+                }
+                if (!column.hasAttribute('data-split-parts')) column.setAttribute('data-split-parts', '1');
+                updateSplitCounterDisplay(column);
+            } catch(e) {}
             return column;
         }
 
         function toggleColumnSplit(btn) {
+            // Expanded: cycle split parts 1→2→3→4→5→6→7→8→1
             const column = btn.closest('.column');
-            const currentState = column.getAttribute('data-split-state') || 'normal';
-            
-            if (currentState === 'normal') {
-                splitColumn(column, 2);
-                column.setAttribute('data-split-state', 'split-2');
-            } else if (currentState === 'split-2') {
-                splitColumn(column, 3);
-                column.setAttribute('data-split-state', 'split-3');
-            } else {
+            const currentParts = parseInt(column.getAttribute('data-split-parts') || '1', 10);
+            const next = currentParts >= 8 ? 1 : currentParts + 1;
+            column.setAttribute('data-split-parts', String(next));
+            if (next === 1) {
                 unsplitColumn(column);
                 column.setAttribute('data-split-state', 'normal');
+            } else {
+                splitColumn(column, next);
+                column.setAttribute('data-split-state', next === 2 ? 'split-2' : (next === 3 ? 'split-3' : 'split-n'));
             }
         }
 
@@ -1231,31 +1270,30 @@
             const addBtn = content.querySelector('.add-section-btn');
             
             column.classList.remove('split-column', 'split-column-3');
-            if (parts === 2) column.classList.add('split-column');
-            else if (parts === 3) column.classList.add('split-column-3');
             
             const splitContainer = document.createElement('div');
             splitContainer.className = 'column-split-content';
             
             for (let i = 0; i < parts; i++) {
-                const splitColumn = document.createElement('div');
-                splitColumn.className = parts === 3 ? 'column-third' : 'column-half';
+                const partDiv = document.createElement('div');
+                partDiv.className = 'column-part';
                 
                 const sectionsPerSplit = Math.ceil(sections.length / parts);
                 const startIndex = i * sectionsPerSplit;
                 const endIndex = Math.min((i + 1) * sectionsPerSplit, sections.length);
                 
                 for (let j = startIndex; j < endIndex; j++) {
-                    if (sections[j]) splitColumn.appendChild(sections[j]);
+                    if (sections[j]) partDiv.appendChild(sections[j]);
                 }
                 
                 const splitAddBtn = addBtn.cloneNode(true);
-                splitColumn.appendChild(splitAddBtn);
-                splitContainer.appendChild(splitColumn);
+                partDiv.appendChild(splitAddBtn);
+                splitContainer.appendChild(partDiv);
             }
             
             content.innerHTML = '';
             content.appendChild(splitContainer);
+            // Do not force width on split; user controls size by dragging
         }
 
         function unsplitColumn(column) {
@@ -1271,6 +1309,38 @@
                 allSections.forEach(section => content.appendChild(section));
                 if (addBtns.length > 0) content.appendChild(addBtns[0]);
             }
+        }
+
+        function updateSplitCounterDisplay(column) {
+            const valueSpan = column.querySelector('.split-counter .value');
+            if (!valueSpan) return;
+            const p = parseInt(column.getAttribute('data-split-parts') || '1', 10) || 1;
+            valueSpan.textContent = String(p);
+        }
+
+        function applySplit(column, parts) {
+            const p = Math.max(1, parseInt(parts, 10) || 1);
+            column.setAttribute('data-split-parts', String(p));
+            updateSplitCounterDisplay(column);
+            if (p === 1) {
+                unsplitColumn(column);
+                column.setAttribute('data-split-state', 'normal');
+            } else {
+                splitColumn(column, p);
+                column.setAttribute('data-split-state', p === 2 ? 'split-2' : (p === 3 ? 'split-3' : 'split-n'));
+            }
+        }
+
+        function incrementSplit(btn) {
+            const column = btn.closest('.column');
+            const parts = parseInt(column.getAttribute('data-split-parts') || '1', 10);
+            applySplit(column, parts + 1);
+        }
+
+        function decrementSplit(btn) {
+            const column = btn.closest('.column');
+            const parts = parseInt(column.getAttribute('data-split-parts') || '1', 10);
+            applySplit(column, Math.max(1, parts - 1));
         }
         
         function updateColorPreview() {
@@ -1536,7 +1606,8 @@
             document.addEventListener('mousemove', e => {
                 if (!isResizing) return;
                 const width = startWidth + e.pageX - startX;
-                if (width >= 150 && width <= 900) currentResizeColumn.style.width = width + 'px';
+                const minW = 150;
+                if (width >= minW) currentResizeColumn.style.width = width + 'px';
             });
             document.addEventListener('mouseup', () => { isResizing = false; currentResizeColumn = null; });
         }
@@ -1757,12 +1828,13 @@
                     title: column.querySelector('.column-header').childNodes[0].textContent.trim(),
                     width: column.offsetWidth + 'px',
                     splitState: column.getAttribute('data-split-state') || 'normal',
+                    splitParts: parseInt(column.getAttribute('data-split-parts') || (function(ss){ if(ss==='split-2') return 2; if(ss==='split-3') return 3; return 1; })(column.getAttribute('data-split-state')||'normal'), 10),
                     contentAreas: []
                 };
                 
                 let contentAreaNodes;
-                if (column.classList.contains('split-column') || column.classList.contains('split-column-3')) {
-                    contentAreaNodes = column.querySelectorAll('.column-half, .column-third');
+                if (column.querySelector('.column-split-content')) {
+                    contentAreaNodes = column.querySelectorAll('.column-part, .column-half, .column-third');
                 } else {
                     contentAreaNodes = [column.querySelector('.column-content')];
                 }
@@ -1863,12 +1935,14 @@
 
                     const splitState = columnData.splitState || 'normal';
                     column.setAttribute('data-split-state', splitState);
+                    const splitParts = parseInt((columnData.splitParts != null ? columnData.splitParts : (splitState==='split-2'?2:(splitState==='split-3'?3:1))), 10);
+                    column.setAttribute('data-split-parts', String(splitParts));
                     
                     const contentWrapper = column.querySelector('.column-content');
                     contentWrapper.innerHTML = ''; // Leert den Standard-Inhalt, der von createColumnElement kommt
 
                     // Baut die Spaltenstruktur (normal oder geteilt) auf
-                    if (splitState === 'normal') {
+                    if (splitParts === 1 || splitState === 'normal') {
                         // Für normale Spalten gibt es nur einen Inhaltsbereich
                         const areaData = columnData.contentAreas[0] || { sections: [] };
                         let sectionsHtml = '';
@@ -1879,9 +1953,8 @@
                     
                     } else {
                         // Für geteilte Spalten wird die Split-Struktur erstellt
-                        const parts = splitState === 'split-2' ? 2 : 3;
-                        const partClass = splitState === 'split-2' ? 'column-half' : 'column-third';
-                        column.classList.add(splitState === 'split-2' ? 'split-column' : 'split-column-3');
+                        const parts = parseInt(columnData.splitParts || (splitState==='split-2'?2:(splitState==='split-3'?3:1)), 10);
+                        const partClass = 'column-part';
 
                         const splitContainer = document.createElement('div');
                         splitContainer.className = 'column-split-content';
@@ -1900,6 +1973,7 @@
                         }
                         contentWrapper.appendChild(splitContainer);
                     }
+                    updateSplitCounterDisplay(column);
                     container.appendChild(column);
                 });
             }
@@ -2025,13 +2099,11 @@
         }
         
         function hideExportUIElements() {
-            document.querySelectorAll('.add-section-btn, .add-column, .delete-column, .section-menu, .split-column-btn, .section-delete, .color-column-btn').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = 'none'; section.style.background = 'transparent'; });
         }
         
         function showExportUIElements() {
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'block');
-            document.querySelectorAll('.add-column, .delete-column, .section-menu, .split-column-btn, .section-delete, .color-column-btn').forEach(el => el.style.display = 'flex');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = '2px dashed #999'; section.style.background = ''; });
         }
     </script>
@@ -2353,3 +2425,5 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
+
