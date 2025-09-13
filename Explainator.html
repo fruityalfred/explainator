@@ -872,12 +872,23 @@
                 <div style="margin-bottom: 30px; padding: 20px; background: #f0f8ff; border-radius: 8px;">
                     <h4 style="margin-bottom: 15px;" data-translate="addNewCategoryTitle">Neue Kategorie hinzufügen:</h4>
                     <input type="text" id="categoryName" placeholder="Kategorie Name (z.B. Cloud Services)">
-                    <div class="color-input-group">
-                        <label style="min-width: 60px;" data-translate="color1">Farbe 1:</label>
-                        <input type="color" id="categoryColor1" value="#667eea">
-                        <label style="min-width: 60px;" data-translate="color2">Farbe 2:</label>
-                        <input type="color" id="categoryColor2" value="#764ba2">
-                        <div id="colorPreview" style="width: 60px; height: 30px; border-radius: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                    <div class="color-input-group" id="catColorGroup">
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
+                            <label style="min-width: 60px;" data-translate="color1">Farbe:</label>
+                            <input type="color" id="categoryColor1" value="#8B4513" style="flex:0 0 40px; border:none; padding:0;">
+                            <button class="btn small-btn" type="button" onclick="pickEyeDropper('categoryColor1')">Pipette</button>
+                            <label style="margin-left:16px; display:flex; align-items:center; gap:6px;">
+                                <input type="checkbox" id="useGradient" onchange="toggleGradient()"> Verlauf verwenden
+                            </label>
+                        </div>
+                        <div id="catSwatches1" style="display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px;"></div>
+                        <div id="gradientRow" style="display:none; align-items:center; gap:8px; margin:6px 0 10px 0; flex-wrap:wrap;">
+                            <label style="min-width: 60px;">Farbe 2:</label>
+                            <input type="color" id="categoryColor2" value="#8B4513" style="flex:0 0 40px; border:none; padding:0;">
+                            <button class="btn small-btn" type="button" onclick="pickEyeDropper('categoryColor2')">Pipette</button>
+                        </div>
+                        <div id="catSwatches2" style="display:none; flex-wrap:wrap; gap:6px; margin-bottom:10px;"></div>
+                        <div id="colorPreview" style="width: 120px; height: 30px; border-radius: 4px; background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%);"></div>
                     </div>
                     <button class="btn btn-success" onclick="addCategory()" data-translate="addCategory">➕ Kategorie hinzufügen</button>
                 </div>
@@ -1289,7 +1300,8 @@
         
         function updateColorPreview() {
             const color1 = document.getElementById('categoryColor1').value;
-            const color2 = document.getElementById('categoryColor2').value;
+            const useGrad = document.getElementById('useGradient') && document.getElementById('useGradient').checked;
+            const color2 = useGrad ? (document.getElementById('categoryColor2').value || color1) : color1;
             document.getElementById('colorPreview').style.background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
         }
         
@@ -1302,7 +1314,8 @@
             }
             let styles = '';
             for (const [key, cat] of Object.entries(categories)) {
-                styles += `.${key} { background: linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%); color: ${isLightColor(cat.color1) ? '#1a1a1a' : 'white'}; border: none; }`;
+                const c1 = cat.color1; const c2 = cat.color2 || cat.color1;
+                styles += `.${key} { background: linear-gradient(135deg, ${c1} 0%, ${c2} 100%); color: ${isLightColor(c1) ? '#1a1a1a' : 'white'}; border: none; }`;
             }
             styleEl.innerHTML = styles;
         }
@@ -1342,6 +1355,21 @@
         function showCategoryModal() {
             document.getElementById('categoryModal').classList.add('show');
             updateCategoryList();
+            // Render preset swatches for quick selection
+            const palette = ['#8B4513','#A0522D','#CD853F','#D2691E','#FF9800','#FFC107','#FF5722','#2196F3','#1E88E5','#64B5F6','#00BCD4','#009688','#4CAF50','#8BC34A','#9C27B0','#AB47BC','#E91E63','#F44336','#607D8B','#455A64','#000000','#333333','#666666','#999999','#CCCCCC','#FFFFFF'];
+            const sw1 = document.getElementById('catSwatches1');
+            const sw2 = document.getElementById('catSwatches2');
+            if (sw1) sw1.innerHTML = palette.map(c=>`<div class="swatch" data-target="categoryColor1" data-c="${c}" style="width:22px;height:22px;border-radius:4px;border:1px solid #bbb;cursor:pointer;background:${c}"></div>`).join('');
+            if (sw2) sw2.innerHTML = palette.map(c=>`<div class="swatch" data-target="categoryColor2" data-c="${c}" style="width:22px;height:22px;border-radius:4px;border:1px solid #bbb;cursor:pointer;background:${c}"></div>`).join('');
+            document.getElementById('catColorGroup').addEventListener('click', function(e){
+                const s = e.target.closest && e.target.closest('.swatch');
+                if (!s) return;
+                const target = s.getAttribute('data-target');
+                const color = s.getAttribute('data-c');
+                const input = document.getElementById(target);
+                if (input) { input.value = color; updateColorPreview(); }
+            });
+            toggleGradient();
         }
         
         function updateCategoryList() {
@@ -1351,12 +1379,13 @@
             for (const [key, cat] of Object.entries(categories)) {
                 const item = document.createElement('div');
                 item.className = 'category-item';
+                const c2 = cat.color2 || cat.color1;
                 item.innerHTML = `
-                    <div class="category-preview" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%);"></div>
+                    <div class="category-preview" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${c2} 100%);"></div>
                     <div class="category-controls">
                         <input type="text" value="${cat.name}" onchange="updateCategoryName('${key}', this.value)">
-                        <input type="color" value="${cat.color1}" onchange="updateCategoryColor('${key}', this.value, '${cat.color2}')">
-                        <input type="color" value="${cat.color2}" onchange="updateCategoryColor('${key}', '${cat.color1}', this.value)">
+                        <input type="color" value="${cat.color1}" onchange="updateCategoryColor('${key}', this.value, '${c2}')">
+                        <input type="color" value="${c2}" onchange="updateCategoryColor('${key}', '${cat.color1}', this.value)">
                         <button class="btn btn-danger small-btn" onclick="deleteCategory('${key}')">${t.delete}</button>
                     </div>`;
                 list.appendChild(item);
@@ -1366,7 +1395,8 @@
         function addCategory() {
             const name = document.getElementById('categoryName').value.trim();
             const color1 = document.getElementById('categoryColor1').value;
-            const color2 = document.getElementById('categoryColor2').value;
+            const useGrad = document.getElementById('useGradient').checked;
+            const color2 = useGrad ? (document.getElementById('categoryColor2').value || color1) : color1;
             const t = translations[currentLanguage];
             if (!name) { alert(t.alertEnterName); return; }
             
@@ -1375,7 +1405,6 @@
             
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend(); updateCategoryList();
             document.getElementById('categoryName').value = '';
-            alert(t.alertCategoryAdded.replace('{name}', name));
         }
         
         function updateCategoryName(key, newName) {
@@ -1390,6 +1419,27 @@
                 categories[key].color1 = color1; categories[key].color2 = color2;
                 updateCategoryStyles(); updateLegend(); updateCategoryList();
             }
+        }
+
+        function toggleGradient(){
+            const row = document.getElementById('gradientRow');
+            const sw2 = document.getElementById('catSwatches2');
+            const chk = document.getElementById('useGradient');
+            if (!row || !chk) return;
+            const show = chk.checked;
+            row.style.display = show ? 'flex' : 'none';
+            if (sw2) sw2.style.display = show ? 'flex' : 'none';
+            updateColorPreview();
+        }
+
+        async function pickEyeDropper(targetId){
+            try{
+                if (!('EyeDropper' in window)) { alert('Pipette wird von diesem Browser nicht unterstützt.'); return; }
+                const ed = new EyeDropper();
+                const res = await ed.open();
+                const input = document.getElementById(targetId);
+                if (input) { input.value = res.sRGBHex; updateColorPreview(); }
+            }catch(err){ /* user cancelled */ }
         }
         
         function deleteCategory(key) {
