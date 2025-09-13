@@ -1254,6 +1254,7 @@
             content.innerHTML = '';
             content.appendChild(splitContainer);
             // Do not force width on split; user controls size by dragging
+            normalizeAddButtons();
         }
 
         function unsplitColumn(column) {
@@ -1268,6 +1269,7 @@
                 content.innerHTML = '';
                 allSections.forEach(section => content.appendChild(section));
                 if (addBtns.length > 0) content.appendChild(addBtns[0]);
+                normalizeAddButtons();
             }
         }
 
@@ -1507,6 +1509,15 @@
                 else if (draggedElement.classList.contains('section-group')) {
                     const container = e.target.closest('.column-content, .column-part');
                     if (container) {
+                        // If hovering over the parent content wrapper of a split column,
+                        // allow placing the placeholder before the split-wrapper to move a section "above" the splits.
+                        if (container.classList.contains('column-content')) {
+                            const splitWrapper = container.querySelector(':scope > .column-split-content');
+                            if (splitWrapper) {
+                                container.insertBefore(placeholder, splitWrapper);
+                                return;
+                            }
+                        }
                         const afterElement = getDragAfterSection(container, e.clientY);
                         container.insertBefore(placeholder, afterElement);
                     }
@@ -1527,6 +1538,8 @@
                     if(button) {
                         dropContainer.appendChild(button);
                     }
+                    // Stelle sicher, dass JEDER Bereich seinen eigenen Button besitzt
+                    normalizeAddButtons();
                 }
             });
 
@@ -1540,6 +1553,27 @@
                 draggedElement = null;
                 placeholder = null;
                 isCloning = false;
+            });
+        }
+
+        // Sorgt dafr, dass in jedem Content-Bereich (unsplitted oder .column-part)
+        // genau ein "+ New Section"-Button vorhanden ist und am Ende steht.
+        function normalizeAddButtons(){
+            const containers = document.querySelectorAll('.column-content, .column-part');
+            containers.forEach(cont => {
+                // Entferne doppelte Buttons und halte genau einen
+                const allBtns = cont.querySelectorAll(':scope > .add-section-btn');
+                let keepBtn = allBtns[0];
+                for (let i = 1; i < allBtns.length; i++) allBtns[i].remove();
+
+                if (!keepBtn) {
+                    keepBtn = document.createElement('button');
+                    keepBtn.className = 'add-section-btn';
+                    keepBtn.setAttribute('onclick', 'addSection(this)');
+                    const t = translations[currentLanguage];
+                    keepBtn.textContent = '+ ' + (t && t.newSection ? t.newSection : 'New Section');
+                }
+                cont.appendChild(keepBtn); // am Ende positionieren
             });
         }
         
@@ -1792,16 +1826,12 @@
                     contentAreas: []
                 };
                 
-                let contentAreaNodes;
-                if (column.querySelector('.column-split-content')) {
-                    contentAreaNodes = column.querySelectorAll('.column-part');
-                } else {
-                    contentAreaNodes = [column.querySelector('.column-content')];
-                }
-                
-                contentAreaNodes.forEach(areaNode => {
+                const contentWrapper = column.querySelector('.column-content');
+                const splitWrapper = contentWrapper ? contentWrapper.querySelector(':scope > .column-split-content') : null;
+
+                function serializeSectionNodes(nodes) {
                     const areaData = { sections: [] };
-                    areaNode.querySelectorAll('.section-group').forEach(section => {
+                    nodes.forEach(section => {
                         const sectionTitle = section.querySelector('.section-title');
                         const sectionData = {
                             title: sectionTitle.childNodes[0].textContent.trim(),
@@ -1816,8 +1846,31 @@
                         };
                         areaData.sections.push(sectionData);
                     });
-                    columnData.contentAreas.push(areaData);
-                });
+                    return areaData;
+                }
+
+                if (splitWrapper) {
+                    // top sections: direct children before split wrapper
+                    const children = Array.from(contentWrapper.children);
+                    const topList = [];
+                    for (const ch of children) { if (ch === splitWrapper) break; if (ch.classList && ch.classList.contains('section-group')) topList.push(ch); }
+                    if (topList.length) columnData.contentAreas.push(serializeSectionNodes(topList));
+
+                    // parts in order
+                    splitWrapper.querySelectorAll(':scope > .column-part').forEach(part => {
+                        const sections = Array.from(part.querySelectorAll(':scope > .section-group'));
+                        columnData.contentAreas.push(serializeSectionNodes(sections));
+                    });
+
+                    // bottom sections: direct children after split wrapper
+                    const bottomList = [];
+                    let seen = false;
+                    for (const ch of children) { if (ch === splitWrapper) { seen = true; continue; } if (!seen) continue; if (ch.classList && ch.classList.contains('section-group')) bottomList.push(ch); }
+                    if (bottomList.length) columnData.contentAreas.push(serializeSectionNodes(bottomList));
+                } else {
+                    const single = Array.from(contentWrapper.querySelectorAll(':scope > .section-group'));
+                    columnData.contentAreas.push(serializeSectionNodes(single));
+                }
                 columns.push(columnData);
             });
             return { columns };
@@ -1918,12 +1971,24 @@
 
                         const splitContainer = document.createElement('div');
                         splitContainer.className = 'column-split-content';
+                        // Optional Top-/Bottom-Bereiche um die Splits herum
+                        const totalAreas = (columnData.contentAreas || []).length;
+                        let startIdx = 0;
+                        let endIdxOffset = 0;
+                        if (totalAreas === parts + 2) { startIdx = 1; endIdxOffset = 1; }
+                        else if (totalAreas === parts + 1) { startIdx = 1; endIdxOffset = 0; }
+                        if (startIdx === 1) {
+                            const topArea = columnData.contentAreas[0] || { sections: [] };
+                            let topHtml = '';
+                            topArea.sections.forEach(s => topHtml += buildSectionHtml(s, t));
+                            contentWrapper.innerHTML += topHtml;
+                        }
 
                         for (let i = 0; i < parts; i++) {
                             const partDiv = document.createElement('div');
                             partDiv.className = partClass;
 
-                            const areaData = columnData.contentAreas[i] || { sections: [] };
+                            const areaData = columnData.contentAreas[i + (typeof startIdx !== 'undefined' ? startIdx : 0)] || { sections: [] };
                             let sectionsHtml = '';
                             areaData.sections.forEach(sectionData => {
                                 sectionsHtml += buildSectionHtml(sectionData, t);
@@ -1932,12 +1997,20 @@
                             splitContainer.appendChild(partDiv);
                         }
                         contentWrapper.appendChild(splitContainer);
+                        if (typeof endIdxOffset !== 'undefined' && endIdxOffset === 1) {
+                            const totalAreas2 = (columnData.contentAreas || []).length;
+                            const bottomArea = columnData.contentAreas[totalAreas2 - 1] || { sections: [] };
+                            let bottomHtml = '';
+                            bottomArea.sections.forEach(s => bottomHtml += buildSectionHtml(s, t));
+                            contentWrapper.innerHTML += bottomHtml;
+                        }
                     }
                     updateSplitCounterDisplay(column);
                     container.appendChild(column);
                 });
             }
 
+            normalizeAddButtons();
             // Fügt am Ende den "+" Button für neue Spalten hinzu
             const addBtn = document.createElement('div');
             addBtn.className = 'add-column';
@@ -2059,11 +2132,26 @@
         }
         
         function hideExportUIElements() {
+            // Mark document for screenshot-specific CSS rules
+            document.documentElement.setAttribute('data-screenshot', 'true');
+
+            // Hide interactive UI for clean export
+            document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.header-btn, .split-counter, .resize-handle').forEach(el => el.style.visibility = 'hidden');
+            document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'hidden');
+            document.querySelectorAll('.column-color-picker, .section-color-picker').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = 'none'; section.style.background = 'transparent'; });
         }
         
         function showExportUIElements() {
+            // Remove screenshot flag
+            document.documentElement.removeAttribute('data-screenshot');
+
+            // Restore interactive UI
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.header-btn').forEach(el => el.style.visibility = 'visible');
+            document.querySelectorAll('.split-counter, .resize-handle').forEach(el => el.style.visibility = 'visible');
+            document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = '2px dashed #999'; section.style.background = ''; });
         }
     </script>
