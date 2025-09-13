@@ -144,28 +144,7 @@
         }
         .column-part:last-child { border-right: none; padding-right: 0; padding-left: 10px; }
         
-        .column-half {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #e0e0e0;
-            padding-right: 10px;
-        }
-        
-        .column-third {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            border-right: 1px solid #e0e0e0;
-            padding-right: 10px;
-        }
-        
-        .column-half:last-child,
-        .column-third:last-child {
-            border-right: none;
-            padding-right: 0;
-            padding-left: 10px;
-        }
+        /* removed legacy .column-half/.column-third; using .column-part only */
         
         .column:hover {
             box-shadow: 0 5px 20px rgba(139,69,19,0.2);
@@ -181,6 +160,10 @@
             border-radius: 6px 6px 0 0;
             position: relative;
             cursor: move;
+            /* Reserve space using a custom property so we can offset the counter back to true left */
+            --header-left-pad: 190px;
+            padding-left: var(--header-left-pad); /* reserve for left counter */
+            padding-right: 96px; /* tighter space for color + delete */
         }
         
         .column-header .delete-column {
@@ -202,12 +185,10 @@
             transition: all 0.3s;
         }
         
-            display: none; /* legacy toggle hidden in favor of counter */
-        }
 
         .split-counter {
             position: absolute;
-            left: 10px;
+            left: 0;
             right: auto;
             top: 50%;
             transform: translateY(-50%);
@@ -500,13 +481,7 @@
             border-bottom: none;
         }
         
-        .grid-lines .column-half {
-            border-right: 1px dashed #ccc !important;
-        }
-        
-        .grid-lines .column-third {
-            border-right: 1px dashed #ccc !important;
-        }
+        /* removed grid-lines styling for legacy halves/thirds */
         
         .grid-lines .column-split-content {
             border-top: 1px dashed #ccc;
@@ -774,7 +749,7 @@
 .column, .column-header { overflow: visible !important; }
 .column-header .header-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
 .column-header .delete-column { right:10px; font-size:16px; }
-.column-header .color-column-btn { right:70px; }
+.column-header .color-column-btn { right:40px; }
 .column-color-picker { z-index:30000; position:absolute; top:110%; right:0; background:#fff; border:2px solid #ddd; border-radius:6px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:12000; display:none; min-width:220px; }
 .column-color-picker.show{ display:block; }
 .column-color-picker .row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
@@ -1249,21 +1224,6 @@
             return column;
         }
 
-        function toggleColumnSplit(btn) {
-            // Expanded: cycle split parts 1→2→3→4→5→6→7→8→1
-            const column = btn.closest('.column');
-            const currentParts = parseInt(column.getAttribute('data-split-parts') || '1', 10);
-            const next = currentParts >= 8 ? 1 : currentParts + 1;
-            column.setAttribute('data-split-parts', String(next));
-            if (next === 1) {
-                unsplitColumn(column);
-                column.setAttribute('data-split-state', 'normal');
-            } else {
-                splitColumn(column, next);
-                column.setAttribute('data-split-state', next === 2 ? 'split-2' : (next === 3 ? 'split-3' : 'split-n'));
-            }
-        }
-
         function splitColumn(column, parts) {
             const content = column.querySelector('.column-content');
             const sections = Array.from(content.querySelectorAll('.section-group'));
@@ -1545,7 +1505,7 @@
                     }
                 } 
                 else if (draggedElement.classList.contains('section-group')) {
-                    const container = e.target.closest('.column-content, .column-half, .column-third');
+                    const container = e.target.closest('.column-content, .column-part');
                     if (container) {
                         const afterElement = getDragAfterSection(container, e.clientY);
                         container.insertBefore(placeholder, afterElement);
@@ -1834,7 +1794,7 @@
                 
                 let contentAreaNodes;
                 if (column.querySelector('.column-split-content')) {
-                    contentAreaNodes = column.querySelectorAll('.column-part, .column-half, .column-third');
+                    contentAreaNodes = column.querySelectorAll('.column-part');
                 } else {
                     contentAreaNodes = [column.querySelector('.column-content')];
                 }
@@ -2425,5 +2385,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
+
 
 
