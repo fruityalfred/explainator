@@ -1,0 +1,2355 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explainator - Ultimate Edition</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 10px;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+        }
+        
+        h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 28px;
+            color: #2c3e50;
+            font-weight: 600;
+        }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+            color: #1a1a1a;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: #1a1a1a;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+        
+        .btn-info {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .main-container {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            padding-bottom: 20px;
+            /* min-height: 600px; */ /* <-- Auskommentiert oder gelöscht */
+        }
+        
+        .column {
+            min-width: 200px;
+            max-width: 900px; /* Increased max width by 100px */
+            width: 400px; /* Increased default width by 100px */
+            background: white;
+            border: 2px solid #8B4513;
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s;
+        }
+        
+        /* Split column layout */
+        .column.split-column {
+            width: 600px; /* Wider for split layout - 2 columns */
+        }
+
+        .column.split-column-3 {
+            width: 800px; /* Even wider for 3-column split layout */
+        }
+        
+        .column-split-content {
+            display: flex;
+            gap: 10px;
+            flex: 1;
+            padding: 10px;
+        }
+        
+        .column-half {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e0e0;
+            padding-right: 10px;
+        }
+        
+        .column-third {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid #e0e0e0;
+            padding-right: 10px;
+        }
+        
+        .column-half:last-child,
+        .column-third:last-child {
+            border-right: none;
+            padding-right: 0;
+            padding-left: 10px;
+        }
+        
+        .column:hover {
+            box-shadow: 0 5px 20px rgba(139,69,19,0.2);
+        }
+        
+        .column-header {
+            background: linear-gradient(to bottom, #8B4513, #A0522D);
+            color: white;
+            padding: 12px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 14px;
+            border-radius: 6px 6px 0 0;
+            position: relative;
+            cursor: move;
+        }
+        
+        .column-header .delete-column {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        
+        .column-header .split-column-btn {
+            position: absolute;
+            right: 40px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+        
+        .section-delete {
+            position: absolute;
+            right: 35px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,0,0,0.7);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            transition: all 0.3s;
+        }
+        
+        .section-delete:hover {
+            background: rgba(255,0,0,0.9);
+            transform: translateY(-50%) scale(1.1);
+        }
+        
+        .column-header .delete-column:hover {
+            background: rgba(255,0,0,0.5);
+        }
+        
+        .resize-handle {
+            position: absolute;
+            right: -5px;
+            top: 0;
+            bottom: 0;
+            width: 10px;
+            cursor: ew-resize;
+            background: transparent;
+        }
+        
+        .resize-handle:hover {
+            background: rgba(139,69,19,0.2);
+        }
+        
+        .column-content {
+            padding: 12px;
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .section-group {
+            border: 2px dashed #999;
+            border-radius: 6px;
+            padding: 10px;
+            min-height: 80px;
+            transition: all 0.3s;
+            position: relative;
+            cursor: move;
+        }
+        
+        .section-group.drag-over {
+            background: #e8f5e9;
+            border-color: #4CAF50;
+            border-style: solid;
+        }
+        
+        .column-content.drag-over {
+            background: rgba(76, 175, 80, 0.1);
+            border: 2px dashed #4CAF50;
+            border-radius: 8px;
+        }
+        
+        .section-group.dragging {
+            opacity: 0.7;
+            transform: rotate(2deg);
+            z-index: 1000;
+        }
+        
+        .section-title {
+            background: #8B4513;
+            color: white;
+            padding: 6px 12px;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .section-title input {
+            background: transparent;
+            border: none;
+            color: white;
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            width: 100%;
+        }
+        
+        .section-title .section-menu {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        
+        .section-title .section-menu:hover {
+            background: rgba(255,255,255,0.4);
+        }
+        
+        .add-section-btn {
+            width: 100%;
+            padding: 8px;
+            border: 2px dashed #ccc;
+            background: #f9f9f9;
+            color: #666;
+            cursor: pointer;
+            border-radius: 4px;
+            text-align: center;
+            transition: all 0.3s;
+            font-size: 12px;
+        }
+        
+        .add-section-btn:hover {
+            background: #e8f5e9;
+            border-color: #4CAF50;
+            color: #2e7d32;
+        }
+        
+        .box-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 30px;
+        }
+        
+        .app-box {
+            padding: 8px 12px;
+            text-align: center;
+            font-size: 11px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+            cursor: move;
+            position: relative;
+            min-height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s;
+            flex: 0 0 auto;
+            max-width: 100%;
+            word-break: break-word;
+        }
+        
+        .app-box.half-width {
+            flex: 0 0 calc(50% - 3px);
+        }
+        
+        .app-box.full-width {
+            flex: 0 0 100%;
+        }
+        
+        .app-box:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+        
+        .app-box.dragging {
+            opacity: 0.5;
+        }
+        
+        .app-box .delete-btn {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #f44336;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+        
+        .app-box:hover .delete-btn {
+            display: flex;
+        }
+        
+        .app-box .resize-btn {
+            position: absolute;
+            bottom: -8px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 10px;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .app-box:hover .resize-btn {
+            display: flex;
+        }
+        
+        /* Add Column Button */
+        .add-column {
+            min-width: 60px;
+            background: #f0f0f0;
+            border: 2px dashed #999;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            padding: 20px;
+        }
+        
+        .add-column:hover {
+            background: #e8f5e9;
+            border-color: #4CAF50;
+        }
+        
+        .add-column span {
+            font-size: 32px;
+            color: #666;
+        }
+        
+        /* Grid lines for better alignment */
+        .grid-lines .section-group {
+            border-bottom: 1px dashed #ccc;
+            margin-bottom: 5px;
+            padding-bottom: 5px;
+        }
+        
+        .grid-lines .section-group:last-of-type {
+            border-bottom: none;
+        }
+        
+        .grid-lines .column-half {
+            border-right: 1px dashed #ccc !important;
+        }
+        
+        .grid-lines .column-third {
+            border-right: 1px dashed #ccc !important;
+        }
+        
+        .grid-lines .column-split-content {
+            border-top: 1px dashed #ccc;
+        }
+        
+        .grid-lines .column-content {
+            position: relative;
+        }
+        
+        .grid-lines .column-content::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            left: 50%;
+            border-left: 1px dashed #eee;
+            pointer-events: none;
+            z-index: 1;
+        }
+        
+        /* Legend */
+        .legend {
+            display: flex;
+            gap: 20px;
+            justify-content: flex-start;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .legend-item:hover {
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .legend-box {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+        }
+        
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal.show {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        
+        .modal-body {
+            margin-bottom: 20px;
+        }
+        
+        .modal-body input, .modal-body select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        
+        .category-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: #f9f9f9;
+        }
+        
+        .category-preview {
+            width: 40px;
+            height: 30px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+        
+        .category-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex: 1;
+        }
+        
+        .category-controls input[type="text"] {
+            flex: 1;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .category-controls input[type="color"] {
+            width: 40px;
+            height: 30px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .color-input-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .placeholder {
+            background: #e8f5e9;
+            border: 2px dashed #4CAF50;
+            min-height: 30px;
+        }
+        
+        .info-panel {
+            background: #fffbf0;
+            border: 2px solid #ffc107;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 13px;
+        }
+        
+        .info-panel strong {
+            color: #f57c00;
+        }
+        
+        .small-btn {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .template-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px;
+            margin-bottom: 10px;
+            background: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .template-item:hover {
+            background: #e8f5e9;
+            border-color: #4CAF50;
+        }
+        
+        .template-info {
+            flex: 1;
+        }
+        
+        .template-name {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .template-date {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .template-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #exportCanvas {
+            position: fixed;
+            top: -10000px;
+            left: -10000px;
+            pointer-events: none;
+        }
+        
+        .section-color-picker {
+            position: absolute;
+            top: 25px;
+            right: 0;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1000;
+            display: none;
+            min-width: 200px;
+        }
+        
+        .section-color-picker.show {
+            display: block;
+        }
+        
+        .color-option {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-bottom: 5px;
+        }
+        
+        .color-option:hover {
+            background: #f0f0f0;
+        }
+        
+        .color-preview {
+            width: 30px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+    </style>
+
+<style>
+.column, .column-header { overflow: visible !important; }
+.column-header .header-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
+.column-header .delete-column { right:10px; font-size:16px; }
+.column-header .split-column-btn { right:40px; }
+.column-header .color-column-btn { right:70px; }
+.column-color-picker { z-index:30000; position:absolute; top:110%; right:0; background:#fff; border:2px solid #ddd; border-radius:6px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:12000; display:none; min-width:220px; }
+.column-color-picker.show{ display:block; }
+.column-color-picker .row{ display:flex; align-items:center; gap:10px; margin-bottom:8px; }
+.column-color-picker .swatch{ width:30px; height:20px; border-radius:4px; border:1px solid #ccc; cursor:pointer; }
+</style>
+
+<style>.column-header{position:relative}</style>
+
+<style>
+/* Hide picker icon during screenshots/exports */
+.screenshot-mode .color-column-btn,
+[data-screenshot="true"] .color-column-btn,
+.exporting .color-column-btn { display: none !important; }
+</style>
+
+<style>
+    /* Visuelles Feedback für das Ziehen von Elementen */
+    .dragging-placeholder {
+        background: rgba(0, 128, 0, 0.1);
+        border: 2px dashed #4CAF50;
+        border-radius: 6px;
+        margin: 4px 0;
+    }
+    .dragging {
+        opacity: 0.5;
+        transform: rotate(2deg);
+    }
+</style>
+
+<style>
+/* Original während Ctrl-Klon nicht dimmen */
+.app-box[data-no-dim="1"],
+.app-box[data-no-dim="1"].dragging {
+  opacity: 1 !important;
+  filter: none !important;
+}
+</style>
+
+<style>
+    /* Styling für das Bearbeitungs-Eingabefeld in einer App-Box */
+    .app-box-editor {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background-color: rgba(255, 255, 255, 0.8);
+        font-family: inherit;
+        font-size: inherit;
+        text-align: center;
+        padding: 2px;
+        box-sizing: border-box;
+    }
+    .app-box-editor:focus {
+        outline: 2px solid #007bff;
+        box-shadow: 0 0 5px rgba(0,123,255,0.5);
+    }
+</style>
+
+<style>
+.column-color-picker { max-width: 260px; }
+.header-btn.color-column-btn { user-select: none; }
+.column-header { overflow: visible; }
+</style>
+
+</head>
+<body>
+    <div class="container">
+        <h2 data-translate="mainTitle">🏢 Explainator - Ultimate Edition</h2>
+        
+        <div class="info-panel">
+            <strong data-translate="infoPanelTitle">Vollständige Kontrolle:</strong> 
+            <span data-translate="infoPanelFeatures">
+            ✓ Templates speichern & laden | 
+            ✓ PNG Export | 
+            ✓ Section-Farben anpassbar | 
+            ✓ Sections innerhalb & zwischen Spalten verschiebbar | 
+            ✓ Kategorien mit eigenen Farben verwalten | 
+            ✓ Spalten verschieben & resize | 
+            ✓ Drag & Drop überall | 
+            ✓ Stabile Section-Funktionalität | 
+            ✓ 3-Spalten Split möglich
+            </span>
+        </div>
+        
+        <div class="controls">
+            <button class="btn btn-secondary" onclick="showFormattingModal()" data-translate="formatting">🔠 Formatierung</button>
+            <button class="btn btn-primary" onclick="addNewColumn()" data-translate="addColumn">➕ Neue Spalte</button>
+            <button class="btn btn-success" onclick="showAddBoxModal()" data-translate="addBox">📦 Neue Box</button>
+            <button class="btn btn-info" onclick="showCategoryModal()" data-translate="manageCategories">🎨 Kategorien verwalten</button>
+            <button class="btn btn-warning" onclick="exportToPNG()" data-translate="exportPNG">📸 Als PNG exportieren</button>
+            <button class="btn btn-secondary" id="gridToggleBtn" onclick="toggleGridLines()" data-translate="gridLines">⊞ Hilfslinien</button>
+            <button class="btn btn-info" onclick="saveTemplate()" data-translate="saveTemplate">💾 Template speichern</button>
+            <button class="btn btn-success" onclick="showLoadTemplateModal()" data-translate="loadTemplate">📂 Template laden</button>
+            <button class="btn btn-warning" onclick="resetLayout()" data-translate="resetLayout">🔄 Layout zurücksetzen</button>
+            <button class="btn btn-danger" onclick="clearAll()" data-translate="clearAll">🗑️ Alles löschen</button>
+            <button id="langSwitchBtn" class="btn btn-info" onclick="toggleLanguage()">EN</button>
+        </div>
+        
+        <div class="main-container" id="mainContainer">
+            </div>
+        
+        <div class="legend" id="legend">
+            </div>
+    </div>
+        
+    <div class="modal" id="addBoxModal">
+        <div class="modal-content">
+            <div class="modal-header" data-translate="addBoxModalTitle">Neue Box hinzufügen</div>
+            <div class="modal-body">
+                <input type="text" id="boxName" placeholder="Box Name">
+                <select id="boxType"></select>
+                <select id="boxWidth">
+                    <option value="full-width" data-translate="fullWidth">Volle Breite</option>
+                    <option value="half-width" data-translate="halfWidth">Halbe Breite</option>
+                </select>
+                <label for="boxLines" style="display:block;margin-top:8px;" data-translate="boxHeightLabel">Höhe (Zeilen)</label>
+                <select id="boxLines">
+                    <option value="1" selected data-translate="boxHeight1">1 Zeile (Standard)</option>
+                    <option value="2" data-translate="boxHeight2">2 Zeilen</option>
+                    <option value="3" data-translate="boxHeight3">3 Zeilen</option>
+                </select>
+                
+                <div style="display: flex; gap: 20px; margin-top: 15px; align-items: center;">
+                    <label>Text: <input type="color" id="boxTextColor" value="#000000"></label>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="addBox()" data-translate="add">Hinzufügen</button>
+                <button class="btn btn-danger" onclick="closeModal('addBoxModal')" data-translate="cancel">Abbrechen</button>
+            </div>
+        </div>
+    </div>    
+    
+    <div class="modal" id="categoryModal">
+        <div class="modal-content">
+            <div class="modal-header" data-translate="manageCategories">🎨 Kategorien verwalten</div>
+            <div class="modal-body">
+                <div style="margin-bottom: 30px; padding: 20px; background: #f0f8ff; border-radius: 8px;">
+                    <h4 style="margin-bottom: 15px;" data-translate="addNewCategoryTitle">Neue Kategorie hinzufügen:</h4>
+                    <input type="text" id="categoryName" placeholder="Kategorie Name (z.B. Cloud Services)">
+                    <div class="color-input-group">
+                        <label style="min-width: 60px;" data-translate="color1">Farbe 1:</label>
+                        <input type="color" id="categoryColor1" value="#667eea">
+                        <label style="min-width: 60px;" data-translate="color2">Farbe 2:</label>
+                        <input type="color" id="categoryColor2" value="#764ba2">
+                        <div id="colorPreview" style="width: 60px; height: 30px; border-radius: 4px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                    </div>
+                    <button class="btn btn-success" onclick="addCategory()" data-translate="addCategory">➕ Kategorie hinzufügen</button>
+                </div>
+                
+                <div>
+                    <h4 style="margin-bottom: 15px;" data-translate="existingCategories">Vorhandene Kategorien:</h4>
+                    <div id="categoryList">
+                        </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="closeModal('categoryModal')" data-translate="done">Fertig</button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="modal" id="loadTemplateModal">
+        <div class="modal-content">
+            <div class="modal-header" data-translate="loadTemplate">📂 Template laden</div>
+            <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px;" data-translate="savedTemplates">Gespeicherte Templates:</h4>
+                    <div id="templateList" style="max-height: 300px; overflow-y: auto;">
+                        </div>
+                </div>
+                
+                <div style="border-top: 2px solid #eee; padding-top: 20px;">
+                    <h4 style="margin-bottom: 10px;" data-translate="loadTemplateFromFileTitle">Template aus Datei laden:</h4>
+                    <input type="file" id="templateFileInput" accept=".json" style="margin-bottom: 10px;">
+                    <button class="btn btn-primary" onclick="loadTemplateFromFile()" data-translate="loadFile">📂 Datei laden</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeModal('loadTemplateModal')" data-translate="close">Schließen</button>
+            </div>
+        </div>
+    </div>
+    
+    <canvas id="exportCanvas" style="position: fixed; top: -10000px; left: -10000px; pointer-events: none;"></canvas>
+    
+    <script>
+        // === LANGUAGE SWITCHER & TRANSLATIONS ===
+        let currentLanguage = 'de';
+
+        const translations = {
+            de: {
+                mainTitle: "🏢 Explainator - Ultimate Edition",
+                infoPanelTitle: "Vollständige Kontrolle:",
+                infoPanelFeatures: "✓ Templates speichern & laden | ✓ PNG Export | ✓ Section-Farben anpassbar | ✓ Sections innerhalb & zwischen Spalten verschiebbar | ✓ Kategorien mit eigenen Farben verwalten | ✓ Spalten verschieben & resize | ✓ Drag & Drop überall | ✓ Stabile Section-Funktionalität | ✓ 3-Spalten Split möglich",
+                formatting: "🔠 Formatierung",
+                addColumn: "➕ Neue Spalte",
+                addBox: "📦 Neue Box",
+                manageCategories: "🎨 Kategorien verwalten",
+                exportPNG: "📸 Als PNG exportieren",
+                gridLines: "⊞ Hilfslinien",
+                gridLinesHide: "⊞ Hilfslinien aus",
+                saveTemplate: "💾 Template speichern",
+                loadTemplate: "📂 Template laden",
+                resetLayout: "🔄 Layout zurücksetzen",
+                clearAll: "🗑️ Alles löschen",
+                addBoxModalTitle: "Neue Box hinzufügen",
+                boxNamePlaceholder: "Box Name",
+                newApplicationName: "Neue Anwendung",
+                fullWidth: "Volle Breite",
+                halfWidth: "Halbe Breite",
+                boxHeightLabel: "Höhe (Zeilen)",
+                boxHeight1: "1 Zeile (Standard)",
+                boxHeight2: "2 Zeilen",
+                boxHeight3: "3 Zeilen",
+                add: "Hinzufügen",
+                cancel: "Abbrechen",
+                addNewCategoryTitle: "Neue Kategorie hinzufügen:",
+                categoryNamePlaceholder: "Kategorie Name (z.B. Cloud Services)",
+                color1: "Farbe 1:",
+                color2: "Farbe 2:",
+                addCategory: "➕ Kategorie hinzufügen",
+                existingCategories: "Vorhandene Kategorien:",
+                delete: "Löschen",
+                done: "Fertig",
+                savedTemplates: "Gespeicherte Templates:",
+                noSavedTemplates: "Keine gespeicherten Templates gefunden",
+                loadTemplateFromFileTitle: "Template aus Datei laden:",
+                loadFile: "📂 Datei laden",
+                close: "Schließen",
+                legendTitle: "Kategorien:",
+                newColumn: "Neue Spalte",
+                newSection: "Neue Section",
+                confirmDeleteColumn: "Spalte wirklich löschen?",
+                confirmDeleteSection: "Section wirklich löschen?",
+                confirmResetLayout: "Layout wirklich zurücksetzen?",
+                confirmClearAll: "Wirklich alles löschen?",
+                alertEnterName: "Bitte geben Sie einen Namen ein!",
+                alertCategoryAdded: "Kategorie \"{name}\" wurde hinzugefügt!",
+                alertOneCategoryNeeded: "Mindestens eine Kategorie muss vorhanden sein!",
+                confirmDeleteCategory: "Kategorie \"{name}\" wirklich löschen?",
+                promptTemplateName: "Template Name eingeben:",
+                defaultTemplateName: "Mein Template",
+                alertTemplateSaved: "Template \"{name}\" gespeichert und heruntergeladen!",
+                alertTemplateNotFound: "Template nicht gefunden!",
+                confirmLoadTemplate: "Template \"{name}\" laden? Das aktuelle Layout wird überschrieben.",
+                alertTemplateLoaded: "Template \"{name}\" erfolgreich geladen!",
+                alertChooseFile: "Bitte wählen Sie eine Datei aus!",
+                confirmLoadFromFile: "Template \"{name}\" aus Datei laden? Das aktuelle Layout wird überschrieben.",
+                alertFileLoadError: "Fehler beim Laden der Template-Datei: ",
+                alertFileLoaded: "Template \"{name}\" erfolgreich aus Datei geladen!",
+                exporting: "📸 Exportiere...",
+                alertExportSuccess: "✅ Sauberes PNG erfolgreich exportiert!",
+                alertExportError: "❌ Fehler beim Export: ",
+                initialColumn1: "Spalte 1",
+                initialColumn2: "Spalte 2",
+                sectionColor: "Section-Farbe",
+                columnColor: "Header-Farbe",
+                splitColumnTooltip: "Spalte in 2-3 Teile teilen/zusammenführen",
+                deleteSectionTooltip: "Section löschen"
+            },
+            en: {
+                mainTitle: "🏢 Explainator - Ultimate Edition",
+                infoPanelTitle: "Full Control:",
+                infoPanelFeatures: "✓ Save & Load Templates | ✓ PNG Export | ✓ Adjustable Section Colors | ✓ Move Sections within & between Columns | ✓ Manage Categories with Custom Colors | ✓ Move & Resize Columns | ✓ Drag & Drop Everywhere | ✓ Stable Section Functionality | ✓ 3-Column Split Possible",
+                formatting: "🔠 Formatting",
+                addColumn: "➕ New Column",
+                addBox: "📦 New Box",
+                manageCategories: "🎨 Manage Categories",
+                exportPNG: "📸 Export as PNG",
+                gridLines: "⊞ Grid Lines",
+                gridLinesHide: "⊞ Hide Grid Lines",
+                saveTemplate: "💾 Save Template",
+                loadTemplate: "📂 Load Template",
+                resetLayout: "🔄 Reset Layout",
+                clearAll: "🗑️ Clear All",
+                addBoxModalTitle: "Add New Box",
+                boxNamePlaceholder: "Box Name",
+                newApplicationName: "New Application",
+                fullWidth: "Full Width",
+                halfWidth: "Half Width",
+                boxHeightLabel: "Height (lines)",
+                boxHeight1: "1 line (default)",
+                boxHeight2: "2 lines",
+                boxHeight3: "3 lines",
+                add: "Add",
+                cancel: "Cancel",
+                addNewCategoryTitle: "Add New Category:",
+                categoryNamePlaceholder: "Category Name (e.g., Cloud Services)",
+                color1: "Color 1:",
+                color2: "Color 2:",
+                addCategory: "➕ Add Category",
+                existingCategories: "Existing Categories:",
+                delete: "Delete",
+                done: "Done",
+                savedTemplates: "Saved Templates:",
+                noSavedTemplates: "No saved templates found",
+                loadTemplateFromFileTitle: "Load Template from File:",
+                loadFile: "📂 Load File",
+                close: "Close",
+                legendTitle: "Categories:",
+                newColumn: "New Column",
+                newSection: "New Section",
+                confirmDeleteColumn: "Really delete column?",
+                confirmDeleteSection: "Really delete section?",
+                confirmResetLayout: "Really reset layout?",
+                confirmClearAll: "Really delete everything?",
+                alertEnterName: "Please enter a name!",
+                alertCategoryAdded: "Category \"{name}\" has been added!",
+                alertOneCategoryNeeded: "At least one category must exist!",
+                confirmDeleteCategory: "Really delete category \"{name}\"?",
+                promptTemplateName: "Enter Template Name:",
+                defaultTemplateName: "My Template",
+                alertTemplateSaved: "Template \"{name}\" saved and downloaded!",
+                alertTemplateNotFound: "Template not found!",
+                confirmLoadTemplate: "Load template \"{name}\"? The current layout will be overwritten.",
+                alertTemplateLoaded: "Template \"{name}\" loaded successfully!",
+                alertChooseFile: "Please select a file!",
+                confirmLoadFromFile: "Load template \"{name}\" from file? The current layout will be overwritten.",
+                alertFileLoadError: "Error loading template file: ",
+                alertFileLoaded: "Template \"{name}\" successfully loaded from file!",
+                exporting: "📸 Exporting...",
+                alertExportSuccess: "✅ Clean PNG exported successfully!",
+                alertExportError: "❌ Error during export: ",
+                initialColumn1: "Column 1",
+                initialColumn2: "Column 2",
+                sectionColor: "Section Color",
+                columnColor: "Header Color",
+                splitColumnTooltip: "Split/merge column into 2-3 parts",
+                deleteSectionTooltip: "Delete section"
+            }
+        };
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            document.documentElement.lang = lang;
+            localStorage.setItem('ea_language', lang);
+
+            const langSwitchBtn = document.getElementById('langSwitchBtn');
+            if(langSwitchBtn) langSwitchBtn.textContent = lang === 'de' ? 'EN' : 'DE';
+
+            const t = translations[lang];
+
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.dataset.translate;
+                if (t[key]) {
+                    el.innerHTML = t[key];
+                }
+            });
+            
+            // Special handling for placeholders
+            const boxNameInput = document.getElementById('boxName');
+            if(boxNameInput) boxNameInput.placeholder = t.boxNamePlaceholder;
+
+            const categoryNameInput = document.getElementById('categoryName');
+            if(categoryNameInput) categoryNameInput.placeholder = t.categoryNamePlaceholder;
+
+            // Update dynamically created elements like buttons
+            document.querySelectorAll('.add-section-btn').forEach(btn => btn.textContent = `+ ${t.newSection}`);
+
+            // Update legend title
+            updateLegend();
+        }
+
+        function toggleLanguage() {
+            const newLang = currentLanguage === 'de' ? 'en' : 'de';
+            setLanguage(newLang);
+        }
+
+        // Global variables
+        let draggedElement = null;
+        let columnIdCounter = 1;
+        let isResizing = false;
+        let currentResizeColumn = null;
+        let startX = 0;
+        let startWidth = 0;
+
+        let sectionColorPalette = [
+            { name: 'Standard', color: '#8B4513' }, { name: 'Blau', color: '#2196F3' }, { name: 'Grün', color: '#4CAF50' },
+            { name: 'Orange', color: '#FF9800' }, { name: 'Lila', color: '#9C27B0' }, { name: 'Rot', color: '#F44336' },
+            { name: 'Grau', color: '#607D8B' }, { name: 'Teal', color: '#009688' }, { name: 'Grau 0%', color: '#000000' },
+            { name: 'Grau 10%', color: '#1A1A1A' }, { name: 'Grau 20%', color: '#333333' }, { name: 'Grau 30%', color: '#4D4D4D' },
+            { name: 'Grau 40%', color: '#666666' }, { name: 'Grau 50%', color: '#808080' }, { name: 'Grau 60%', color: '#999999' },
+            { name: 'Grau 70%', color: '#B3B3B3' }, { name: 'Grau 80%', color: '#CCCCCC' }, { name: 'Grau 90%', color: '#E6E6E6' },
+            { name: 'Grau 100%', color: '#FFFFFF' }
+        ];
+        
+        // Category management - Start with default categories
+        let categories = {
+            'cat1': { name: 'Cat. 1', color1: '#667eea', color2: '#764ba2' },
+            'cat2': { name: 'Cat. 2', color1: '#f093fb', color2: '#f5576c' },
+            'cat3': { name: 'Cat. 3', color1: '#fa709a', color2: '#fee140' },
+            'cat4': { name: 'Cat. 4', color1: '#84fab0', color2: '#8fd3f4' },
+            'cat5': { name: 'Cat. 5', color1: '#a8edea', color2: '#fed6e3' }
+        };
+        
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', function() {
+            const savedLang = localStorage.getItem('ea_language') || 'de';
+            setLanguage(savedLang);
+
+            initializeDragAndDrop();
+            initializeResize();
+            initializeColumnDrag();
+            updateCategoryStyles();
+            updateCategoryDropdown();
+            updateLegend();
+            initializeDefaultLayout();
+            
+            document.getElementById('categoryColor1').addEventListener('input', updateColorPreview);
+            document.getElementById('categoryColor2').addEventListener('input', updateColorPreview);
+        });
+        
+        function initializeDefaultLayout() {
+            const container = document.getElementById('mainContainer');
+            const t = translations[currentLanguage];
+            
+            const column1 = createColumnElement(t.initialColumn1, columnIdCounter++);
+            const column2 = createColumnElement(t.initialColumn2, columnIdCounter++);
+            
+            container.innerHTML = '';
+            container.appendChild(column1);
+            container.appendChild(column2);
+            
+            const addBtn = document.createElement('div');
+            addBtn.className = 'add-column';
+            addBtn.onclick = addNewColumn;
+            addBtn.innerHTML = '<span>+</span>';
+            container.appendChild(addBtn);
+        }
+        
+        function createColumnElement(title, id) {
+            const column = document.createElement('div');
+            const t = translations[currentLanguage];
+            column.className = 'column';
+            column.setAttribute('data-column-id', id);
+            column.setAttribute('data-split-state', 'normal');
+            column.innerHTML = `
+                <div class="column-header" draggable="true">
+                    ${title}
+                    <span class="header-btn color-column-btn" title="${t.columnColor}" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="showColumnColorPicker(this)">🖌️</span>
+                    <span class="header-btn split-column-btn" title="${t.splitColumnTooltip}" onclick="toggleColumnSplit(this)">⫼</span>
+                    <span class="header-btn delete-column" onclick="deleteColumn(this)">×</span>
+                </div>
+                <div class="resize-handle"></div>
+                <div class="column-content">
+                    <div class="section-group" draggable="true">
+                        <div class="section-title">
+                            ${t.newSection}
+                            <span class="section-delete" onclick="deleteSection(this)" title="${t.deleteSectionTooltip}">×</span>
+                            <span class="section-menu" onclick="showSectionColorPicker(this)">⚙</span>
+                        </div>
+                        <div class="box-container"></div>
+                    </div>
+                    <button class="add-section-btn" onclick="addSection(this)">+ ${t.newSection}</button>
+                </div>
+            `;
+            return column;
+        }
+
+        function toggleColumnSplit(btn) {
+            const column = btn.closest('.column');
+            const currentState = column.getAttribute('data-split-state') || 'normal';
+            
+            if (currentState === 'normal') {
+                splitColumn(column, 2);
+                column.setAttribute('data-split-state', 'split-2');
+            } else if (currentState === 'split-2') {
+                splitColumn(column, 3);
+                column.setAttribute('data-split-state', 'split-3');
+            } else {
+                unsplitColumn(column);
+                column.setAttribute('data-split-state', 'normal');
+            }
+        }
+
+        function splitColumn(column, parts) {
+            const content = column.querySelector('.column-content');
+            const sections = Array.from(content.querySelectorAll('.section-group'));
+            const addBtn = content.querySelector('.add-section-btn');
+            
+            column.classList.remove('split-column', 'split-column-3');
+            if (parts === 2) column.classList.add('split-column');
+            else if (parts === 3) column.classList.add('split-column-3');
+            
+            const splitContainer = document.createElement('div');
+            splitContainer.className = 'column-split-content';
+            
+            for (let i = 0; i < parts; i++) {
+                const splitColumn = document.createElement('div');
+                splitColumn.className = parts === 3 ? 'column-third' : 'column-half';
+                
+                const sectionsPerSplit = Math.ceil(sections.length / parts);
+                const startIndex = i * sectionsPerSplit;
+                const endIndex = Math.min((i + 1) * sectionsPerSplit, sections.length);
+                
+                for (let j = startIndex; j < endIndex; j++) {
+                    if (sections[j]) splitColumn.appendChild(sections[j]);
+                }
+                
+                const splitAddBtn = addBtn.cloneNode(true);
+                splitColumn.appendChild(splitAddBtn);
+                splitContainer.appendChild(splitColumn);
+            }
+            
+            content.innerHTML = '';
+            content.appendChild(splitContainer);
+        }
+
+        function unsplitColumn(column) {
+            const content = column.querySelector('.column-content');
+            const splitContainer = content.querySelector('.column-split-content');
+            
+            if (splitContainer) {
+                const allSections = Array.from(splitContainer.querySelectorAll('.section-group'));
+                const addBtns = splitContainer.querySelectorAll('.add-section-btn');
+                
+                column.classList.remove('split-column', 'split-column-3');
+                content.innerHTML = '';
+                allSections.forEach(section => content.appendChild(section));
+                if (addBtns.length > 0) content.appendChild(addBtns[0]);
+            }
+        }
+        
+        function updateColorPreview() {
+            const color1 = document.getElementById('categoryColor1').value;
+            const color2 = document.getElementById('categoryColor2').value;
+            document.getElementById('colorPreview').style.background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+        }
+        
+        function updateCategoryStyles() {
+            let styleEl = document.getElementById('dynamic-styles');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'dynamic-styles';
+                document.head.appendChild(styleEl);
+            }
+            let styles = '';
+            for (const [key, cat] of Object.entries(categories)) {
+                styles += `.${key} { background: linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%); color: ${isLightColor(cat.color1) ? '#1a1a1a' : 'white'}; border: none; }`;
+            }
+            styleEl.innerHTML = styles;
+        }
+        
+        function isLightColor(color) {
+            const hex = color.replace('#', '');
+            const r = parseInt(hex.substr(0, 2), 16);
+            const g = parseInt(hex.substr(2, 2), 16);
+            const b = parseInt(hex.substr(4, 2), 16);
+            return ((r * 299) + (g * 587) + (b * 114)) / 1000 > 155;
+        }
+        
+        function updateCategoryDropdown() {
+            const select = document.getElementById('boxType');
+            select.innerHTML = '';
+            for (const [key, cat] of Object.entries(categories)) {
+                const option = document.createElement('option');
+                option.value = key;
+                option.textContent = cat.name;
+                select.appendChild(option);
+            }
+        }
+        
+        function updateLegend() {
+            const legend = document.getElementById('legend');
+            const t = translations[currentLanguage];
+            legend.innerHTML = `<strong style="margin-right: 20px;">${t.legendTitle}</strong>`;
+            for (const [key, cat] of Object.entries(categories)) {
+                const item = document.createElement('div');
+                item.className = 'legend-item';
+                item.onclick = () => filterByCategory(key);
+                item.innerHTML = `<div class="legend-box" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%)"></div><span>${cat.name}</span>`;
+                legend.appendChild(item);
+            }
+        }
+        
+        function showCategoryModal() {
+            document.getElementById('categoryModal').classList.add('show');
+            updateCategoryList();
+        }
+        
+        function updateCategoryList() {
+            const list = document.getElementById('categoryList');
+            list.innerHTML = '';
+            const t = translations[currentLanguage];
+            for (const [key, cat] of Object.entries(categories)) {
+                const item = document.createElement('div');
+                item.className = 'category-item';
+                item.innerHTML = `
+                    <div class="category-preview" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%);"></div>
+                    <div class="category-controls">
+                        <input type="text" value="${cat.name}" onchange="updateCategoryName('${key}', this.value)">
+                        <input type="color" value="${cat.color1}" onchange="updateCategoryColor('${key}', this.value, '${cat.color2}')">
+                        <input type="color" value="${cat.color2}" onchange="updateCategoryColor('${key}', '${cat.color1}', this.value)">
+                        <button class="btn btn-danger small-btn" onclick="deleteCategory('${key}')">${t.delete}</button>
+                    </div>`;
+                list.appendChild(item);
+            }
+        }
+        
+        function addCategory() {
+            const name = document.getElementById('categoryName').value.trim();
+            const color1 = document.getElementById('categoryColor1').value;
+            const color2 = document.getElementById('categoryColor2').value;
+            const t = translations[currentLanguage];
+            if (!name) { alert(t.alertEnterName); return; }
+            
+            const key = 'cat-' + Date.now();
+            categories[key] = { name, color1, color2 };
+            
+            updateCategoryStyles(); updateCategoryDropdown(); updateLegend(); updateCategoryList();
+            document.getElementById('categoryName').value = '';
+            alert(t.alertCategoryAdded.replace('{name}', name));
+        }
+        
+        function updateCategoryName(key, newName) {
+            if (categories[key] && newName.trim()) {
+                categories[key].name = newName.trim();
+                updateCategoryDropdown(); updateLegend();
+            }
+        }
+        
+        function updateCategoryColor(key, color1, color2) {
+            if (categories[key]) {
+                categories[key].color1 = color1; categories[key].color2 = color2;
+                updateCategoryStyles(); updateLegend(); updateCategoryList();
+            }
+        }
+        
+        function deleteCategory(key) {
+            const t = translations[currentLanguage];
+            if (Object.keys(categories).length <= 1) { alert(t.alertOneCategoryNeeded); return; }
+            if (confirm(t.confirmDeleteCategory.replace('{name}', categories[key].name))) {
+                delete categories[key];
+                updateCategoryStyles(); updateCategoryDropdown(); updateLegend(); updateCategoryList();
+            }
+        }
+        
+        function filterByCategory(key) {
+            document.querySelectorAll('.app-box').forEach(box => box.style.opacity = box.classList.contains(key) ? '1' : '0.3');
+            setTimeout(() => document.querySelectorAll('.app-box').forEach(box => box.style.opacity = '1'), 2000);
+        }
+
+        function toggleGridLines() {
+            const container = document.querySelector('.main-container');
+            const btn = document.getElementById('gridToggleBtn');
+            const t = translations[currentLanguage];
+            container.classList.toggle('grid-lines');
+            btn.textContent = container.classList.contains('grid-lines') ? t.gridLinesHide : t.gridLines;
+        }
+        
+// HELFER-FUNKTION: Findet heraus, vor welches BOX-Element eingefügt werden soll.
+        function getDragAfterElement(container, x, y) {
+            const draggableElements = [...container.querySelectorAll('.app-box:not(.dragging-placeholder)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offsetY = y - box.top - box.height / 2;
+                if (offsetY < 0 && offsetY > closest.offsetY) {
+                    return { offsetY: offsetY, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offsetY: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // HELFER-FUNKTION: Findet heraus, vor welches SECTION-Element eingefügt werden soll.
+        function getDragAfterSection(container, y) {
+            const draggableElements = [...container.querySelectorAll('.section-group:not(.dragging-placeholder)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset: offset, element: child };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
+        // ==================================================================
+        // FINALE, KOMPLETTE DRAG & DROP FUNKTION
+        // ==================================================================
+        function initializeDragAndDrop() {
+            let draggedElement = null; // Das Element, das WIRKLICH bewegt wird
+            let placeholder = null;    // Das visuelle Feedback-Element
+            let isCloning = false;     // Merkt sich, ob wir gerade klonen
+
+            document.addEventListener('dragstart', function(e) {
+                const target = e.target;
+                if (!target.matches('.app-box, .section-group')) return;
+                if (e.target.closest('.section-title input')) return;
+
+                isCloning = e.ctrlKey;
+                
+                if (isCloning) {
+                    draggedElement = target.cloneNode(true);
+                    draggedElement.classList.add('dragging');
+                } else {
+                    draggedElement = target;
+                    setTimeout(() => target.classList.add('dragging'), 0);
+                }
+                
+                placeholder = document.createElement('div');
+                placeholder.classList.add('dragging-placeholder');
+                if (target.classList.contains('section-group')) {
+                    placeholder.style.height = '100px';
+                } else {
+                    placeholder.style.height = target.offsetHeight + 'px';
+                }
+                
+                e.dataTransfer.effectAllowed = 'move';
+                try { e.dataTransfer.setData('text/plain', ''); } catch (err) {}
+            });
+
+            document.addEventListener('dragover', function(e) {
+                e.preventDefault();
+                if (!draggedElement) return;
+
+                if (draggedElement.classList.contains('app-box')) {
+                    const container = e.target.closest('.box-container');
+                    if (container) {
+                        const afterElement = getDragAfterElement(container, e.clientX, e.clientY);
+                        container.insertBefore(placeholder, afterElement);
+                    }
+                } 
+                else if (draggedElement.classList.contains('section-group')) {
+                    const container = e.target.closest('.column-content, .column-half, .column-third');
+                    if (container) {
+                        const afterElement = getDragAfterSection(container, e.clientY);
+                        container.insertBefore(placeholder, afterElement);
+                    }
+                }
+            });
+
+            document.addEventListener('drop', function(e) {
+                e.preventDefault();
+                if (!placeholder || !placeholder.parentElement) return;
+                
+                const dropContainer = placeholder.parentElement;
+                dropContainer.replaceChild(draggedElement, placeholder);
+                draggedElement.classList.remove('dragging');
+
+                // NEU: Stellt sicher, dass der "+ Neue Section"-Button immer am Ende ist.
+                if (draggedElement.classList.contains('section-group')) {
+                    const button = dropContainer.querySelector('.add-section-btn');
+                    if(button) {
+                        dropContainer.appendChild(button);
+                    }
+                }
+            });
+
+            document.addEventListener('dragend', function(e) {
+                if(draggedElement) {
+                    draggedElement.classList.remove('dragging');
+                }
+                if (placeholder && placeholder.parentElement) {
+                    placeholder.remove();
+                }
+                draggedElement = null;
+                placeholder = null;
+                isCloning = false;
+            });
+        }
+        
+        function getDragAfterElement(container, x) {
+            const draggableElements = [...container.querySelectorAll('.app-box:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = x - box.left - box.width / 2;
+                if (offset < 0 && offset > closest.offset) return { offset, element: child };
+                else return closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+        
+        function initializeResize() {
+            document.addEventListener('mousedown', e => {
+                if (e.target.classList.contains('resize-handle')) {
+                    isResizing = true;
+                    currentResizeColumn = e.target.parentElement;
+                    startX = e.pageX;
+                    startWidth = currentResizeColumn.offsetWidth;
+                    e.preventDefault();
+                }
+            });
+            document.addEventListener('mousemove', e => {
+                if (!isResizing) return;
+                const width = startWidth + e.pageX - startX;
+                if (width >= 150 && width <= 900) currentResizeColumn.style.width = width + 'px';
+            });
+            document.addEventListener('mouseup', () => { isResizing = false; currentResizeColumn = null; });
+        }
+        
+        function initializeColumnDrag() {
+            let draggedColumn = null;
+            document.addEventListener('dragstart', e => {
+                if (e.target.classList.contains('column-header')) {
+                    draggedColumn = e.target.parentElement;
+                    e.dataTransfer.effectAllowed = 'move';
+                }
+            });
+            document.addEventListener('dragover', e => {
+                if (!draggedColumn) return;
+                e.preventDefault();
+                const column = e.target.closest('.column');
+                if (column && column !== draggedColumn) {
+                    const columns = [...document.getElementById('mainContainer').querySelectorAll('.column')];
+                    const draggedIndex = columns.indexOf(draggedColumn);
+                    const targetIndex = columns.indexOf(column);
+                    if (draggedIndex < targetIndex) column.parentNode.insertBefore(draggedColumn, column.nextSibling);
+                    else column.parentNode.insertBefore(draggedColumn, column);
+                }
+            });
+            document.addEventListener('dragend', () => { draggedColumn = null; });
+        }
+        
+        function addNewColumn() {
+            const container = document.getElementById('mainContainer');
+            const addButton = container.querySelector('.add-column');
+            const t = translations[currentLanguage];
+            const newColumn = createColumnElement(t.newColumn, columnIdCounter++);
+            container.insertBefore(newColumn, addButton);
+        }
+        
+        function deleteColumn(btn) {
+            if (confirm(translations[currentLanguage].confirmDeleteColumn)) {
+                btn.closest('.column').remove();
+            }
+        }
+        
+        function addSection(btn) {
+            const columnContent = btn.parentElement;
+            const t = translations[currentLanguage];
+            const newSection = document.createElement('div');
+            newSection.className = 'section-group';
+            newSection.draggable = true;
+            newSection.innerHTML = `
+                <div class="section-title">
+                    ${t.newSection}
+                    <span class="section-delete" onclick="deleteSection(this)" title="${t.deleteSectionTooltip}">×</span>
+                    <span class="section-menu" onclick="showSectionColorPicker(this)">⚙</span>
+                </div>
+                <div class="box-container"></div>`;
+            columnContent.insertBefore(newSection, btn);
+        }
+
+        function deleteSection(deleteBtn) {
+            if (confirm(translations[currentLanguage].confirmDeleteSection)) {
+                const sectionGroup = deleteBtn.closest('.section-group');
+                sectionGroup.remove();
+            }
+        }
+        
+        function deleteBox(btn) { btn.parentElement.remove(); }
+        
+        function toggleBoxWidth(btn) {
+            const box = btn.parentElement;
+            box.classList.toggle('full-width');
+            box.classList.toggle('half-width');
+        }
+        
+        function showAddBoxModal() {
+            document.getElementById('addBoxModal').classList.add('show');
+            document.getElementById('boxName').value = translations[currentLanguage].newApplicationName;
+        }
+        
+        function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
+        
+        function addBox() {
+            const name = document.getElementById('boxName').value;
+            const type = document.getElementById('boxType').value;
+            const width = document.getElementById('boxWidth').value;
+            const lines = parseInt(document.getElementById('boxLines').value, 10) || 1;
+            const textColor = document.getElementById('boxTextColor').value;
+
+            const newBox = document.createElement('div');
+            newBox.className = `app-box ${type} ${width}`;
+            newBox.draggable = true;
+            newBox.innerHTML = `${name}<button class="delete-btn" onclick="deleteBox(this)">×</button><button class="resize-btn" onclick="toggleBoxWidth(this)">↔</button>`;
+            newBox.dataset.lines = String(lines);
+            
+            const minHeight = ((lines * 26) + 12);
+            newBox.style.minHeight = `${minHeight}px`;
+
+            // ALT: if (textColor !== '#000000') newBox.style.color = textColor;
+            // NEU: Die Farbe wird jetzt immer direkt zugewiesen, auch wenn es schwarz ist.
+            newBox.style.color = textColor;
+        
+            const firstContainer = document.querySelector('.box-container');
+            if (firstContainer) firstContainer.appendChild(newBox);
+            closeModal('addBoxModal');
+        }       
+        
+        function resetLayout() {
+            if (confirm(translations[currentLanguage].confirmResetLayout)) location.reload();
+        }
+        
+        function clearAll() {
+            if (confirm(translations[currentLanguage].confirmClearAll)) {
+                document.getElementById('mainContainer').innerHTML = '<div class="add-column" onclick="addNewColumn()"><span>+</span></div>';
+            }
+        }
+        
+        document.addEventListener('click', e => {
+            if (e.target.classList.contains('section-title') && !e.target.closest('.section-menu, .section-delete')) {
+                const title = e.target;
+                const menuHTML = title.querySelector('.section-menu')?.outerHTML || '';
+                const deleteHTML = title.querySelector('.section-delete')?.outerHTML || '';
+                const currentText = title.textContent.replace('⚙', '').replace('×', '').trim();
+                
+                title.innerHTML = `<input type="text" value="${currentText}" onblur="updateSectionTitle(this)" onkeypress="if(event.key==='Enter') this.blur()">`;
+                title.querySelector('input').focus();
+                title.setAttribute('data-menu', deleteHTML + menuHTML);
+            }
+        });
+        
+        function updateSectionTitle(input) {
+            const newTitle = input.value || translations[currentLanguage].newSection;
+            const title = input.parentElement;
+            const menuHTML = title.getAttribute('data-menu') || '';
+            title.innerHTML = newTitle + ' ' + menuHTML;
+            title.removeAttribute('data-menu');
+        }
+        
+        document.addEventListener('dblclick', e => {
+            if (e.target.classList.contains('column-header')) {
+                const header = e.target;
+                const currentText = header.childNodes[0].textContent.trim();
+                const buttonsHTML = Array.from(header.querySelectorAll('.header-btn')).map(btn => btn.outerHTML).join('');
+                header.innerHTML = `<input type="text" value="${currentText}" onblur="updateColumnTitle(this)" onkeypress="if(event.key==='Enter') this.blur()"> ${buttonsHTML}`;
+                header.querySelector('input').focus();
+            }
+        });
+        
+        function updateColumnTitle(input) {
+            const newTitle = input.value || translations[currentLanguage].newColumn;
+            const header = input.parentElement;
+            const buttonsHTML = Array.from(header.querySelectorAll('.header-btn')).map(btn => btn.outerHTML).join('');
+            header.innerHTML = newTitle + ' ' + buttonsHTML;
+        }
+        
+        document.addEventListener('contextmenu', e => {
+            if (e.target.classList.contains('app-box')) {
+                e.preventDefault();
+                const box = e.target;
+                const types = Object.keys(categories);
+                const currentType = types.find(t => box.classList.contains(t));
+                const currentIndex = types.indexOf(currentType);
+                const nextIndex = (currentIndex + 1) % types.length;
+                
+                if (currentType) box.classList.remove(currentType);
+                box.classList.add(types[nextIndex]);
+            }
+        });
+
+        function showSectionColorPicker(menuBtn) {
+            document.querySelectorAll('.section-color-picker').forEach(picker => picker.remove());
+            const sectionTitle = menuBtn.closest('.section-title');
+            const picker = document.createElement('div');
+            picker.className = 'section-color-picker show';
+            picker.innerHTML = sectionColorPalette.map(opt => `
+                <div class="color-option" onclick="changeSectionColor('${opt.color}', this)">
+                    <div class="color-preview" style="background: ${opt.color}"></div>
+                    <span>${opt.name}</span>
+                </div>`).join('');
+            sectionTitle.appendChild(picker);
+            
+            picker.onclick = e => e.stopPropagation();
+            setTimeout(() => {
+                document.addEventListener('click', function closePickerHandler() {
+                    picker.remove();
+                    document.removeEventListener('click', closePickerHandler);
+                });
+            }, 100);
+        }
+        
+        function changeSectionColor(color, optionElement) {
+            const sectionTitle = optionElement.closest('.section-title');
+            sectionTitle.style.background = color;
+            sectionTitle.setAttribute('data-color', color);
+            optionElement.closest('.section-color-picker').remove();
+        }
+        
+        // === TEMPLATE MANAGEMENT FUNCTIONS ===
+        function saveTemplate() {
+            const t = translations[currentLanguage];
+            const templateName = prompt(t.promptTemplateName, `${t.defaultTemplateName} ${new Date().toLocaleDateString()}`);
+            if (!templateName) return;
+            
+            const templateData = { name: templateName, date: new Date().toISOString(), categories, layout: extractLayoutData() };
+            const templates = getStoredTemplates();
+            templates[templateName] = templateData;
+            localStorage.setItem('architectureTemplates', JSON.stringify(templates));
+            
+            downloadTemplateAsFile(templateData);
+            alert(t.alertTemplateSaved.replace('{name}', templateName));
+        }
+        
+        function getStoredTemplates() { return JSON.parse(localStorage.getItem('architectureTemplates') || '{}'); }
+        
+// Extract current layout data
+        function extractLayoutData() {
+            const columns = [];
+            document.querySelectorAll('.column').forEach(column => {
+                const columnData = {
+                    id: column.getAttribute('data-column-id'),
+                    title: column.querySelector('.column-header').childNodes[0].textContent.trim(),
+                    width: column.offsetWidth + 'px',
+                    splitState: column.getAttribute('data-split-state') || 'normal',
+                    contentAreas: []
+                };
+                
+                let contentAreaNodes;
+                if (column.classList.contains('split-column') || column.classList.contains('split-column-3')) {
+                    contentAreaNodes = column.querySelectorAll('.column-half, .column-third');
+                } else {
+                    contentAreaNodes = [column.querySelector('.column-content')];
+                }
+                
+                contentAreaNodes.forEach(areaNode => {
+                    const areaData = { sections: [] };
+                    areaNode.querySelectorAll('.section-group').forEach(section => {
+                        const sectionTitle = section.querySelector('.section-title');
+                        const sectionData = {
+                            title: sectionTitle.childNodes[0].textContent.trim(),
+                            color: sectionTitle.getAttribute('data-color') || '#8B4513',
+                            boxes: Array.from(section.querySelectorAll('.app-box')).map(box => ({
+                                text: box.childNodes[0].textContent.trim(),
+                                type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
+                                width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
+                                lines: box.dataset.lines || '1',
+                                textColor: box.style.color || ''
+                            }))
+                        };
+                        areaData.sections.push(sectionData);
+                    });
+                    columnData.contentAreas.push(areaData);
+                });
+                columns.push(columnData);
+            });
+            return { columns };
+        } 
+        
+        function downloadTemplateAsFile(templateData) {
+            const blob = new Blob([JSON.stringify(templateData, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${templateData.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+        
+        function showLoadTemplateModal() {
+            document.getElementById('loadTemplateModal').classList.add('show');
+            updateTemplateList();
+        }
+        
+        function updateTemplateList() {
+            const list = document.getElementById('templateList');
+            const templates = getStoredTemplates();
+            const t = translations[currentLanguage];
+            list.innerHTML = '';
+            
+            if (Object.keys(templates).length === 0) {
+                list.innerHTML = `<div style="text-align: center; color: #666; padding: 20px;">${t.noSavedTemplates}</div>`;
+                return;
+            }
+            
+            for (const [name, template] of Object.entries(templates)) {
+                const item = document.createElement('div');
+                item.className = 'template-item';
+                item.innerHTML = `
+                    <div class="template-info" onclick="loadTemplate('${name}')">
+                        <div class="template-name">${template.name}</div>
+                        <div class="template-date">${new Date(template.date).toLocaleString()}</div>
+                    </div>
+                    <div class="template-actions">
+                        <button class="btn btn-primary small-btn" onclick="loadTemplate('${name}')">${t.loadTemplate.split(' ')[0]}</button>
+                        <button class="btn btn-warning small-btn" onclick="downloadStoredTemplate('${name}')">Download</button>
+                        <button class="btn btn-danger small-btn" onclick="deleteTemplate('${name}')">${t.delete}</button>
+                    </div>`;
+                list.appendChild(item);
+            }
+        }
+        
+        function loadTemplate(templateName) {
+            const t = translations[currentLanguage];
+            const templates = getStoredTemplates();
+            const template = templates[templateName];
+            if (!template) { alert(t.alertTemplateNotFound); return; }
+            if (!confirm(t.confirmLoadTemplate.replace('{name}', templateName))) return;
+            
+            categories = template.categories || categories;
+            updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+            applyLayoutData(template.layout);
+            
+            closeModal('loadTemplateModal');
+            // HINWEIS: Die Erfolgsmeldung wurde hier entfernt (auskommentiert).
+            // alert(t.alertTemplateLoaded.replace('{name}', templateName)); 
+        }
+        
+// Apply layout data
+        function applyLayoutData(layoutData) {
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = ''; // Leert den Container für das neue Layout
+            const t = translations[currentLanguage];
+
+            if (layoutData.columns) {
+                layoutData.columns.forEach(columnData => {
+                    const column = createColumnElement(columnData.title, columnData.id);
+                    if(columnData.width) column.style.width = columnData.width;
+
+                    const splitState = columnData.splitState || 'normal';
+                    column.setAttribute('data-split-state', splitState);
+                    
+                    const contentWrapper = column.querySelector('.column-content');
+                    contentWrapper.innerHTML = ''; // Leert den Standard-Inhalt, der von createColumnElement kommt
+
+                    // Baut die Spaltenstruktur (normal oder geteilt) auf
+                    if (splitState === 'normal') {
+                        // Für normale Spalten gibt es nur einen Inhaltsbereich
+                        const areaData = columnData.contentAreas[0] || { sections: [] };
+                        let sectionsHtml = '';
+                        areaData.sections.forEach(sectionData => {
+                            sectionsHtml += buildSectionHtml(sectionData, t);
+                        });
+                        contentWrapper.innerHTML = sectionsHtml + `<button class="add-section-btn" onclick="addSection(this)">+ ${t.newSection}</button>`;
+                    
+                    } else {
+                        // Für geteilte Spalten wird die Split-Struktur erstellt
+                        const parts = splitState === 'split-2' ? 2 : 3;
+                        const partClass = splitState === 'split-2' ? 'column-half' : 'column-third';
+                        column.classList.add(splitState === 'split-2' ? 'split-column' : 'split-column-3');
+
+                        const splitContainer = document.createElement('div');
+                        splitContainer.className = 'column-split-content';
+
+                        for (let i = 0; i < parts; i++) {
+                            const partDiv = document.createElement('div');
+                            partDiv.className = partClass;
+
+                            const areaData = columnData.contentAreas[i] || { sections: [] };
+                            let sectionsHtml = '';
+                            areaData.sections.forEach(sectionData => {
+                                sectionsHtml += buildSectionHtml(sectionData, t);
+                            });
+                            partDiv.innerHTML = sectionsHtml + `<button class="add-section-btn" onclick="addSection(this)">+ ${t.newSection}</button>`;
+                            splitContainer.appendChild(partDiv);
+                        }
+                        contentWrapper.appendChild(splitContainer);
+                    }
+                    container.appendChild(column);
+                });
+            }
+
+            // Fügt am Ende den "+" Button für neue Spalten hinzu
+            const addBtn = document.createElement('div');
+            addBtn.className = 'add-column';
+            addBtn.onclick = addNewColumn;
+            addBtn.innerHTML = '<span>+</span>';
+            container.appendChild(addBtn);
+        }
+
+// HELFER-FUNKTION: Baut das HTML für eine einzelne Sektion (wird von applyLayoutData genutzt)
+        function buildSectionHtml(sectionData, t) {
+            let boxesHtml = '';
+            if (sectionData.boxes && Array.isArray(sectionData.boxes)) {
+                sectionData.boxes.forEach(boxData => {
+                    const lines = parseInt(boxData.lines, 10) || 1;
+                    const minHeight = (lines * 26) + 12;
+                    const dataLinesAttr = `data-lines="${lines}"`;
+
+                    let styleString = `min-height: ${minHeight}px;`;
+                    if (boxData.textColor) styleString += ` color: ${boxData.textColor};`;
+                    const styleAttr = `style="${styleString}"`;
+
+                    boxesHtml += `
+                        <div class="app-box ${boxData.type || 'saas'} ${boxData.width || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr}>
+                            ${boxData.text}
+                            <button class="delete-btn" onclick="deleteBox(this)">×</button>
+                            <button class="resize-btn" onclick="toggleBoxWidth(this)">↔</button>
+                        </div>`;
+                });
+            }
+            const sectionColor = sectionData.color || '#8B4513';
+            return `
+                <div class="section-group" draggable="true">
+                    <div class="section-title" style="background: ${sectionColor}" data-color="${sectionColor}">
+                        ${sectionData.title}
+                        <span class="section-delete" onclick="deleteSection(this)" title="${t.deleteSectionTooltip}">×</span>
+                        <span class="section-menu" onclick="showSectionColorPicker(this)">⚙</span>
+                    </div>
+                    <div class="box-container">${boxesHtml}</div>
+                </div>`;
+        }  
+        
+        function downloadStoredTemplate(templateName) {
+            const template = getStoredTemplates()[templateName];
+            if (template) downloadTemplateAsFile(template);
+        }
+        
+        function deleteTemplate(templateName) {
+            if (confirm(translations[currentLanguage].confirmDeleteCategory.replace('{name}', templateName))) {
+                const templates = getStoredTemplates();
+                delete templates[templateName];
+                localStorage.setItem('architectureTemplates', JSON.stringify(templates));
+                updateTemplateList();
+            }
+        }
+        
+        function loadTemplateFromFile() {
+            const fileInput = document.getElementById('templateFileInput');
+            const file = fileInput.files[0];
+            const t = translations[currentLanguage];
+            if (!file) { alert(t.alertChooseFile); return; }
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                try {
+                    const templateData = JSON.parse(e.target.result);
+                    if (!templateData.categories || !templateData.layout) throw new Error('Invalid format');
+                    if (!confirm(t.confirmLoadFromFile.replace('{name}', templateData.name))) return;
+                    
+                    categories = templateData.categories;
+                    updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+                    applyLayoutData(templateData.layout);
+                    
+                    closeModal('loadTemplateModal');
+                    // HINWEIS: Die Erfolgsmeldung wurde hier entfernt (auskommentiert).
+                    // alert(t.alertFileLoaded.replace('{name}', templateData.name));
+                } catch (error) {
+                    alert(t.alertFileLoadError + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }    
+        
+        // === PNG EXPORT FUNCTIONS ===
+        function exportToPNG() {
+            const container = document.querySelector('.main-container');
+            const t = translations[currentLanguage];
+            
+            const button = event.target;
+            const originalText = button.textContent;
+            button.textContent = t.exporting;
+            button.disabled = true;
+            
+            hideExportUIElements();
+            
+            setTimeout(() => {
+                html2canvas(container, {
+                    scale: 2, backgroundColor: '#ffffff',
+                    width: Math.max(container.scrollWidth, container.offsetWidth),
+                    height: Math.max(container.scrollHeight, container.offsetHeight)
+                }).then(canvas => {
+                    showExportUIElements();
+                    const a = document.createElement('a');
+                    a.href = canvas.toDataURL('image/png', 0.95);
+                    a.download = 'enterprise-architecture-' + new Date().toISOString().split('T')[0] + '.png';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    
+                    button.textContent = originalText;
+                    button.disabled = false;
+                    alert(t.alertExportSuccess);
+                }).catch(error => {
+                    showExportUIElements();
+                    button.textContent = originalText;
+                    button.disabled = false;
+                    alert(t.alertExportError + error.message);
+                });
+            }, 100);
+        }
+        
+        function hideExportUIElements() {
+            document.querySelectorAll('.add-section-btn, .add-column, .delete-column, .section-menu, .split-column-btn, .section-delete, .color-column-btn').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.section-group').forEach(section => { section.style.border = 'none'; section.style.background = 'transparent'; });
+        }
+        
+        function showExportUIElements() {
+            document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.add-column, .delete-column, .section-menu, .split-column-btn, .section-delete, .color-column-btn').forEach(el => el.style.display = 'flex');
+            document.querySelectorAll('.section-group').forEach(section => { section.style.border = '2px dashed #999'; section.style.background = ''; });
+        }
+    </script>
+
+<!-- Injected from Explainator2: Formatting Modal -->
+<div class="modal" id="formattingModal" data-target="columns">
+        <div class="modal-content">
+            <div class="modal-header">🔠 Schriftart anpassen</div>
+            <div class="formatting-target-selector">
+                <button class="btn active" onclick="switchFormattingTarget('columns', this)">Spalten</button>
+                <button class="btn" onclick="switchFormattingTarget('sections', this)">Sections</button>
+                <button class="btn" onclick="switchFormattingTarget('boxes', this)">Boxen</button>
+            </div>
+            <div class="modal-body">
+                <label for="fontFamily">Schriftart:</label>
+                <select id="fontFamily">
+                    <option value="'Segoe UI', Arial, sans-serif">Segoe UI (Default)</option>
+                    <option value="Arial, sans-serif">Arial</option>
+                    <option value="'Times New Roman', Times, serif">Times New Roman</option>
+                    <option value="'Courier New', Courier, monospace">Courier New</option>
+                    <option value="Verdana, sans-serif">Verdana</option>
+                    <option value="Georgia, serif">Georgia</option>
+                </select>
+                <label for="fontSize">Schriftgröße (px):</label>
+                <input type="number" id="fontSize" value="14" min="8" max="32">
+                <div style="display: flex; gap: 20px; margin-top: 15px;">
+                    <label class="checkbox-label"><input type="checkbox" id="fontBold"><strong>Fett</strong></label>
+                    <label class="checkbox-label"><input type="checkbox" id="fontItalic"><em>Kursiv</em></label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="saveCurrentFontStyle()">Anwenden & Schließen</button>
+                <button class="btn btn-danger" onclick="closeModal('formattingModal')">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+<script>
+(function(){
+  var styleEl = document.getElementById('font-styles');
+  if(!styleEl){ styleEl = document.createElement('style'); styleEl.id='font-styles'; document.head.appendChild(styleEl); }
+
+  window.fontSettings = window.fontSettings || {
+    columns: { family:"'Segoe UI', Arial, sans-serif", size:14, bold:true, italic:false },
+    sections:{ family:"'Segoe UI', Arial, sans-serif", size:12, bold:true, italic:false },
+    boxes:   { family:"'Segoe UI', Arial, sans-serif", size:11, bold:false, italic:false }
+  };
+
+  function toCss(cfg){
+    return "font-family:"+cfg.family+" !important; font-size:"+cfg.size+"px !important; font-weight:"+(cfg.bold?'700':'400')+" !important; font-style:"+(cfg.italic?'italic':'normal')+" !important;";
+  }
+
+  window.applyAllFontStyles = function(){
+    var css = ""
+      + ".column .column-header, .column .column-header input { " + toCss(window.fontSettings.columns) + " }\n"
+      + ".section-title, .section-title input { " + toCss(window.fontSettings.sections) + " }\n"
+      + ".app-box { " + toCss(window.fontSettings.boxes) + " }\n";
+    styleEl.textContent = css;
+  };
+
+  window.showFormattingModal = function(){
+    var m=document.getElementById('formattingModal'); if(m){ m.classList.add('show'); }
+    // Load current target's values if selector exists
+    var t = (m && m.getAttribute('data-target')) || 'columns';
+    var cfg = window.fontSettings[t];
+    var fam=document.getElementById('fontFamily'), size=document.getElementById('fontSize'), b=document.getElementById('fontBold'), i=document.getElementById('fontItalic');
+    if(fam) fam.value = cfg.family;
+    if(size) size.value = cfg.size;
+    if(b) b.checked = !!cfg.bold;
+    if(i) i.checked = !!cfg.italic;
+  };
+
+  window.switchFormattingTarget = function(target, btn){
+    var m=document.getElementById('formattingModal'); if(m){ m.setAttribute('data-target', target); }
+    if(btn && btn.parentElement){ btn.parentElement.querySelectorAll('.btn').forEach(function(x){ x.classList.remove('active'); }); btn.classList.add('active'); }
+    // sync form
+    var cfg = window.fontSettings[target];
+    var fam=document.getElementById('fontFamily'), size=document.getElementById('fontSize'), b=document.getElementById('fontBold'), i=document.getElementById('fontItalic');
+    if(fam) fam.value = cfg.family;
+    if(size) size.value = cfg.size;
+    if(b) b.checked = !!cfg.bold;
+    if(i) i.checked = !!cfg.italic;
+  };
+
+  window.saveCurrentFontStyle = function(){
+    var m=document.getElementById('formattingModal'); var t=(m && m.getAttribute('data-target'))||'columns';
+    var fam=document.getElementById('fontFamily'), size=document.getElementById('fontSize'), b=document.getElementById('fontBold'), i=document.getElementById('fontItalic');
+    var cfg=window.fontSettings[t];
+    if(fam) cfg.family=fam.value||cfg.family;
+    if(size){ var v=parseInt(size.value,10); if(!isNaN(v)) cfg.size=v; }
+    if(b) cfg.bold=!!b.checked; if(i) cfg.italic=!!i.checked;
+    window.applyAllFontStyles();
+    if(m) m.classList.remove('show');
+  };
+
+  // Apply once
+  window.applyAllFontStyles();
+})();
+</script>
+
+
+<script>
+(function(){
+  if (typeof window.applyHeaderColor !== 'function') {
+    window.applyHeaderColor = function(header, color){
+      if(!header) return;
+      header.style.background = 'linear-gradient(to bottom,'+color+','+color+')';
+      var col = header.closest('.column'); if(col) col.style.borderColor = color;
+    };
+  }
+  // Delegated handler to ensure button always works for dynamic columns
+  if (!window.__ea_color_delegate__) {
+    window.__ea_color_delegate__ = true;
+    document.addEventListener('click', function(e){
+      var btn = e.target && e.target.closest && e.target.closest('.color-column-btn');
+      if (!btn) return;
+      e.preventDefault(); e.stopPropagation();
+      try { if (typeof showColumnColorPicker === 'function') showColumnColorPicker(btn); } catch(err) { console.warn(err); }
+    }, true);
+  }
+})();
+</script>
+
+<script>
+
+window.showColumnColorPicker = function(btn){
+  try{
+    // Prevent header drag from swallowing events
+    btn.setAttribute('draggable','false');
+    btn.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); ev.preventDefault(); }, { once:true });
+  }catch(e){}
+
+  // Close other pickers
+  document.querySelectorAll('.column-color-picker').forEach(function(p){ p.remove(); });
+
+  var header = btn.closest('.column-header');
+  if(!header) return;
+  header.style.position = header.style.position || 'relative';
+
+  var p = document.createElement('div');
+  p.className = 'column-color-picker';
+  p.innerHTML = '<div class="row"><strong>Header-Farbe</strong></div>'
+    + ['#8B4513','#2196F3','#4CAF50','#FF9800','#9C27B0','#F44336','#607D8B','#009688'].map(function(c){return '<div class="row"><div class="swatch" data-c="'+c+'" style="background:'+c+'"></div><span>'+c+'</span></div>';}).join('')
+    + '<div class="row" style="margin-top:8px;"><input type="color" id="col-custom" value="#8B4513" style="flex:0 0 40px;border:none;padding:0;"><button class="btn small-btn">Übernehmen</button></div>';
+
+  // Stop events inside picker from bubbling to global handlers
+  ['mousedown','pointerdown','click'].forEach(function(evt){
+    p.addEventListener(evt, function(e){ e.stopPropagation(); }, true);
+    btn.addEventListener(evt, function(e){ e.stopPropagation(); }, true);
+  });
+
+  header.appendChild(p);
+  requestAnimationFrame(function(){ p.classList.add('show'); });
+
+  p.addEventListener('click', function(e){
+    var sw = e.target.closest && e.target.closest('.swatch');
+    if(sw){ applyHeaderColor(header, sw.getAttribute('data-c')); p.remove(); return; }
+    if(e.target && e.target.tagName === 'BUTTON'){
+      var c = p.querySelector('#col-custom').value; applyHeaderColor(header, c); p.remove(); return;
+    }
+  }, true);
+
+  // Close on outside mousedown (but not if inside picker)
+  function onDoc(ev){
+    if(!p.contains(ev.target) && ev.target!==btn){
+      p.remove(); document.removeEventListener('mousedown', onDoc, true);
+    }
+  }
+  setTimeout(function(){ document.addEventListener('mousedown', onDoc, true); }, 0);
+};
+
+</script>
+
+<script>
+(function(){
+  if(!window.__ea_color_delegate_v2__){
+    window.__ea_color_delegate_v2__ = true;
+    document.addEventListener('click', function(e){
+      var b = e.target && e.target.closest && e.target.closest('.color-column-btn');
+      if(!b) return;
+      e.preventDefault(); e.stopPropagation();
+      try{ (window.showColumnColorPicker||showColumnColorPicker)(b); }catch(err){ console.warn(err); }
+    }, true);
+    document.addEventListener('pointerdown', function(e){
+      var b = e.target && e.target.closest && e.target.closest('.color-column-btn');
+      if(b){ e.preventDefault(); e.stopPropagation(); }
+    }, true);
+  }
+})();
+</script>
+
+
+<script>
+(function(){
+  function ensureColorButton(header){
+    if(!header) return;
+    if(header.querySelector('.color-column-btn')) return;
+    var btn = document.createElement('span');
+    btn.className = 'header-btn color-column-btn';
+    btn.title = 'Header-Farbe ändern';
+    btn.setAttribute('draggable','false');
+    btn.textContent = '🖌️';
+    // Guard: prevent drag handlers from eating click
+    btn.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); }, true);
+    btn.addEventListener('click', function(e){
+      e.preventDefault(); e.stopPropagation();
+      try { (window.showColumnColorPicker||showColumnColorPicker)(btn); } catch(err){ console.warn(err); }
+    }, true);
+    header.appendChild(btn);
+  }
+  function ensureAll(){
+    document.querySelectorAll('.column-header').forEach(ensureColorButton);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', ensureAll, { once:true });
+  } else {
+    ensureAll();
+  }
+  // Observe dynamic changes to re-add icon when columns are re-rendered
+  try{
+    var obs = new MutationObserver(function(muts){
+      for (var i=0;i<muts.length;i++){
+        var m = muts[i];
+        for (var j=0;j<(m.addedNodes?m.addedNodes.length:0); j++){
+          var n = m.addedNodes[j];
+          if(n.nodeType===1){
+            if (n.classList && n.classList.contains('column-header')) ensureColorButton(n);
+            else if (n.querySelectorAll) n.querySelectorAll('.column-header').forEach(ensureColorButton);
+          }
+        }
+      }
+    });
+    obs.observe(document.body, { childList:true, subtree:true });
+  }catch(e){}
+})();
+</script>
+
+
+<script>
+window.enterScreenshotMode = function(){ document.body.classList.add('screenshot-mode'); };
+window.exitScreenshotMode = function(){ document.body.classList.remove('screenshot-mode'); };
+window.addEventListener('vc:screenshot:start', function(){ document.body.classList.add('screenshot-mode'); });
+window.addEventListener('vc:screenshot:end', function(){ document.body.classList.remove('screenshot-mode'); });
+</script>
+
+
+<script>
+(function(){
+  if (window.__colorBrushGuardInstalled__) return;
+  window.__colorBrushGuardInstalled__ = true;
+  const stop = ev => { ev.stopPropagation(); };
+  ['pointerdown','mousedown','dragstart'].forEach(evt => {
+    document.addEventListener(evt, function(ev){
+      if (ev.target && ev.target.closest && ev.target.closest('.color-column-btn, .column-color-picker')) {
+        // prevent column header drag when interacting with the color UI
+        ev.preventDefault();
+        ev.stopPropagation();
+      }
+    }, true);
+  });
+})();
+</script>
+
+<script>
+    // Ermöglicht das Bearbeiten von Box-Texten per Doppelklick
+    document.getElementById('mainContainer').addEventListener('dblclick', function(e) {
+        const box = e.target.closest('.app-box');
+        if (!box) return;
+
+        // Verhindern, dass ein Input-Feld in sich selbst erstellt wird
+        if (e.target.tagName === 'INPUT') return;
+
+        const currentText = box.childNodes[0].nodeValue.trim();
+        
+        // Temporär die Buttons ausblenden für mehr Platz
+        const deleteBtn = box.querySelector('.delete-btn');
+        const resizeBtn = box.querySelector('.resize-btn');
+        if(deleteBtn) deleteBtn.style.display = 'none';
+        if(resizeBtn) resizeBtn.style.display = 'none';
+
+        // Erstelle das Input-Feld
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.className = 'app-box-editor';
+        input.value = currentText;
+        
+        // Ersetze den Textknoten durch das Input-Feld
+        box.childNodes[0].replaceWith(input);
+        input.focus();
+        input.select();
+
+        // Funktion, um die Bearbeitung abzuschließen
+        const finishEditing = () => {
+            const newText = input.value.trim() || currentText; // Fallback auf alten Text, wenn leer
+            const newTextNode = document.createTextNode(newText);
+            input.replaceWith(newTextNode);
+
+            // Buttons wieder einblenden
+            if(deleteBtn) deleteBtn.style.display = '';
+            if(resizeBtn) resizeBtn.style.display = '';
+
+            // Event Listener wieder entfernen, um Speicherlecks zu vermeiden
+            input.removeEventListener('blur', finishEditing);
+            input.removeEventListener('keypress', handleKeyPress);
+        };
+        
+        const handleKeyPress = (e) => {
+            if (e.key === 'Enter') {
+                finishEditing();
+            }
+        };
+
+        // Event Listener hinzufügen, um die Bearbeitung zu beenden
+        input.addEventListener('blur', finishEditing);
+        input.addEventListener('keypress', handleKeyPress);
+    });
+</script>
+
+
+</body>
+</html>
