@@ -160,9 +160,9 @@
             border-radius: 6px 6px 0 0;
             position: relative;
             cursor: move;
-            /* Reserve space using a custom property so we can offset the counter back to true left */
-            --header-left-pad: 190px;
-            padding-left: var(--header-left-pad); /* reserve for left counter */
+            /* Reserve space for left counter to keep title visually centered */
+            --header-left-pad: 80px;
+            padding-left: var(--header-left-pad);
             padding-right: 96px; /* tighter space for color + delete */
         }
         
