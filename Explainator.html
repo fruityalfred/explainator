@@ -160,7 +160,7 @@
             /* Reserve space for left counter to keep title visually centered */
             --header-left-pad: 80px;
             padding-left: var(--header-left-pad);
-            padding-right: 96px; /* tighter space for color + delete */
+            padding-right: 96px; /* space for color + delete */
         }
         
         .column-header .delete-column {
@@ -1209,6 +1209,8 @@
                 <div class="column-header" draggable="true">
                      ${title} 
                     <span class="header-btn color-column-btn" title="${t.columnColor}" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="showColumnColorPicker(this)">🖌️</span>
+
+
                     <span class="header-btn delete-column" onclick="deleteColumn(this)">×</span>
                 </div>
                 <div class="resize-handle"></div>
@@ -1321,6 +1323,22 @@
             const column = btn.closest('.column');
             const parts = parseInt(column.getAttribute('data-split-parts') || '1', 10);
             applySplit(column, Math.max(1, parts - 1));
+        }
+
+        function cloneColumn(btn){
+            const orig = btn.closest('.column');
+            if (!orig) return;
+            const parent = orig.parentElement;
+            const clone = orig.cloneNode(true);
+            clone.setAttribute('data-column-id', ++columnIdCounter);
+            // remove any open pickers within clone
+            clone.querySelectorAll('.column-color-picker, .section-color-picker').forEach(el => el.remove());
+            // keep split parts attribute/state
+            const parts = parseInt(orig.getAttribute('data-split-parts') || '1', 10);
+            clone.setAttribute('data-split-parts', String(parts));
+            // insert after original
+            parent.insertBefore(clone, orig.nextSibling);
+            normalizeAddButtons();
         }
         
         function updateColorPreview() {
@@ -1741,9 +1759,18 @@
         
         function initializeColumnDrag() {
             let draggedColumn = null;
+            let cloningColumn = false;
             document.addEventListener('dragstart', e => {
                 if (e.target.classList.contains('column-header')) {
-                    draggedColumn = e.target.parentElement;
+                    const original = e.target.parentElement;
+                    cloningColumn = !!e.ctrlKey;
+                    if (cloningColumn) {
+                        const clone = original.cloneNode(true);
+                        original.parentNode.insertBefore(clone, original.nextSibling);
+                        draggedColumn = clone;
+                    } else {
+                        draggedColumn = original;
+                    }
                     // add visual dragging effect
                     draggedColumn.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
@@ -1764,6 +1791,7 @@
             document.addEventListener('dragend', () => {
                 if (draggedColumn) draggedColumn.classList.remove('dragging');
                 draggedColumn = null;
+                cloningColumn = false;
             });
         }
         
@@ -2647,6 +2675,9 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
+
+
 
 
 
