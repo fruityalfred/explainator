@@ -1,7 +1,4 @@
 <!DOCTYPE html>
-
-                    ${title}
-<!DOCTYPE html>
 <html lang="de">
 <head>
     <meta charset="UTF-8">
@@ -816,7 +813,8 @@
         </div>
         
         <div class="controls">
-            <button class="btn btn-secondary" onclick="showFormattingModal()" data-translate="formatting">🔠 Formatierung</button>
+                        <button class="btn btn-primary" onclick="showLayoutBuilder()">Layout Builder</button>
+<button class="btn btn-secondary" onclick="showFormattingModal()" data-translate="formatting">🔠 Formatierung</button>
             <button class="btn btn-primary" onclick="addNewColumn()" data-translate="addColumn">➕ Neue Spalte</button>
             <button class="btn btn-success" onclick="showAddBoxModal()" data-translate="addBox">📦 Neue Box</button>
             <button class="btn btn-info" onclick="showCategoryModal()" data-translate="manageCategories">🎨 Kategorien verwalten</button>
@@ -863,7 +861,26 @@
                 <button class="btn btn-danger" onclick="closeModal('addBoxModal')" data-translate="cancel">Abbrechen</button>
             </div>
         </div>
-    </div>    
+    </div>
+
+    <!-- Layout Builder Modal -->
+    <div class="modal" id="layoutBuilderModal">
+        <div class="modal-content">
+            <div class="modal-header">Layout Builder</div>
+            <div class="modal-body">
+                <div style="display:flex; gap:12px; align-items:center; margin-bottom:12px;">
+                    <label>Spalten:</label>
+                    <input type="number" id="lbColumns" min="1" max="8" value="2" style="width:80px;">
+                    <button class="btn btn-secondary" onclick="renderLayoutBuilderGrid()">Aktualisieren</button>
+                </div>
+                <div id="lbGrid" style="display:flex; flex-direction:column; gap:8px;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="applyLayoutBuilder()">Erstellen</button>
+                <button class="btn btn-danger" onclick="closeModal('layoutBuilderModal')">Abbrechen</button>
+            </div>
+        </div>
+    </div>
     
     <div class="modal" id="categoryModal">
         <div class="modal-content">
@@ -1371,6 +1388,82 @@
             });
             toggleGradient();
         }
+
+        // === LAYOUT BUILDER ===
+        function showLayoutBuilder(){
+            const m = document.getElementById('layoutBuilderModal');
+            document.getElementById('lbColumns').value = Math.max(1, document.querySelectorAll('.column').length || 2);
+            renderLayoutBuilderGrid();
+            m.classList.add('show');
+        }
+
+        function renderLayoutBuilderGrid(){
+            const n = parseInt(document.getElementById('lbColumns').value, 10) || 1;
+            const grid = document.getElementById('lbGrid');
+            grid.innerHTML = '';
+            for (let i=0;i<n;i++){
+                const row = document.createElement('div');
+                row.style.display='grid';
+                row.style.gridTemplateColumns='1fr 1fr 1fr';
+                row.style.gap='8px';
+                row.style.alignItems='center';
+                row.innerHTML = `
+                    <div>
+                        <label>Titel</label>
+                        <input type="text" class="lbTitle" data-index="${i}" value="Spalte ${i+1}" style="width:100%">
+                    </div>
+                    <div>
+                        <label>Splits</label>
+                        <input type="number" class="lbSplits" data-index="${i}" min="1" max="8" value="1" style="width:100%">
+                    </div>
+                    <div>
+                        <label>Sections/Teil</label>
+                        <input type="number" class="lbSections" data-index="${i}" min="0" max="20" value="1" style="width:100%">
+                    </div>`;
+                grid.appendChild(row);
+            }
+        }
+
+        function applyLayoutBuilder(){
+            const cols = parseInt(document.getElementById('lbColumns').value,10) || 1;
+            const titles = Array.from(document.querySelectorAll('#lbGrid .lbTitle')).map(i=>i.value.trim()||'Spalte');
+            const splits = Array.from(document.querySelectorAll('#lbGrid .lbSplits')).map(i=>Math.max(1, parseInt(i.value,10)||1));
+            const sections = Array.from(document.querySelectorAll('#lbGrid .lbSections')).map(i=>Math.max(0, parseInt(i.value,10)||0));
+
+            const container = document.getElementById('mainContainer');
+            container.innerHTML = '';
+            for (let i=0;i<cols;i++){
+                const col = createColumnElement(titles[i] || `Spalte ${i+1}`, i+1);
+                container.appendChild(col);
+                const parts = splits[i] || 1;
+                if (parts > 1) applySplit(col, parts);
+                const per = sections[i] || 0;
+                if (parts === 1){
+                    // Remove default section, then add desired
+                    const content = col.querySelector('.column-content');
+                    const def = content.querySelector('.section-group');
+                    if (def) def.remove();
+                    for (let s=0;s<per;s++){
+                        const btn = content.querySelector('.add-section-btn');
+                        addSection(btn);
+                    }
+                } else {
+                    const partsNodes = col.querySelectorAll('.column-part');
+                    partsNodes.forEach(pNode => {
+                        // Remove any default section in part
+                        const defS = pNode.querySelector('.section-group'); if (defS) defS.remove();
+                        const btn = pNode.querySelector('.add-section-btn');
+                        for (let s=0;s<per;s++){ addSection(btn); }
+                    });
+                }
+            }
+            // Add trailing + column button
+            const addBtn = document.createElement('div');
+            addBtn.className='add-column'; addBtn.onclick=addNewColumn; addBtn.innerHTML='<span>+</span>';
+            container.appendChild(addBtn);
+            normalizeAddButtons();
+            closeModal('layoutBuilderModal');
+        }
         
         function updateCategoryList() {
             const list = document.getElementById('categoryList');
@@ -1707,8 +1800,17 @@
         }
         
         function showAddBoxModal() {
-            document.getElementById('addBoxModal').classList.add('show');
-            document.getElementById('boxName').value = translations[currentLanguage].newApplicationName;
+            const modal = document.getElementById('addBoxModal');
+            modal.classList.add('show');
+            const input = document.getElementById('boxName');
+            if (input) {
+                input.value = '';
+                // place caret to start and focus for immediate typing
+                input.focus();
+                input.select();
+                // Pressing Enter triggers Add
+                input.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); addBox(); } };
+            }
         }
         
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
@@ -2532,6 +2634,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
 
 
 
