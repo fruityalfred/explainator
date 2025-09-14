@@ -398,6 +398,14 @@
         .app-box.dragging {
             opacity: 0.5;
         }
+
+        /* Column dragging visual effect */
+        .column.dragging {
+            opacity: 0.7;
+            transform: rotate(2deg);
+            box-shadow: 0 12px 28px rgba(0,0,0,0.25);
+            z-index: 1000;
+        }
         
         .app-box .delete-btn {
             position: absolute;
@@ -1736,6 +1744,8 @@
             document.addEventListener('dragstart', e => {
                 if (e.target.classList.contains('column-header')) {
                     draggedColumn = e.target.parentElement;
+                    // add visual dragging effect
+                    draggedColumn.classList.add('dragging');
                     e.dataTransfer.effectAllowed = 'move';
                 }
             });
@@ -1751,7 +1761,10 @@
                     else column.parentNode.insertBefore(draggedColumn, column);
                 }
             });
-            document.addEventListener('dragend', () => { draggedColumn = null; });
+            document.addEventListener('dragend', () => {
+                if (draggedColumn) draggedColumn.classList.remove('dragging');
+                draggedColumn = null;
+            });
         }
         
         function addNewColumn() {
