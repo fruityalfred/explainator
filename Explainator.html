@@ -800,6 +800,41 @@
 .column-header { overflow: visible; }
 </style>
 
+<style>
+/* Image boxes */
+.app-box.image-box {
+    padding: 6px;
+    border: 1px solid #ccc;
+    background: #fff;
+}
+.app-box.image-box img {
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: 270px; /* 3 x (3 lines) → 3 * (3*26 + 12) ≈ 270px */
+    object-fit: contain;
+    border-radius: 4px;
+}
+
+/* Modal dropzone for images */
+.image-dropzone {
+    width: 100%;
+    min-height: 80px;
+    border: 2px dashed #999;
+    border-radius: 6px;
+    background: #f9f9f9;
+    color: #666;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px;
+    user-select: none;
+}
+.image-dropzone.dragover { border-color: #4CAF50; background: #e8f5e9; color: #2e7d32; }
+.image-preview img { max-width: 100%; height: auto; max-height: 200px; display: block; border-radius: 4px; }
+</style>
+
 </head>
 <body>
     <div class="container">
@@ -846,26 +881,41 @@
         <div class="modal-content">
             <div class="modal-header" data-translate="addBoxModalTitle">Neue Box hinzufügen</div>
             <div class="modal-body">
-                <input type="text" id="boxName" placeholder="Box Name">
+                <input type="text" id="boxName" placeholder="Box Name" data-translate="boxNamePlaceholder">
                 <select id="boxType"></select>
                 <select id="boxWidth">
                     <option value="full-width" data-translate="fullWidth">Volle Breite</option>
                     <option value="half-width" data-translate="halfWidth">Halbe Breite</option>
                 </select>
-                <label for="boxLines" style="display:block;margin-top:8px;" data-translate="boxHeightLabel">Höhe (Zeilen)</label>
+                <label for="boxLines" id="boxLinesLabel" style="display:block;margin-top:8px;" data-translate="boxHeightLabel">Höhe (Zeilen)</label>
                 <select id="boxLines">
                     <option value="1" selected data-translate="boxHeight1">1 Zeile (Standard)</option>
                     <option value="2" data-translate="boxHeight2">2 Zeilen</option>
                     <option value="3" data-translate="boxHeight3">3 Zeilen</option>
                 </select>
                 
-                <div style="display: flex; gap: 20px; margin-top: 15px; align-items: center;">
-                    <label>Text: <input type="color" id="boxTextColor" value="#000000"></label>
+                <div id="textOptions" style="display: flex; gap: 20px; margin-top: 15px; align-items: center;">
+                    <label><span data-translate="textColorLabel">Text:</span> <input type="color" id="boxTextColor" value="#000000"></label>
+                </div>
+
+                <hr style="margin:14px 0;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" id="boxIsImage" />
+                    <span data-translate="imageMode">Bild statt Text</span>
+                </label>
+                
+                <div id="imageOptions" style="display:none; margin-top:10px;">
+                    <div id="imageDropzone" class="image-dropzone" data-translate="imageSelectOrDrop" title="JPG oder PNG">
+                        Bild auswählen oder hierher ziehen (JPG/PNG)
+                    </div>
+                    <input type="file" id="boxImageFile" accept="image/png, image/jpeg" style="margin-top:8px; width:100%;" />
+                    <div id="imagePreview" class="image-preview" style="margin-top:8px; display:none;"></div>
+                    <div style="font-size:12px; color:#666; margin-top:6px;" data-translate="imageMaxHeightHint">Maximale Höhe: 3 × 3‑Zeilen Boxen</div>
                 </div>
 
             </div>
             <div class="modal-footer">
-                <button class="btn btn-primary" onclick="addBox()" data-translate="add">Hinzufügen</button>
+                <button class="btn btn-primary" onclick="addBoxNew()" data-translate="add">Hinzufügen</button>
                 <button class="btn btn-danger" onclick="closeModal('addBoxModal')" data-translate="cancel">Abbrechen</button>
             </div>
         </div>
@@ -985,6 +1035,11 @@
                 boxHeight3: "3 Zeilen",
                 add: "Hinzufügen",
                 cancel: "Abbrechen",
+                textColorLabel: "Text:",
+                imageMode: "Bild statt Text",
+                imageSelectOrDrop: "Bild auswählen oder hierher ziehen (JPG/PNG)",
+                imageMaxHeightHint: "Maximale Höhe: 3 × 3‑Zeilen Boxen",
+                alertChooseImage: "Bitte ein Bild (JPG/PNG) auswählen oder hineinziehen.",
                 addNewCategoryTitle: "Neue Kategorie hinzufügen:",
                 categoryNamePlaceholder: "Kategorie Name (z.B. Cloud Services)",
                 color1: "Farbe 1:",
@@ -1055,6 +1110,11 @@
                 boxHeight3: "3 lines",
                 add: "Add",
                 cancel: "Cancel",
+                textColorLabel: "Text:",
+                imageMode: "Image instead of text",
+                imageSelectOrDrop: "Select or drop an image (JPG/PNG)",
+                imageMaxHeightHint: "Max height: 3 × 3‑line boxes",
+                alertChooseImage: "Please select or drop an image (JPG/PNG).",
                 addNewCategoryTitle: "Add New Category:",
                 categoryNamePlaceholder: "Category Name (e.g., Cloud Services)",
                 color1: "Color 1:",
@@ -1130,6 +1190,8 @@
 
             // Update legend title
             updateLegend();
+            // Equalize header heights after text changes
+            requestAnimationFrame(equalizeHeaderHeights);
         }
 
         function toggleLanguage() {
@@ -1164,6 +1226,10 @@
             'cat5': { name: 'Cat. 5', color1: '#a8edea', color2: '#fed6e3' }
         };
         
+        // Image modal state + last focused section box-container
+        let pendingImageDataUrl = null;
+        let lastFocusedBoxContainer = null;
+
         // Initialize on load
         document.addEventListener('DOMContentLoaded', function() {
             const savedLang = localStorage.getItem('ea_language') || 'de';
@@ -1176,10 +1242,132 @@
             updateCategoryDropdown();
             updateLegend();
             initializeDefaultLayout();
-            
+            setupImageModal();
+            setupLastFocusTracking();
+            normalizeDeleteIcons(document);
+            setupDeleteIconObserver();
+            equalizeHeaderHeights();
+            window.addEventListener('resize', () => equalizeHeaderHeights());
+        
             document.getElementById('categoryColor1').addEventListener('input', updateColorPreview);
             document.getElementById('categoryColor2').addEventListener('input', updateColorPreview);
         });
+
+        function equalizeHeaderHeights() {
+            try {
+                const headers = Array.from(document.querySelectorAll('.column-header'));
+                if (!headers.length) return;
+                // Reset heights first to measure natural single-line heights
+                headers.forEach(h => h.style.minHeight = '');
+                const heights = headers.map(h => h.scrollHeight);
+                const minH = Math.min(...heights);
+                const maxH = Math.max(...heights);
+                const wrapDetected = (maxH - minH) > 6; // tolerance
+                if (!wrapDetected) {
+                    headers.forEach(h => h.style.minHeight = maxH + 'px');
+                } else {
+                    headers.forEach(h => h.style.minHeight = '');
+                }
+            } catch(e) {}
+        }
+
+        function setupImageModal() {
+            const chk = document.getElementById('boxIsImage');
+            const textOpts = document.getElementById('textOptions');
+            const linesLabel = document.getElementById('boxLinesLabel');
+            const linesSel = document.getElementById('boxLines');
+            const imgOpts = document.getElementById('imageOptions');
+            const fileInput = document.getElementById('boxImageFile');
+            const dz = document.getElementById('imageDropzone');
+            const t = translations[currentLanguage];
+
+            if (dz) dz.textContent = t.imageSelectOrDrop || dz.textContent;
+
+            if (chk) {
+                chk.addEventListener('change', () => {
+                    const on = chk.checked;
+                    if (textOpts) textOpts.style.display = on ? 'none' : 'flex';
+                    if (linesLabel) linesLabel.style.display = on ? 'none' : 'block';
+                    if (linesSel) linesSel.style.display = on ? 'none' : 'block';
+                    if (imgOpts) imgOpts.style.display = on ? 'block' : 'none';
+                });
+            }
+
+            if (fileInput) {
+                fileInput.addEventListener('change', (e) => {
+                    if (e.target.files && e.target.files.length) {
+                        handleImageFiles(e.target.files);
+                    }
+                });
+            }
+
+            if (dz) {
+                ;['dragenter','dragover'].forEach(evt => dz.addEventListener(evt, (e) => {
+                    e.preventDefault(); e.stopPropagation(); dz.classList.add('dragover');
+                }));
+                ;['dragleave','dragend','drop'].forEach(evt => dz.addEventListener(evt, (e) => {
+                    dz.classList.remove('dragover');
+                }));
+                dz.addEventListener('drop', (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
+                    if (files && files.length) handleImageFiles(files);
+                });
+            }
+        }
+
+        function handleImageFiles(fileList) {
+            const file = Array.from(fileList).find(f => /image\/(png|jpeg)/i.test(f.type));
+            if (!file) { alert(translations[currentLanguage].alertChooseImage); return; }
+            const reader = new FileReader();
+            reader.onload = () => { setImagePreview(reader.result); };
+            reader.readAsDataURL(file);
+        }
+
+        function setImagePreview(dataUrl) {
+            pendingImageDataUrl = dataUrl;
+            const prev = document.getElementById('imagePreview');
+            if (prev) {
+                prev.innerHTML = `<img src="${dataUrl}" alt="preview" />`;
+                prev.style.display = 'block';
+            }
+        }
+
+        function setupLastFocusTracking() {
+            document.addEventListener('click', (e) => {
+                const bc = e.target.closest && e.target.closest('.box-container');
+                if (bc) { lastFocusedBoxContainer = bc; return; }
+                const sg = e.target.closest && e.target.closest('.section-group');
+                if (sg) {
+                    const inner = sg.querySelector(':scope > .box-container');
+                    if (inner) lastFocusedBoxContainer = inner;
+                }
+            }, true);
+        }
+
+        function getTargetBoxContainer() {
+            if (lastFocusedBoxContainer && document.body.contains(lastFocusedBoxContainer)) return lastFocusedBoxContainer;
+            return document.querySelector('.box-container');
+        }
+
+        function normalizeDeleteIcons(root) {
+            const scope = root || document;
+            scope.querySelectorAll('.delete-btn, .section-delete, .delete-column').forEach(el => { el.textContent = 'x'; });
+        }
+
+        function setupDeleteIconObserver() {
+            try {
+                const mo = new MutationObserver((mutations) => {
+                    for (const m of mutations) {
+                        m.addedNodes && m.addedNodes.forEach(node => {
+                            if (!(node instanceof Element)) return;
+                            normalizeDeleteIcons(node);
+                        });
+                    }
+                });
+                mo.observe(document.body, { childList: true, subtree: true });
+            } catch(e) {}
+        }
         
         function initializeDefaultLayout() {
             const container = document.getElementById('mainContainer');
@@ -1228,6 +1416,8 @@
             `;
             // Ensure split counter exists and reflects current parts
             try {
+                const del1 = column.querySelector('.delete-column'); if (del1) del1.textContent = 'x';
+                const del2 = column.querySelector('.section-delete'); if (del2) del2.textContent = 'x';
                 const header = column.querySelector('.column-header');
                 const del = header.querySelector('.delete-column');
                 let counter = header.querySelector('.split-counter');
@@ -1241,6 +1431,8 @@
                 if (!column.hasAttribute('data-split-parts')) column.setAttribute('data-split-parts', '1');
                 updateSplitCounterDisplay(column);
             } catch(e) {}
+            // Ensure consistent header height alignment
+            requestAnimationFrame(equalizeHeaderHeights);
             return column;
         }
 
@@ -1311,6 +1503,7 @@
                 splitColumn(column, p);
                 column.setAttribute('data-split-state', p === 2 ? 'split-2' : (p === 3 ? 'split-3' : 'split-n'));
             }
+            requestAnimationFrame(equalizeHeaderHeights);
         }
 
         function incrementSplit(btn) {
@@ -1620,9 +1813,9 @@
             let isCloning = false;     // Merkt sich, ob wir gerade klonen
 
             document.addEventListener('dragstart', function(e) {
-                const target = e.target;
-                if (!target.matches('.app-box, .section-group')) return;
-                if (e.target.closest('.section-title input')) return;
+                const target = e.target.closest && e.target.closest('.app-box, .section-group');
+                if (!target) return;
+                if (target.classList.contains('section-group') && target.querySelector('.section-title input')) return;
 
                 isCloning = e.ctrlKey;
                 
@@ -1801,6 +1994,7 @@
             const t = translations[currentLanguage];
             const newColumn = createColumnElement(t.newColumn, columnIdCounter++);
             container.insertBefore(newColumn, addButton);
+            requestAnimationFrame(equalizeHeaderHeights);
         }
         
         function deleteColumn(btn) {
@@ -1823,6 +2017,7 @@
                 </div>
                 <div class="box-container"></div>`;
             columnContent.insertBefore(newSection, btn);
+            try { const sd = newSection.querySelector('.section-delete'); if (sd) sd.textContent = 'x'; } catch(e) {}
         }
 
         function deleteSection(deleteBtn) {
@@ -1850,12 +2045,68 @@
                 input.focus();
                 input.select();
                 // Pressing Enter triggers Add
-                input.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); addBox(); } };
+                input.onkeydown = function(e){ if(e.key === 'Enter'){ e.preventDefault(); addBoxNew(); } };
             }
+            // Reset image options each time the modal opens
+            try {
+                const t = translations[currentLanguage];
+                const chk = document.getElementById('boxIsImage');
+                const textOpts = document.getElementById('textOptions');
+                const linesLabel = document.getElementById('boxLinesLabel');
+                const linesSel = document.getElementById('boxLines');
+                const imgOpts = document.getElementById('imageOptions');
+                const fileInput = document.getElementById('boxImageFile');
+                const dz = document.getElementById('imageDropzone');
+                const prev = document.getElementById('imagePreview');
+                if (chk) chk.checked = false;
+                if (textOpts) textOpts.style.display = 'flex';
+                if (linesLabel) linesLabel.style.display = 'block';
+                if (linesSel) linesSel.style.display = 'block';
+                if (imgOpts) imgOpts.style.display = 'none';
+                if (fileInput) fileInput.value = '';
+                if (prev) { prev.innerHTML = ''; prev.style.display = 'none'; }
+                if (dz) { dz.classList.remove('dragover'); dz.textContent = t.imageSelectOrDrop || dz.textContent; }
+                pendingImageDataUrl = null;
+            } catch (e) {}
         }
         
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
         
+        // New: adds either a text-box or image-box based on modal state
+        function addBoxNew() {
+            const t = translations[currentLanguage];
+            const isImage = !!document.getElementById('boxIsImage')?.checked;
+            const name = document.getElementById('boxName').value;
+            const type = document.getElementById('boxType').value;
+            const width = document.getElementById('boxWidth').value;
+            const lines = parseInt(document.getElementById('boxLines').value, 10) || 1;
+            const textColorEl = document.getElementById('boxTextColor');
+            const textColor = textColorEl ? textColorEl.value : '#000000';
+
+            const newBox = document.createElement('div');
+            newBox.draggable = true;
+
+            if (isImage) {
+                if (!pendingImageDataUrl) { alert(t.alertChooseImage); return; }
+                newBox.className = `app-box image-box ${width}`;
+                newBox.innerHTML = `<img src="${pendingImageDataUrl}" alt="image" />` +
+                    `<button class="delete-btn" onclick="deleteBox(this)">�</button>` +
+                    `<button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>`;
+                pendingImageDataUrl = null;
+            } else {
+                newBox.className = `app-box ${type} ${width}`;
+                newBox.innerHTML = `${name}<button class="delete-btn" onclick="deleteBox(this)">�</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>`;
+                newBox.dataset.lines = String(lines);
+                const minHeight = ((lines * 26) + 12);
+                newBox.style.minHeight = `${minHeight}px`;
+                newBox.style.color = textColor;
+            }
+
+            const target = getTargetBoxContainer();
+            if (target) target.appendChild(newBox);
+            closeModal('addBoxModal');
+        }
+
         function addBox() {
             const name = document.getElementById('boxName').value;
             const type = document.getElementById('boxType').value;
@@ -1876,8 +2127,9 @@
             // NEU: Die Farbe wird jetzt immer direkt zugewiesen, auch wenn es schwarz ist.
             newBox.style.color = textColor;
         
-            const firstContainer = document.querySelector('.box-container');
-            if (firstContainer) firstContainer.appendChild(newBox);
+            try { const db = newBox.querySelector('.delete-btn'); if (db) db.textContent = 'x'; } catch(e) {}
+            const target2 = getTargetBoxContainer();
+            if (target2) target2.appendChild(newBox);
             closeModal('addBoxModal');
         }       
         
@@ -1927,6 +2179,7 @@
             const header = input.parentElement;
             const buttonsHTML = Array.from(header.querySelectorAll('.header-btn')).map(btn => btn.outerHTML).join('');
             header.innerHTML = newTitle + ' ' + buttonsHTML;
+            requestAnimationFrame(equalizeHeaderHeights);
         }
         
         document.addEventListener('contextmenu', e => {
@@ -2035,13 +2288,26 @@
                         const sectionData = {
                             title: sectionTitle.childNodes[0].textContent.trim(),
                             color: sectionTitle.getAttribute('data-color') || '#8B4513',
-                            boxes: Array.from(section.querySelectorAll('.app-box')).map(box => ({
-                                text: box.childNodes[0].textContent.trim(),
-                                type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
-                                width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
-                                lines: box.dataset.lines || '1',
-                                textColor: box.style.color || ''
-                            }))
+                                boxes: Array.from(section.querySelectorAll('.app-box')).map(box => {
+                                    const isImage = box.classList.contains('image-box');
+                                    if (isImage) {
+                                        const img = box.querySelector('img');
+                                        return {
+                                            isImage: true,
+                                            imageSrc: img ? img.getAttribute('src') : '',
+                                            width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width'
+                                        };
+                                    } else {
+                                        return {
+                                            isImage: false,
+                                            text: box.childNodes[0].textContent.trim(),
+                                            type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
+                                            width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
+                                            lines: box.dataset.lines || '1',
+                                            textColor: box.style.color || ''
+                                        };
+                                    }
+                                })
                         };
                         areaData.sections.push(sectionData);
                     });
@@ -2159,7 +2425,7 @@
                         const areaData = columnData.contentAreas[0] || { sections: [] };
                         let sectionsHtml = '';
                         areaData.sections.forEach(sectionData => {
-                            sectionsHtml += buildSectionHtml(sectionData, t);
+                            sectionsHtml += buildSectionHtmlEx(sectionData, t);
                         });
                         contentWrapper.innerHTML = sectionsHtml + `<button class="add-section-btn" onclick="addSection(this)">+ ${t.newSection}</button>`;
                     
@@ -2179,7 +2445,7 @@
                         if (startIdx === 1) {
                             const topArea = columnData.contentAreas[0] || { sections: [] };
                             let topHtml = '';
-                            topArea.sections.forEach(s => topHtml += buildSectionHtml(s, t));
+                            topArea.sections.forEach(s => topHtml += buildSectionHtmlEx(s, t));
                             contentWrapper.innerHTML += topHtml;
                         }
 
@@ -2190,7 +2456,7 @@
                             const areaData = columnData.contentAreas[i + (typeof startIdx !== 'undefined' ? startIdx : 0)] || { sections: [] };
                             let sectionsHtml = '';
                             areaData.sections.forEach(sectionData => {
-                                sectionsHtml += buildSectionHtml(sectionData, t);
+                                sectionsHtml += buildSectionHtmlEx(sectionData, t);
                             });
                             partDiv.innerHTML = sectionsHtml + `<button class="add-section-btn" onclick="addSection(this)">+ ${t.newSection}</button>`;
                             splitContainer.appendChild(partDiv);
@@ -2200,7 +2466,7 @@
                             const totalAreas2 = (columnData.contentAreas || []).length;
                             const bottomArea = columnData.contentAreas[totalAreas2 - 1] || { sections: [] };
                             let bottomHtml = '';
-                            bottomArea.sections.forEach(s => bottomHtml += buildSectionHtml(s, t));
+                            bottomArea.sections.forEach(s => bottomHtml += buildSectionHtmlEx(s, t));
                             contentWrapper.innerHTML += bottomHtml;
                         }
                     }
@@ -2250,6 +2516,46 @@
                     <div class="box-container">${boxesHtml}</div>
                 </div>`;
         }  
+        
+        // Extended builder supporting image boxes in templates
+        function buildSectionHtmlEx(sectionData, t) {
+            let boxesHtml = '';
+            if (sectionData.boxes && Array.isArray(sectionData.boxes)) {
+                sectionData.boxes.forEach(boxData => {
+                    if (boxData && boxData.isImage) {
+                        boxesHtml += `
+                            <div class="app-box image-box ${boxData.width || 'full-width'}" draggable="true">
+                                <img src="${boxData.imageSrc || ''}" alt="image" />
+                                <button class="delete-btn" onclick="deleteBox(this)">x</button>
+                                <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
+                            </div>`;
+                    } else {
+                        const lines = parseInt((boxData && boxData.lines) || '1', 10) || 1;
+                        const minHeight = (lines * 26) + 12;
+                        const dataLinesAttr = `data-lines="${lines}"`;
+                        let styleString = `min-height: ${minHeight}px;`;
+                        if (boxData && boxData.textColor) styleString += ` color: ${boxData.textColor};`;
+                        const styleAttr = `style="${styleString}"`;
+                        boxesHtml += `
+                            <div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr}>
+                                ${(boxData && boxData.text) || ''}
+                                <button class="delete-btn" onclick="deleteBox(this)">x</button>
+                                <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
+                            </div>`;
+                    }
+                });
+            }
+            const sectionColor = sectionData.color || '#8B4513';
+            return `
+                <div class="section-group" draggable="true">
+                    <div class="section-title" style="background: ${sectionColor}" data-color="${sectionColor}">
+                        ${sectionData.title}
+                        <span class="section-delete" onclick="deleteSection(this)" title="${t.deleteSectionTooltip}">x</span>
+                        <span class="section-menu" onclick="showSectionColorPicker(this)">?</span>
+                    </div>
+                    <div class="box-container">${boxesHtml}</div>
+                </div>`;
+        }
         
         function downloadStoredTemplate(templateName) {
             const template = getStoredTemplates()[templateName];
@@ -2675,6 +2981,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
 
 
 
