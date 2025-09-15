@@ -129,13 +129,15 @@
             display: flex;
             gap: 10px;
             flex: 1;
-            padding: 10px;
+            /* Keep the same top spacing as unsplit: padding-top = 0 so overall is column-content's 12px */
+            padding: 0 10px 10px 10px;
         }
 
         .column-part {
             flex: 1;
             display: flex;
             flex-direction: column;
+            gap: 10px; /* match .column-content vertical spacing between sections */
             border-right: 1px solid #e0e0e0;
             padding-right: 10px;
         }
