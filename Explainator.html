@@ -811,7 +811,8 @@
 }
 .app-box.image-box img {
     display: block;
-    width: 100%;
+    width: auto;
+    max-width: 100%;
     height: auto;
     max-height: 270px; /* 3 x (3 lines) → 3 * (3*26 + 12) ≈ 270px */
     object-fit: contain;
@@ -2648,6 +2649,9 @@
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'hidden');
             document.querySelectorAll('.column-color-picker, .section-color-picker').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = 'none'; section.style.background = 'transparent'; });
+
+            // Freeze current rendered sizes of images so html2canvas uses exact on-screen size
+            freezeImageSizes(document.querySelector('.main-container'));
         }
         
         function showExportUIElements() {
@@ -2660,6 +2664,39 @@
             document.querySelectorAll('.split-counter, .resize-handle').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = '2px dashed #999'; section.style.background = ''; });
+
+            // Unfreeze image sizes after export
+            unfreezeImageSizes(document.querySelector('.main-container'));
+        }
+
+        // Ensures html2canvas renders images exactly as displayed by fixing inline width/height during export
+        function freezeImageSizes(scope){
+            try{
+                if (!scope) return;
+                scope.querySelectorAll('.app-box.image-box img').forEach(img => {
+                    const cs = window.getComputedStyle(img);
+                    const rect = img.getBoundingClientRect();
+                    // store previous inline style to restore later
+                    if (!img.dataset.prevStyle) img.dataset.prevStyle = img.getAttribute('style') || '';
+                    img.style.width = rect.width + 'px';
+                    img.style.height = rect.height + 'px';
+                    // avoid object-fit or max-height changing rendering during rasterization
+                    img.style.objectFit = 'contain';
+                    img.style.maxHeight = rect.height + 'px';
+                    img.style.maxWidth = rect.width + 'px';
+                });
+            }catch(e){}
+        }
+
+        function unfreezeImageSizes(scope){
+            try{
+                if (!scope) return;
+                scope.querySelectorAll('.app-box.image-box img').forEach(img => {
+                    const prev = img.dataset.prevStyle || '';
+                    if (prev === '') img.removeAttribute('style'); else img.setAttribute('style', prev);
+                    delete img.dataset.prevStyle;
+                });
+            }catch(e){}
         }
     </script>
 
