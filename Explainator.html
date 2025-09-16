@@ -127,17 +127,21 @@
         
         .column-split-content {
             display: flex;
-            gap: 10px;
-            flex: 1;
-            padding: 10px;
+            gap: 10px;           /* horizontal gap between parts */
+            flex: 0 0 auto;      /* DO NOT grow; keeps columns independent */
+            padding: 0 10px 0 10px; /* no extra top/bottom spacing; rely on .column-content */
+            position: relative;  /* for bottom overlay */
+            margin: 0;           /* consistent spacing via parent gap */
         }
 
         .column-part {
             flex: 1;
             display: flex;
             flex-direction: column;
+            gap: 10px; /* match vertical spacing with normal sections */
             border-right: 1px solid #e0e0e0;
             padding-right: 10px;
+            margin-top: 0;
         }
         .column-part:last-child { border-right: none; padding-right: 0; padding-left: 10px; }
         
@@ -145,6 +149,16 @@
         
         .column:hover {
             box-shadow: 0 5px 20px rgba(139,69,19,0.2);
+        }
+
+        /* Ensure split divider never extends into the 10px gap below */
+        .column-split-content::after {
+            content: '';
+            position: absolute;
+            left: 0; right: 0; bottom: 0;
+            height: 10px; /* equal to inter-section gap */
+            background: #fff; /* same as column background */
+            pointer-events: none;
         }
         
         .column-header {
@@ -339,7 +353,7 @@
         
         .add-section-btn {
             width: 100%;
-            padding: 8px;
+            padding: 4px 8px;
             border: 2px dashed #ccc;
             background: #f9f9f9;
             color: #666;
@@ -347,7 +361,7 @@
             border-radius: 4px;
             text-align: center;
             transition: all 0.3s;
-            font-size: 12px;
+            font-size: 10px;
         }
         
         .add-section-btn:hover {
@@ -735,6 +749,7 @@
 .column-header .header-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
 .column-header .delete-column { right:10px; font-size:16px; }
 .column-header .color-column-btn { right:40px; }
+.column-header .insert-split-btn { right:70px; }
 .column-color-picker { z-index:30000; position:absolute; top:110%; right:0; background:#fff; border:2px solid #ddd; border-radius:6px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:12000; display:none; min-width:240px; max-width:520px; }
 .column-color-picker.show{ display:flex; flex-wrap: wrap; gap:8px; }
 .column-color-picker .row{ display:flex; align-items:center; gap:8px; margin:0; width: calc(33.333% - 8px); }
@@ -1399,6 +1414,7 @@
                     <span class="header-btn color-column-btn" title="${t.columnColor}" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="showColumnColorPicker(this)">🖌️</span>
 
 
+                    <span class="header-btn insert-split-btn" title="Split-Block am Ende einfügen" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="insertSplitBlock(this)">⇲</span>
                     <span class="header-btn delete-column" onclick="deleteColumn(this)">×</span>
                 </div>
                 <div class="resize-handle"></div>
@@ -1804,6 +1820,21 @@
             }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
+        // Calculates insertion point among direct children (sections or split blocks)
+        function getDragAfterBlock(container, y) {
+            const selector = ':scope > .section-group:not(.dragging-placeholder), :scope > .column-split-content';
+            const elements = [...container.querySelectorAll(selector)];
+            return elements.reduce((closest, el) => {
+                const rect = el.getBoundingClientRect();
+                const offset = y - rect.top - rect.height / 2;
+                if (offset < 0 && offset > closest.offset) {
+                    return { offset, element: el };
+                } else {
+                    return closest;
+                }
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+
         // ==================================================================
         // FINALE, KOMPLETTE DRAG & DROP FUNKTION
         // ==================================================================
@@ -1811,6 +1842,9 @@
             let draggedElement = null; // Das Element, das WIRKLICH bewegt wird
             let placeholder = null;    // Das visuelle Feedback-Element
             let isCloning = false;     // Merkt sich, ob wir gerade klonen
+            let draggedFromSplit = false; // Ursprung in .column-part?
+            let sourceSplitParts = 0;      // Anzahl Parts im Ursprungs-Split
+            let lastDragX = 0;             // letzte Maus-X-Position
 
             document.addEventListener('dragstart', function(e) {
                 const target = e.target.closest && e.target.closest('.app-box, .section-group');
@@ -1834,6 +1868,13 @@
                 } else {
                     placeholder.style.height = target.offsetHeight + 'px';
                 }
+                // Track origin split context
+                if (target.classList.contains('section-group')) {
+                    const srcPart = target.closest('.column-part');
+                    draggedFromSplit = !!srcPart;
+                    const srcSplit = srcPart ? srcPart.parentElement : null;
+                    sourceSplitParts = srcSplit ? srcSplit.querySelectorAll(':scope > .column-part').length : 0;
+                } else { draggedFromSplit = false; sourceSplitParts = 0; }
                 
                 e.dataTransfer.effectAllowed = 'move';
                 try { e.dataTransfer.setData('text/plain', ''); } catch (err) {}
@@ -1842,6 +1883,7 @@
             document.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 if (!draggedElement) return;
+                lastDragX = e.clientX;
 
                 if (draggedElement.classList.contains('app-box')) {
                     const container = e.target.closest('.box-container');
@@ -1851,19 +1893,32 @@
                     }
                 } 
                 else if (draggedElement.classList.contains('section-group')) {
-                    const container = e.target.closest('.column-content, .column-part');
-                    if (container) {
-                        // If hovering over the parent content wrapper of a split column,
-                        // allow placing the placeholder before the split-wrapper to move a section "above" the splits.
-                        if (container.classList.contains('column-content')) {
-                            const splitWrapper = container.querySelector(':scope > .column-split-content');
-                            if (splitWrapper) {
-                                container.insertBefore(placeholder, splitWrapper);
-                                return;
-                            }
+                    // Prefer dropping into a specific split part if hovering a split area
+                    let part = e.target.closest('.column-part');
+                    if (!part) {
+                        const split = e.target.closest('.column-split-content');
+                        if (split) {
+                            // Pick nearest part by mouse X
+                            const parts = Array.from(split.querySelectorAll(':scope > .column-part'));
+                            let best = null, bestDx = Infinity;
+                            parts.forEach(p => {
+                                const r = p.getBoundingClientRect();
+                                const cx = r.left + r.width/2;
+                                const dx = Math.abs(e.clientX - cx);
+                                if (dx < bestDx) { bestDx = dx; best = p; }
+                            });
+                            part = best;
                         }
-                        const afterElement = getDragAfterSection(container, e.clientY);
-                        container.insertBefore(placeholder, afterElement);
+                    }
+                    if (part) {
+                        const afterElement = getDragAfterSection(part, e.clientY);
+                        part.insertBefore(placeholder, afterElement);
+                    } else {
+                        const container = e.target.closest('.column-content');
+                        if (container) {
+                            const afterElement = getDragAfterBlock(container, e.clientY);
+                            container.insertBefore(placeholder, afterElement);
+                        }
                     }
                 }
             });
@@ -1873,12 +1928,38 @@
                 if (!placeholder || !placeholder.parentElement) return;
                 
                 const dropContainer = placeholder.parentElement;
-                dropContainer.replaceChild(draggedElement, placeholder);
+                if (draggedElement.classList.contains('section-group') && draggedFromSplit && dropContainer.classList.contains('column-content')) {
+                    // Create a new split block here and place the dragged section into the nearest part
+                    const column = dropContainer.closest('.column');
+                    const t = translations[currentLanguage];
+                    const parts = Math.max(2, parseInt(column.getAttribute('data-split-parts') || sourceSplitParts || '2', 10) || 2);
+                    const splitContainer = document.createElement('div');
+                    splitContainer.className = 'column-split-content';
+                    const rect = dropContainer.getBoundingClientRect();
+                    for (let i = 0; i < parts; i++) {
+                        const partDiv = document.createElement('div');
+                        partDiv.className = 'column-part';
+                        const addBtn = document.createElement('button');
+                        addBtn.className = 'add-section-btn';
+                        addBtn.setAttribute('onclick', 'addSection(this)');
+                        addBtn.textContent = '+ ' + (t && t.newSection ? t.newSection : 'New Section');
+                        partDiv.appendChild(addBtn);
+                        splitContainer.appendChild(partDiv);
+                    }
+                    let index = 0;
+                    try { const relX = Math.max(0, Math.min(rect.width - 1, lastDragX - rect.left)); index = Math.min(parts - 1, Math.max(0, Math.floor(relX / (rect.width / parts)))); } catch(_) {}
+                    const targetPart = splitContainer.querySelectorAll(':scope > .column-part')[index];
+                    const partBtn = targetPart.querySelector('.add-section-btn');
+                    targetPart.insertBefore(draggedElement, partBtn);
+                    dropContainer.replaceChild(splitContainer, placeholder);
+                } else {
+                    dropContainer.replaceChild(draggedElement, placeholder);
+                }
                 draggedElement.classList.remove('dragging');
 
                 // NEU: Stellt sicher, dass der "+ Neue Section"-Button immer am Ende ist.
                 if (draggedElement.classList.contains('section-group')) {
-                    const button = dropContainer.querySelector('.add-section-btn');
+                    const button = dropContainer.querySelector(':scope > .add-section-btn');
                     if(button) {
                         dropContainer.appendChild(button);
                     }
@@ -2002,7 +2083,35 @@
                 btn.closest('.column').remove();
             }
         }
-        
+
+        // Insert a new split block at the end of the column
+        function insertSplitBlock(btn) {
+            try {
+                const header = btn.closest('.column-header');
+                const column = header.closest('.column');
+                const content = column.querySelector('.column-content');
+                const t = translations[currentLanguage];
+                const parts = parseInt(column.getAttribute('data-split-parts') || '2', 10) || 2;
+                const splitContainer = document.createElement('div');
+                splitContainer.className = 'column-split-content';
+                for (let i = 0; i < parts; i++) {
+                    const partDiv = document.createElement('div');
+                    partDiv.className = 'column-part';
+                    const btnEl = document.createElement('button');
+                    btnEl.className = 'add-section-btn';
+                    btnEl.setAttribute('onclick', 'addSection(this)');
+                    btnEl.textContent = '+ ' + (t && t.newSection ? t.newSection : 'New Section');
+                    partDiv.appendChild(btnEl);
+                    splitContainer.appendChild(partDiv);
+                }
+                // Insert before trailing column-level add button if present
+                const tailBtn = content.querySelector(':scope > .add-section-btn:last-of-type');
+                if (tailBtn) content.insertBefore(splitContainer, tailBtn);
+                else content.appendChild(splitContainer);
+                normalizeAddButtons();
+            } catch(e) { console.warn(e); }
+        }
+
         function addSection(btn) {
             const columnContent = btn.parentElement;
             const t = translations[currentLanguage];
@@ -2308,7 +2417,6 @@
                 };
                 
                 const contentWrapper = column.querySelector('.column-content');
-                const splitWrapper = contentWrapper ? contentWrapper.querySelector(':scope > .column-split-content') : null;
 
                 function serializeSectionNodes(nodes) {
                     const areaData = { sections: [] };
@@ -2343,27 +2451,24 @@
                     return areaData;
                 }
 
-                if (splitWrapper) {
-                    // top sections: direct children before split wrapper
-                    const children = Array.from(contentWrapper.children);
-                    const topList = [];
-                    for (const ch of children) { if (ch === splitWrapper) break; if (ch.classList && ch.classList.contains('section-group')) topList.push(ch); }
-                    if (topList.length) columnData.contentAreas.push(serializeSectionNodes(topList));
-
-                    // parts in order
-                    splitWrapper.querySelectorAll(':scope > .column-part').forEach(part => {
-                        const sections = Array.from(part.querySelectorAll(':scope > .section-group'));
-                        columnData.contentAreas.push(serializeSectionNodes(sections));
+                // New flexible serialization: walk children, supporting multiple split blocks
+                if (contentWrapper) {
+                    let buffer = [];
+                    const flush = () => { if (buffer.length) { columnData.contentAreas.push(serializeSectionNodes(buffer)); buffer = []; } };
+                    Array.from(contentWrapper.children).forEach(ch => {
+                        if (ch.classList && ch.classList.contains('section-group')) {
+                            buffer.push(ch);
+                        } else if (ch.classList && ch.classList.contains('column-split-content')) {
+                            flush();
+                            const parts = [];
+                            ch.querySelectorAll(':scope > .column-part').forEach(part => {
+                                const sections = Array.from(part.querySelectorAll(':scope > .section-group'));
+                                parts.push(serializeSectionNodes(sections));
+                            });
+                            columnData.contentAreas.push({ splitParts: parts });
+                        }
                     });
-
-                    // bottom sections: direct children after split wrapper
-                    const bottomList = [];
-                    let seen = false;
-                    for (const ch of children) { if (ch === splitWrapper) { seen = true; continue; } if (!seen) continue; if (ch.classList && ch.classList.contains('section-group')) bottomList.push(ch); }
-                    if (bottomList.length) columnData.contentAreas.push(serializeSectionNodes(bottomList));
-                } else {
-                    const single = Array.from(contentWrapper.querySelectorAll(':scope > .section-group'));
-                    columnData.contentAreas.push(serializeSectionNodes(single));
+                    flush();
                 }
                 columns.push(columnData);
             });
@@ -2448,6 +2553,31 @@
                     const contentWrapper = column.querySelector('.column-content');
                     contentWrapper.innerHTML = ''; // Leert den Standard-Inhalt, der von createColumnElement kommt
 
+                    // Flexible builder: if contentAreas contains splitParts, render sequential blocks
+                    const __areas = Array.isArray(columnData.contentAreas) ? columnData.contentAreas : [];
+                    const __hasFlexible = __areas.some(a => a && Array.isArray(a.splitParts));
+                    if (__hasFlexible) {
+                        __areas.forEach(area => {
+                            if (area && Array.isArray(area.splitParts)) {
+                                const splitContainer = document.createElement('div');
+                                splitContainer.className = 'column-split-content';
+                                area.splitParts.forEach(partArea => {
+                                    const partDiv = document.createElement('div');
+                                    partDiv.className = 'column-part';
+                                    let sectionsHtml = '';
+                                    (partArea.sections || []).forEach(sectionData => { sectionsHtml += buildSectionHtmlEx(sectionData, t); });
+                                    partDiv.innerHTML = sectionsHtml + `<button class=\"add-section-btn\" onclick=\"addSection(this)\">+ ${t.newSection}</button>`;
+                                    splitContainer.appendChild(partDiv);
+                                });
+                                contentWrapper.appendChild(splitContainer);
+                            } else if (area && Array.isArray(area.sections)) {
+                                let sectionsHtml = '';
+                                area.sections.forEach(sectionData => { sectionsHtml += buildSectionHtmlEx(sectionData, t); });
+                                contentWrapper.innerHTML += sectionsHtml;
+                            }
+                        });
+                        contentWrapper.innerHTML += `<button class=\"add-section-btn\" onclick=\"addSection(this)\">+ ${t.newSection}</button>`;
+                    } else {
                     // Baut die Spaltenstruktur (normal oder geteilt) auf
                     if (splitParts === 1 || splitState === 'normal') {
                         // Für normale Spalten gibt es nur einen Inhaltsbereich
@@ -2498,6 +2628,7 @@
                             bottomArea.sections.forEach(s => bottomHtml += buildSectionHtmlEx(s, t));
                             contentWrapper.innerHTML += bottomHtml;
                         }
+                    }
                     }
                     updateSplitCounterDisplay(column);
                     container.appendChild(column);
