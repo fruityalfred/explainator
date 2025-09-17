@@ -1,7 +1,4 @@
-<!DOCTYPE html>
-<html lang="de">
-<head>
-    <meta charset="UTF-8">
+.app-box.image-box img {\n    display: block;\n charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explainator - Ultimate Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -827,10 +824,12 @@
 }
 .app-box.image-box img {
     display: block;
-    width: 100%;
+    max-width: 100%; /* constrain but do not upscale */
+    width: auto;      /* keep intrinsic width to avoid stretching */
     height: auto;
-    max-height: 270px; /* 3 x (3 lines) → 3 * (3*26 + 12) ≈ 270px */
+    max-height: 270px; /* 3 x (3 lines) ~ 270px */
     object-fit: contain;
+    margin: 0 auto;   /* center if narrower than container */
     border-radius: 4px;
 }
 
@@ -3092,6 +3091,8 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
+
 
 
 
