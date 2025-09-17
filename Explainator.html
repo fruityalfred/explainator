@@ -1885,9 +1885,10 @@
                         container.insertBefore(placeholder, afterElement);
                     }
                 } 
-                else if (draggedElement.classList.contains('section-group')) {
-                    if (draggedFromSplit) {
-                        // Origin from split: prefer a specific part target
+                else if (draggedElement.classList.contains('section-group') || draggedElement.classList.contains('column-split-content')) {
+                    // This part is for dragging a section from one split part to another.
+                    // It should only apply when dragging a section-group.
+                    if (draggedFromSplit && draggedElement.classList.contains('section-group')) {
                         let part = e.target.closest('.column-part');
                         if (!part) {
                             const split = e.target.closest('.column-split-content');
@@ -1904,7 +1905,9 @@
                             return;
                         }
                     }
-                    // Origin not from split OR no part under cursor: place between blocks in column-content
+                    
+                    // This part is for dropping into the main column content area.
+                    // It should apply to both section-group and column-split-content.
                     const container = e.target.closest('.column-content');
                     if (container) {
                         const afterElement = getDragAfterBlock(container, e.clientY);
@@ -1918,18 +1921,34 @@
                 if (!placeholder || !placeholder.parentElement) return;
                 
                 const dropContainer = placeholder.parentElement;
-                dropContainer.replaceChild(draggedElement, placeholder);
+                if (draggedElement && draggedElement.classList && draggedElement.classList.contains('section-group')
+                    && draggedFromSplit && dropContainer.classList.contains('column-content')) {
+                    // Preserve split: create a new split block here and insert into the nearest part
+                    const column = dropContainer.closest('.column');
+                    const parts = Math.max(2, parseInt((column && column.getAttribute('data-split-parts')) || (sourceSplitParts || '2'), 10) || 2);
+                    const splitContainer = document.createElement('div');
+                    splitContainer.className = 'column-split-content';
+                    for (let i = 0; i < parts; i++) {
+                        const partDiv = document.createElement('div');
+                        partDiv.className = 'column-part';
+                        splitContainer.appendChild(partDiv);
+                    }
+                    // Choose part by mouse X relative to container
+                    let index = 0;
+                    try {
+                        const rect = dropContainer.getBoundingClientRect();
+                        const relX = Math.max(0, Math.min(rect.width - 1, lastDragX - rect.left));
+                        index = Math.min(parts - 1, Math.max(0, Math.floor(relX / (rect.width / parts))));
+                    } catch(_) { index = 0; }
+                    const targetPart = splitContainer.querySelectorAll(':scope > .column-part')[index];
+                    targetPart.appendChild(draggedElement);
+                    dropContainer.replaceChild(splitContainer, placeholder);
+                } else {
+                    dropContainer.replaceChild(draggedElement, placeholder);
+                }
                 draggedElement.classList.remove('dragging');
 
-                // NEU: Stellt sicher, dass der "+ Neue Section"-Button immer am Ende ist.
-                if (draggedElement.classList.contains('section-group')) {
-                    const button = dropContainer.querySelector(':scope > .add-section-btn');
-                    if(button) {
-                        dropContainer.appendChild(button);
-                    }
-                    // Stelle sicher, dass JEDER Bereich seinen eigenen Button besitzt
-            // placeholders entfernt
-                }
+                // placeholders entfernt
             });
 
             document.addEventListener('dragend', function(e) {
@@ -3073,7 +3092,6 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
-
 
 
 
