@@ -1,4 +1,7 @@
-.app-box.image-box img {\n    display: block;\n charset="UTF-8">
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explainator - Ultimate Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
@@ -114,19 +117,14 @@
         }
         
         /* Split column layout */
-        .column.split-column {
-            /* legacy class no longer fixes width */
-        }
-
-        .column.split-column-3 {
-            /* legacy class no longer fixes width */
-        }
+        /* legacy split classes no longer used; kept for compatibility */
+        /* .column.split-column, .column.split-column-3 { } */
         
         .column-split-content {
             display: flex;
                         gap: 10px;            /* horizontal gap between parts */
             flex: 0 0 auto;       /* do not grow; columns independent */
-            padding: 0;      /* match .column-content horizontal padding */
+            padding: 0 12px;      /* match .column-content horizontal padding */
             position: relative;
             margin: 0;            /* rely on parent gap for vertical spacing */
         }
@@ -2336,18 +2334,61 @@ function insertSplitBlock(btn) {
         }
         
         // === TEMPLATE MANAGEMENT FUNCTIONS ===
+        // Track the currently loaded template name for sane save behavior
+        window.currentTemplateName = window.currentTemplateName || '';
+
+        function deepClone(obj){ try { return JSON.parse(JSON.stringify(obj)); } catch(_) { return obj; } }
+        // Remove heavy image data for localStorage (keeps structure so it still loads)
+        function stripImagesForStorage(layout){
+            const clone = deepClone(layout);
+            try {
+                (clone.columns||[]).forEach(col => {
+                    const areas = col.contentAreas || [];
+                    areas.forEach(area => {
+                        const sectLists = [];
+                        if (Array.isArray(area.sections)) sectLists.push(area.sections);
+                        if (Array.isArray(area.splitParts)) area.splitParts.forEach(p=> sectLists.push(p.sections||[]));
+                        sectLists.forEach(list => (list||[]).forEach(sec => {
+                            (sec.boxes||[]).forEach(box => { if (box && box.isImage) { box.imageSrc = ''; } });
+                        }));
+                    });
+                });
+            } catch(_){}
+            return clone;
+        }
         function saveTemplate() {
             const t = translations[currentLanguage];
-            const templateName = prompt(t.promptTemplateName, `${t.defaultTemplateName} ${new Date().toLocaleDateString()}`);
-            if (!templateName) return;
-            
-            const templateData = { name: templateName, date: new Date().toISOString(), categories, layout: extractLayoutData() };
             const templates = getStoredTemplates();
-            templates[templateName] = templateData;
-            localStorage.setItem('architectureTemplates', JSON.stringify(templates));
-            
+            // Prefer the current loaded name when present
+            const suggested = window.currentTemplateName && typeof window.currentTemplateName === 'string'
+                ? window.currentTemplateName
+                : `${t.defaultTemplateName} ${new Date().toLocaleDateString()}`;
+
+            let name = prompt(t.promptTemplateName, suggested);
+            if (!name) return;
+
+            // Helper to find a free name with (n) suffix
+            function nextName(base) {
+                let i = 1; let candidate = base;
+                while (templates[candidate]) { i++; candidate = `${base} (${i})`; }
+                return candidate;
+            }
+
+            if (templates[name]) {
+                // Ask before overwriting; if declined, pick next available sequential name
+                const overwrite = confirm(t.confirmOverwriteTemplate ? t.confirmOverwriteTemplate.replace('{name}', name) : `Template "${name}" überschreiben?`);
+                if (!overwrite) name = nextName(name);
+            }
+
+            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData() };
+            templates[name] = templateData;
+            // localStorage write guarded; full template always downloaded below
+            try { localStorage.setItem('architectureTemplates', JSON.stringify(templates)); } catch(_) {}
+            window.currentTemplateName = name; // remember last saved name
+
             downloadTemplateAsFile(templateData);
-            alert(t.alertTemplateSaved.replace('{name}', templateName));
+            alert(t.alertTemplateSaved.replace('{name}', name));
+            updateTemplateList();
         }
         
         function getStoredTemplates() { return JSON.parse(localStorage.getItem('architectureTemplates') || '{}'); }
@@ -2477,6 +2518,7 @@ function insertSplitBlock(btn) {
             categories = template.categories || categories;
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
             applyLayoutData(template.layout);
+            window.currentTemplateName = template.name || templateName;
             
             closeModal('loadTemplateModal');
             // HINWEIS: Die Erfolgsmeldung wurde hier entfernt (auskommentiert).
@@ -2676,7 +2718,13 @@ function insertSplitBlock(btn) {
             if (confirm(translations[currentLanguage].confirmDeleteCategory.replace('{name}', templateName))) {
                 const templates = getStoredTemplates();
                 delete templates[templateName];
+            try {
                 localStorage.setItem('architectureTemplates', JSON.stringify(templates));
+            } catch(e) {
+                console.warn('LocalStorage quota exceeded', e);
+                // Keine Reduktion der Bilddaten – volle Vorlage bleibt im Download erhalten
+                alert((translations[currentLanguage] && translations[currentLanguage].alertTemplateSaved ? translations[currentLanguage].alertTemplateSaved : 'Template gespeichert und heruntergeladen!').replace('{name}', name) + "\n(Hinweis: Speicherung im Browser-Speicher ist fehlgeschlagen – Limit überschritten.)");
+            }
                 updateTemplateList();
             }
         }
@@ -2697,6 +2745,7 @@ function insertSplitBlock(btn) {
                     categories = templateData.categories;
                     updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
                     applyLayoutData(templateData.layout);
+                    window.currentTemplateName = templateData.name || '';
                     
                     closeModal('loadTemplateModal');
                     // HINWEIS: Die Erfolgsmeldung wurde hier entfernt (auskommentiert).
@@ -3091,6 +3140,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 
 </body>
 </html>
+
 
 
 
