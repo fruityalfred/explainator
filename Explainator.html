@@ -2948,12 +2948,43 @@ function insertSplitBlock(btn) {
             
             hideExportUIElements();
             
+            // Compute bounding box of currently visible columns with 5px padding
+            function getVisibleColumnsBBox(padding){
+                const cols = Array.from(document.querySelectorAll('.column'));
+                const vw = window.innerWidth || document.documentElement.clientWidth || 0;
+                const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+                let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
+                cols.forEach(col => {
+                    const r = col.getBoundingClientRect();
+                    const visible = r.right > 0 && r.left < vw && r.bottom > 0 && r.top < vh;
+                    if (!visible) return;
+                    left = Math.min(left, r.left);
+                    top = Math.min(top, r.top);
+                    right = Math.max(right, r.right);
+                    bottom = Math.max(bottom, r.bottom);
+                });
+                if (right <= left || bottom <= top) return null;
+                const pad = padding || 2;
+                const x = Math.max(0, Math.floor(left) - pad + window.scrollX);
+                const y = Math.max(0, Math.floor(top) - pad + window.scrollY);
+                const width = Math.ceil(right - left) + pad * 2;
+                const height = Math.ceil(bottom - top) + pad * 2;
+                return { x, y, width, height };
+            }
+
             setTimeout(() => {
-                html2canvas(container, {
+                const bbox = getVisibleColumnsBBox(5);
+                const target = document.body; // crop from full page to avoid scroll issues
+                const opts = bbox ? {
+                    x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height,
+                    scale: 2, backgroundColor: '#ffffff'
+                } : {
                     scale: 2, backgroundColor: '#ffffff',
                     width: Math.max(container.scrollWidth, container.offsetWidth),
                     height: Math.max(container.scrollHeight, container.offsetHeight)
-                }).then(canvas => {
+                };
+
+                html2canvas(target, opts).then(canvas => {
                     showExportUIElements();
                     const a = document.createElement('a');
                     a.href = canvas.toDataURL('image/png', 0.95);
