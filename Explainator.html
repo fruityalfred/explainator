@@ -2964,7 +2964,7 @@ function insertSplitBlock(btn) {
                     bottom = Math.max(bottom, r.bottom);
                 });
                 if (right <= left || bottom <= top) return null;
-                const pad = padding || 2;
+                const pad = padding || 5;
                 const x = Math.max(0, Math.floor(left) - pad + window.scrollX);
                 const y = Math.max(0, Math.floor(top) - pad + window.scrollY);
                 const width = Math.ceil(right - left) + pad * 2;
