@@ -873,6 +873,7 @@
             <button class="btn btn-warning" onclick="resetLayout()" data-translate="resetLayout">🔄 Layout zurücksetzen</button>
             <button class="btn btn-danger" onclick="clearAll()" data-translate="clearAll">🗑️ Alles löschen</button>
             <button id="langSwitchBtn" class="btn btn-info" onclick="toggleLanguage()">EN</button>
+            <button class="btn btn-secondary" onclick="showHelpModal()" data-translate="help">❓ Hilfe</button>
         </div>
         
         <div class="main-container" id="mainContainer">
@@ -1015,6 +1016,71 @@
         </div>
     </div>
     
+    <div class="modal" id="helpModal">
+        <div class="modal-content" style="max-width: 900px;">
+            <div class="modal-header" data-translate="helpTitle">❓ Hilfe</div>
+            <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+                <div class="help-content help-de">
+                    <h3>Willkommen</h3>
+                    <p>Explainator ist ein flexibles Canvas für Organigramme, Office‑Maps, Boards u. v. m.</p>
+                    <h4>Grundlagen</h4>
+                    <ul>
+                        <li>Neue Spalten: „Neue Spalte“ im Kopfbereich.</li>
+                        <li>Sections/Boxen: „Neue Box“ öffnet den Dialog; Boxen per Drag & Drop verschieben.</li>
+                        <li>Splitten: In der Spalten‑Leiste den Split‑Zähler nutzen (2–3 Teile).</li>
+                        <li>Zwischen Splits und normalen Bereichen wechseln: Beim Ziehen einer Split‑Section Alt gedrückt halten, um als volle Breite abzulegen. Ohne Alt bleibt die Section gesplittet.</li>
+                        <li>Farben: ⚙/🎨 im Section‑Header öffnet den Farbwähler.</li>
+                        <li>Raster: „Hilfslinien“ zeigt dezente Ausrichtungslinien.</li>
+                    </ul>
+                    <h4>Speichern & Laden</h4>
+                    <ul>
+                        <li>„Template speichern“ – speichert in der Liste und lädt eine JSON‑Datei herunter.</li>
+                        <li>„Template laden“ – gespeicherte Einträge oder JSON‑Datei importieren; oben findest du auch eingebaute Vorlagen (Organigramm, Office Map, Kanban).</li>
+                    </ul>
+                    <h4>Export</h4>
+                    <ul>
+                        <li>„Als PNG exportieren“ – erstellt einen sauberen PNG‑Export (Icons und Rahmen werden bereinigt).</li>
+                    </ul>
+                    <h4>Tastatur‑Tipps</h4>
+                    <ul>
+                        <li>Alt beim Ablegen einer Split‑Section ⇒ als volle Breite einfügen.</li>
+                        <li>Ctrl beim Ziehen ⇒ duplizieren (sofern aktiv).</li>
+                    </ul>
+                </div>
+                <div class="help-content help-en" style="display:none;">
+                    <h3>Welcome</h3>
+                    <p>Explainator is a flexible canvas for org charts, office maps, boards and more.</p>
+                    <h4>Basics</h4>
+                    <ul>
+                        <li>Add columns via “New Column”.</li>
+                        <li>Add boxes via “New Box”, drag & drop anywhere.</li>
+                        <li>Split columns using the split counter (2–3 parts).</li>
+                        <li>Switch between split and full‑width: While dragging a split‑section hold Alt to drop as full‑width; otherwise it stays split.</li>
+                        <li>Colors: ⚙/🎨 in section header opens the picker.</li>
+                        <li>Grid: “Grid Lines” shows alignment helpers.</li>
+                    </ul>
+                    <h4>Save & Load</h4>
+                    <ul>
+                        <li>“Save Template” stores to the list and downloads a JSON file.</li>
+                        <li>“Load Template” loads saved entries or a JSON file; built‑ins (Organigram, Office Map, Kanban) are available on top.</li>
+                    </ul>
+                    <h4>Export</h4>
+                    <ul>
+                        <li>“Export as PNG” produces a clean PNG (UI elements hidden).</li>
+                    </ul>
+                    <h4>Keyboard</h4>
+                    <ul>
+                        <li>Alt on drop of split‑section ⇒ insert as full‑width.</li>
+                        <li>Ctrl while dragging ⇒ duplicate (if enabled).</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" onclick="closeModal('helpModal')" data-translate="close">Schließen</button>
+            </div>
+        </div>
+    </div>
+    
     <canvas id="exportCanvas" style="position: fixed; top: -10000px; left: -10000px; pointer-events: none;"></canvas>
     
     <script>
@@ -1095,7 +1161,9 @@
                 sectionColor: "Section-Farbe",
                 columnColor: "Header-Farbe",
                 splitColumnTooltip: "Spalte in 2-3 Teile teilen/zusammenführen",
-                deleteSectionTooltip: "Section löschen"
+                deleteSectionTooltip: "Section loeschen",
+                help: "Hilfe",
+                helpTitle: "Hilfe"
             },
             en: {
                 mainTitle: "🏢 Explainator - Ultimate Edition",
@@ -1170,7 +1238,9 @@
                 sectionColor: "Section Color",
                 columnColor: "Header Color",
                 splitColumnTooltip: "Split/merge column into 2-3 parts",
-                deleteSectionTooltip: "Delete section"
+                deleteSectionTooltip: "Delete section",
+                help: "❓ Help",
+                helpTitle: "❓ Help"
             }
         };
 
@@ -1190,6 +1260,17 @@
                     el.innerHTML = t[key];
                 }
             });
+
+            // If help is open, switch language content
+            const hm = document.getElementById('helpModal');
+            if (hm && hm.classList.contains('show')) {
+                const de = hm.querySelector('.help-de');
+                const en = hm.querySelector('.help-en');
+                if(de && en){
+                    if(lang === 'de'){ de.style.display='block'; en.style.display='none'; }
+                    else { de.style.display='none'; en.style.display='block'; }
+                }
+            }
             
             // Special handling for placeholders
             const boxNameInput = document.getElementById('boxName');
@@ -2140,6 +2221,18 @@ function insertSplitBlock(btn) {
         }
         
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
+
+        function showHelpModal(){
+            const m = document.getElementById('helpModal');
+            if(!m) return;
+            m.classList.add('show');
+            const de = m.querySelector('.help-de');
+            const en = m.querySelector('.help-en');
+            if(de && en){
+                if(currentLanguage === 'de'){ de.style.display='block'; en.style.display='none'; }
+                else { de.style.display='none'; en.style.display='block'; }
+            }
+        }
         
         // New: adds either a text-box or image-box based on modal state
         function addBoxNew() {
