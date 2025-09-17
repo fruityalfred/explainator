@@ -773,6 +773,11 @@
         border-radius: 6px;
         margin: 4px 0;
     }
+    /* Visual cue when Alt enables full-width drop for split-origin sections */
+    .dragging-placeholder.full-width-mode {
+        background: rgba(33, 150, 243, 0.10);
+        border-color: #2196F3;
+    }
     .dragging {
         opacity: 0.5;
         transform: rotate(2deg);
@@ -1902,6 +1907,15 @@
                     if (container) {
                         const afterElement = getDragAfterBlock(container, e.clientY);
                         container.insertBefore(placeholder, afterElement);
+                        // If we are dragging from a split, allow user to choose mode via Alt key
+                        if (draggedFromSplit && draggedElement.classList.contains('section-group')) {
+                            const full = !!e.altKey; // Alt = insert as full-width (unsplitted)
+                            placeholder.setAttribute('data-drop-mode', full ? 'full' : 'split');
+                            placeholder.classList.toggle('full-width-mode', full);
+                        } else {
+                            placeholder.removeAttribute('data-drop-mode');
+                            placeholder.classList.remove('full-width-mode');
+                        }
                     }
                 }
             });
@@ -1913,6 +1927,11 @@
                 const dropContainer = placeholder.parentElement;
                 if (draggedElement && draggedElement.classList && draggedElement.classList.contains('section-group')
                     && draggedFromSplit && dropContainer.classList.contains('column-content')) {
+                    // Check placeholder mode: Alt during dragover toggles 'full' mode
+                    const mode = placeholder && placeholder.getAttribute('data-drop-mode');
+                    if (mode === 'full') {
+                        dropContainer.replaceChild(draggedElement, placeholder);
+                    } else {
                     // Preserve split: create a new split block here and insert into the nearest part
                     const column = dropContainer.closest('.column');
                     const parts = Math.max(2, parseInt((column && column.getAttribute('data-split-parts')) || (sourceSplitParts || '2'), 10) || 2);
@@ -1933,6 +1952,7 @@
                     const targetPart = splitContainer.querySelectorAll(':scope > .column-part')[index];
                     targetPart.appendChild(draggedElement);
                     dropContainer.replaceChild(splitContainer, placeholder);
+                    }
                 } else {
                     dropContainer.replaceChild(draggedElement, placeholder);
                 }
