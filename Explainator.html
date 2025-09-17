@@ -124,7 +124,7 @@
             display: flex;
                         gap: 10px;            /* horizontal gap between parts */
             flex: 0 0 auto;       /* do not grow; columns independent */
-            padding: 0 12px;      /* match .column-content horizontal padding */
+            padding: 0;      /* match .column-content horizontal padding */
             position: relative;
             margin: 0;            /* rely on parent gap for vertical spacing */
         }
@@ -984,6 +984,14 @@
         <div class="modal-content">
             <div class="modal-header" data-translate="loadTemplate">📂 Template laden</div>
             <div class="modal-body">
+                <div style="margin-bottom: 20px;">
+                    <h4 style="margin-bottom: 10px;">Vorlagen:</h4>
+                    <div id="builtinTemplateList" style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;">
+                        <button class="btn btn-secondary small-btn" onclick="loadBuiltinTemplate('organigram')">Organigramm</button>
+                        <button class="btn btn-secondary small-btn" onclick="loadBuiltinTemplate('office')">Office Map</button>
+                        <button class="btn btn-secondary small-btn" onclick="loadBuiltinTemplate('kanban')">Kanban</button>
+                    </div>
+                </div>
                 <div style="margin-bottom: 20px;">
                     <h4 style="margin-bottom: 10px;" data-translate="savedTemplates">Gespeicherte Templates:</h4>
                     <div id="templateList" style="max-height: 300px; overflow-y: auto;">
@@ -2463,6 +2471,79 @@ function insertSplitBlock(btn) {
         function showLoadTemplateModal() {
             document.getElementById('loadTemplateModal').classList.add('show');
             updateTemplateList();
+        }
+
+        // Built-in templates
+        const builtinTemplates = {
+            organigram: {
+                name: 'Organigramm',
+                categories: {
+                    mgmt: { name:'Management', color1:'#8B4513', color2:'#8B4513' },
+                    eng:  { name:'Engineering', color1:'#667eea', color2:'#764ba2' },
+                    sales:{ name:'Sales', color1:'#84fab0', color2:'#8fd3f4' },
+                    ops:  { name:'Operations', color1:'#f093fb', color2:'#f5576c' },
+                    hr:   { name:'HR', color1:'#f6d365', color2:'#fda085' }
+                },
+                layout: {
+                    columns: [
+                        { id: '1', title:'Organisation', width:'400px', splitState:'normal', splitParts:1, contentAreas:[
+                            { sections:[ { title:'CEO', color:'#8B4513', boxes:[{ isImage:false, text:'Max Mustermann', type:'mgmt', width:'full-width', lines:'1'}] } ] },
+                            { splitParts:[
+                                { sections:[ { title:'Engineering', color:'#667eea', boxes:[{ isImage:false, text:'Team A', type:'eng', width:'full-width', lines:'1'},{ isImage:false, text:'Team B', type:'eng', width:'full-width', lines:'1'}] } ] },
+                                { sections:[ { title:'Sales', color:'#84fab0', boxes:[{ isImage:false, text:'DACH', type:'sales', width:'full-width', lines:'1'},{ isImage:false, text:'EMEA', type:'sales', width:'full-width', lines:'1'}] } ] },
+                                { sections:[ { title:'Operations', color:'#f093fb', boxes:[{ isImage:false, text:'IT Ops', type:'ops', width:'full-width', lines:'1'},{ isImage:false, text:'Finance Ops', type:'ops', width:'full-width', lines:'1'}] } ] }
+                            ]},
+                            { sections:[ { title:'HR', color:'#f6d365', boxes:[{ isImage:false, text:'Recruiting', type:'hr', width:'half-width', lines:'1'},{ isImage:false, text:'People & Culture', type:'hr', width:'half-width', lines:'1'}] } ] }
+                        ]}
+                    ]
+                }
+            },
+            office: {
+                name: 'Office Map',
+                categories: {
+                    space:{ name:'Space', color1:'#E0E0E0', color2:'#E0E0E0' },
+                    room: { name:'Room',  color1:'#B0BEC5', color2:'#B0BEC5' },
+                    desk: { name:'Desk',  color1:'#90CAF9', color2:'#90CAF9' }
+                },
+                layout: {
+                    columns: [
+                        { id:'1', title:'Etage 3', splitState:'normal', splitParts:1, contentAreas:[
+                            { splitParts:[
+                                { sections:[ { title:'Open Space', color:'#E0E0E0', boxes:[{ isImage:false, text:'Desk 1', type:'desk', width:'half-width', lines:'1'},{ isImage:false, text:'Desk 2', type:'desk', width:'half-width', lines:'1'},{ isImage:false, text:'Desk 3', type:'desk', width:'half-width', lines:'1'},{ isImage:false, text:'Desk 4', type:'desk', width:'half-width', lines:'1'}] } ] },
+                                { sections:[ { title:'Meeting', color:'#B0BEC5', boxes:[{ isImage:false, text:'Room A', type:'room', width:'full-width', lines:'1'}] } ] }
+                            ]},
+                            { splitParts:[
+                                { sections:[ { title:'Open Space', color:'#E0E0E0', boxes:[{ isImage:false, text:'Desk 5', type:'desk', width:'half-width', lines:'1'},{ isImage:false, text:'Desk 6', type:'desk', width:'half-width', lines:'1'}] } ] },
+                                { sections:[ { title:'Küche', color:'#B0BEC5', boxes:[{ isImage:false, text:'Coffee', type:'room', width:'full-width', lines:'1'}] } ] }
+                            ]}
+                        ]}
+                    ]
+                }
+            },
+            kanban: {
+                name: 'Kanban',
+                categories: {
+                    todo: { name:'To Do', color1:'#FFAB91', color2:'#FFAB91' },
+                    doing:{ name:'Doing', color1:'#FFD54F', color2:'#FFD54F' },
+                    done: { name:'Done',  color1:'#A5D6A7', color2:'#A5D6A7' }
+                },
+                layout: {
+                    columns: [
+                        { id:'1', title:'To Do', splitState:'normal', splitParts:1, contentAreas:[ { sections:[ { title:'Backlog', color:'#FFAB91', boxes:[{ isImage:false, text:'Task 1', type:'todo', width:'full-width', lines:'1'},{ isImage:false, text:'Task 2', type:'todo', width:'full-width', lines:'1'}] } ] } ] },
+                        { id:'2', title:'Doing', splitState:'normal', splitParts:1, contentAreas:[ { sections:[ { title:'In Arbeit', color:'#FFD54F', boxes:[{ isImage:false, text:'Implement Feature', type:'doing', width:'full-width', lines:'1'}] } ] } ] },
+                        { id:'3', title:'Done',  splitState:'normal', splitParts:1, contentAreas:[ { sections:[ { title:'Abgeschlossen', color:'#A5D6A7', boxes:[{ isImage:false, text:'Review OK', type:'done', width:'full-width', lines:'1'}] } ] } ] }
+                    ]
+                }
+            }
+        };
+
+        function loadBuiltinTemplate(key){
+            const tpl = builtinTemplates[key]; if(!tpl) return;
+            categories = tpl.categories || categories;
+            updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+            applyLayoutData(tpl.layout);
+            window.currentTemplateName = tpl.name || key;
+            closeModal('loadTemplateModal');
         }
         
         function updateTemplateList() {
