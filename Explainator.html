@@ -127,23 +127,23 @@
         
         .column-split-content {
             display: flex;
-            gap: 10px;           /* horizontal gap between parts */
-            flex: 0 0 auto;      /* DO NOT grow; keeps columns independent */
-            padding: 0 10px 0 10px; /* no extra top/bottom spacing; rely on .column-content */
-            position: relative;  /* for bottom overlay */
-            margin: 0;           /* consistent spacing via parent gap */
+                        gap: 10px;            /* horizontal gap between parts */
+            flex: 0 0 auto;       /* do not grow; columns independent */
+            padding: 0;      /* match .column-content horizontal padding */
+            position: relative;
+            margin: 0;            /* rely on parent gap for vertical spacing */
         }
 
         .column-part {
             flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 10px; /* match vertical spacing with normal sections */
+            gap: 4px; /* match vertical spacing with normal sections */
             border-right: 1px solid #e0e0e0;
             padding-right: 10px;
             margin-top: 0;
         }
-        .column-part:last-child { border-right: none; padding-right: 0; padding-left: 10px; }
+        .column-part:last-child { border-right: none; padding-right: 0; padding-left: 0px; }
         
         /* removed legacy .column-half/.column-third; using .column-part only */
         
@@ -151,15 +151,18 @@
             box-shadow: 0 5px 20px rgba(139,69,19,0.2);
         }
 
-        /* Ensure split divider never extends into the 10px gap below */
-        .column-split-content::after {
+        /* Do not cover bottom borders of sections; mask only the vertical divider ends */
+        .column-split-content::after { display: none; }
+
+        .column-part { position: relative; }
+        .column-part::after {
             content: '';
             position: absolute;
-            left: 0; right: 0; bottom: 0;
-            height: 10px; /* equal to inter-section gap */
-            background: #fff; /* same as column background */
-            pointer-events: none;
+            right: -1px; bottom: 0;
+            width: 2px; height: 10px; /* hide last 10px of divider only */
+            background: #fff; pointer-events: none;
         }
+        .column-part:last-child::after { display: none; }
         
         .column-header {
             background: linear-gradient(to bottom, #8B4513, #A0522D);
@@ -275,7 +278,7 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 8px; /* slightly tighter vertical spacing */
         }
         
         .section-group {
@@ -1414,7 +1417,6 @@
                     <span class="header-btn color-column-btn" title="${t.columnColor}" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="showColumnColorPicker(this)">🖌️</span>
 
 
-                    <span class="header-btn insert-split-btn" title="Split-Block am Ende einfügen" draggable="false" onmousedown="event.stopPropagation();event.preventDefault();" onpointerdown="event.stopPropagation();event.preventDefault();" onclick="insertSplitBlock(this)">⇲</span>
                     <span class="header-btn delete-column" onclick="deleteColumn(this)">×</span>
                 </div>
                 <div class="resize-handle"></div>
@@ -1423,7 +1425,7 @@
                         <div class="section-title">
                             ${t.newSection}
                             <span class="section-delete" onclick="deleteSection(this)" title="${t.deleteSectionTooltip}">×</span>
-                            <span class="section-menu" onclick="showSectionColorPicker(this)">?</span>
+                            <span class="section-menu" onclick="showSectionColorPicker(this)">🎨</span>
                         </div>
                         <div class="box-container"></div>
                     </div>
@@ -1838,7 +1840,7 @@
             let lastDragX = 0;             // letzte Maus-X-Position
 
             document.addEventListener('dragstart', function(e) {
-                const target = e.target.closest && e.target.closest('.app-box, .section-group');
+                const target = e.target.closest && e.target.closest('.app-box, .section-group, .column-split-content');
                 if (!target) return;
                 if (target.classList.contains('section-group') && target.querySelector('.section-title input')) return;
 
@@ -1916,27 +1918,7 @@
                 if (!placeholder || !placeholder.parentElement) return;
                 
                 const dropContainer = placeholder.parentElement;
-                if (draggedElement.classList.contains('section-group') && draggedFromSplit && dropContainer.classList.contains('column-content')) {
-                    // Create a new split block here and place the dragged section into the nearest part
-                    const column = dropContainer.closest('.column');
-                    const t = translations[currentLanguage];
-                    const parts = Math.max(2, parseInt(column.getAttribute('data-split-parts') || sourceSplitParts || '2', 10) || 2);
-                    const splitContainer = document.createElement('div');
-                    splitContainer.className = 'column-split-content';
-                    const rect = dropContainer.getBoundingClientRect();
-                    for (let i = 0; i < parts; i++) {
-                        const partDiv = document.createElement('div');
-                        partDiv.className = 'column-part';
-                        splitContainer.appendChild(partDiv);
-                    }
-                    let index = 0;
-                    try { const relX = Math.max(0, Math.min(rect.width - 1, lastDragX - rect.left)); index = Math.min(parts - 1, Math.max(0, Math.floor(relX / (rect.width / parts)))); } catch(_) {}
-                    const targetPart = splitContainer.querySelectorAll(':scope > .column-part')[index];
-                    targetPart.appendChild(draggedElement);
-                    dropContainer.replaceChild(splitContainer, placeholder);
-                } else {
-                    dropContainer.replaceChild(draggedElement, placeholder);
-                }
+                dropContainer.replaceChild(draggedElement, placeholder);
                 draggedElement.classList.remove('dragging');
 
                 // NEU: Stellt sicher, dass der "+ Neue Section"-Button immer am Ende ist.
@@ -2056,7 +2038,7 @@
   const newSection = document.createElement("div");
   newSection.className = "section-group";
   newSection.draggable = true;
-  newSection.innerHTML = '<div class="section-title">' + t.newSection + '<span class="section-delete" onclick="deleteSection(this)" title="' + t.deleteSectionTooltip + '">x</span><span class="section-menu" onclick="showSectionColorPicker(this)">?</span></div><div class="box-container"></div>';
+  newSection.innerHTML = '<div class="section-title">' + t.newSection + '<span class="section-delete" onclick="deleteSection(this)" title="' + t.deleteSectionTooltip + '">x</span><span class="section-menu" onclick="showSectionColorPicker(this)">🎨</span></div><div class="box-container"></div>';
   columnContent.appendChild(newSection);
   try { const sd = newSection.querySelector(".section-delete"); if (sd) sd.textContent = 'x'; } catch(e) {}
 }
@@ -2247,7 +2229,7 @@ function insertSplitBlock(btn) {
                 const menuHTML = title.querySelector('.section-menu')?.outerHTML || '';
                 const deleteHTML = title.querySelector('.section-delete')?.outerHTML || '';
                 const textNode = (title.childNodes && title.childNodes[0] && title.childNodes[0].nodeType === 3) ? title.childNodes[0] : null;
-                const currentText = textNode ? textNode.textContent.trim() : title.textContent.replace(/[x×⚙?]/g, '').trim();
+                const currentText = textNode ? textNode.textContent.trim() : title.textContent.replace(/[x×⚙?🎨]/g, '').trim();
                 title.classList.add('editing');
                 title.innerHTML = `<input type="text" value="${currentText}" onblur="updateSectionTitle(this)" onkeypress="if(event.key==='Enter') this.blur()">`;
                 title.setAttribute('data-menu', deleteHTML + menuHTML);
@@ -2510,6 +2492,7 @@ function insertSplitBlock(btn) {
                             if (area && Array.isArray(area.splitParts)) {
                                 const splitContainer = document.createElement('div');
                                 splitContainer.className = 'column-split-content';
+                                splitContainer.setAttribute('draggable', 'true');
                                 area.splitParts.forEach(partArea => {
                                     const partDiv = document.createElement('div');
                                     partDiv.className = 'column-part';
@@ -2544,6 +2527,7 @@ function insertSplitBlock(btn) {
 
                         const splitContainer = document.createElement('div');
                         splitContainer.className = 'column-split-content';
+                        splitContainer.setAttribute('draggable', 'true');
                         // Optional Top-/Bottom-Bereiche um die Splits herum
                         const totalAreas = (columnData.contentAreas || []).length;
                         let startIdx = 0;
@@ -2619,7 +2603,7 @@ function insertSplitBlock(btn) {
                     <div class="section-title" style="background: ${sectionColor}" data-color="${sectionColor}">
                         ${sectionData.title}
                         <span class="section-delete" onclick="deleteSection(this)" title="${t.deleteSectionTooltip}">×</span>
-                        <span class="section-menu" onclick="showSectionColorPicker(this)">⚙</span>
+                        <span class="section-menu" onclick="showSectionColorPicker(this)">🎨</span>
                     </div>
                     <div class="box-container">${boxesHtml}</div>
                 </div>`;
