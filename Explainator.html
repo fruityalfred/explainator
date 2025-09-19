@@ -348,6 +348,25 @@
         .section-title .section-menu:hover {
             background: rgba(255,255,255,0.4);
         }
+        /* Section pipette icon */
+        .section-title .section-pipette {
+            position: absolute;
+            right: 58px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: white;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .section-title .section-pipette:hover { background: rgba(255,255,255,0.4); }
         
         .add-section-btn {
             width: 100%;
@@ -747,13 +766,14 @@
 .column-header .header-btn { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,0.15); border:1px solid rgba(255,255,255,0.3); color:#fff; width:24px; height:24px; border-radius:50%; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; }
 .column-header .delete-column { right:10px; font-size:16px; }
 .column-header .color-column-btn { right:40px; }
-.column-header .insert-split-btn { right:70px; }
+.column-header .pipette-column-btn { right:70px; }
+.column-header .insert-split-btn { right:100px; }
 .column-color-picker { z-index:30000; position:absolute; top:110%; right:0; background:#fff; border:2px solid #ddd; border-radius:6px; padding:10px; box-shadow:0 4px 12px rgba(0,0,0,0.15); z-index:12000; display:none; min-width:240px; max-width:520px; }
 .column-color-picker.show{ display:flex; flex-wrap: wrap; gap:8px; }
 .column-color-picker .row{ display:flex; align-items:center; gap:8px; margin:0; width: calc(33.333% - 8px); }
 .column-color-picker .row:last-child{ width:100%; margin-top:8px; }
 .column-color-picker .swatch{ width:22px; height:22px; border-radius:4px; border:1px solid #bbb; cursor:pointer; }
-.column-color-picker .swatch{ width:30px; height:20px; border-radius:4px; border:1px solid #ccc; cursor:pointer; }
+        .column-color-picker .swatch{ width:30px; height:20px; border-radius:4px; border:1px solid #ccc; cursor:pointer; }
 </style>
 
 <style>.column-header{position:relative}</style>
@@ -763,6 +783,15 @@
 .screenshot-mode .color-column-btn,
 [data-screenshot="true"] .color-column-btn,
 .exporting .color-column-btn { display: none !important; }
+/* Hide pipette icons during screenshots/exports */
+.screenshot-mode .pipette-column-btn,
+[data-screenshot="true"] .pipette-column-btn,
+.exporting .pipette-column-btn,
+.screenshot-mode .section-pipette,
+[data-screenshot="true"] .section-pipette,
+.exporting .section-pipette { display: none !important; }
+/* During EyeDropper, remove modal dimming so picked color is accurate */
+.eye-drop-mode .modal { background: transparent !important; }
 </style>
 
 <style>
@@ -3126,6 +3155,74 @@ function insertSplitBlock(btn) {
 
 <script>
 (function(){
+  function addColumnPipette(header){
+    if (!header || header.querySelector('.pipette-column-btn')) return;
+    var pip = document.createElement('span');
+    pip.className = 'header-btn pipette-column-btn pipette-btn';
+    pip.title = 'Farbe mit Pipette wählen';
+    pip.setAttribute('draggable','false');
+    pip.textContent = '🧪';
+    pip.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); }, true);
+    pip.addEventListener('click', async function(e){
+      e.preventDefault(); e.stopPropagation();
+      try{
+        var headerEl = header; // capture via closure
+        var color = null;
+        if (window.pickEyeDropper) {
+          color = await pickEyeDropper('col-custom');
+        } else if ('EyeDropper' in window) {
+          document.body.classList.add('eye-drop-mode');
+          const ed = new EyeDropper();
+          const res = await ed.open();
+          color = res && res.sRGBHex;
+        }
+        if (color && headerEl) applyHeaderColor(headerEl, color);
+      }catch(_){ }
+      finally { try { document.body.classList.remove('eye-drop-mode'); } catch(_){} }
+    }, true);
+    header.appendChild(pip);
+  }
+  function addSectionPipette(title){
+    if (!title || title.querySelector('.section-pipette')) return;
+    var pip = document.createElement('span');
+    pip.className = 'section-pipette pipette-btn';
+    pip.title = 'Farbe mit Pipette wählen';
+    pip.textContent = '🧪';
+    pip.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); }, true);
+    pip.addEventListener('click', async function(e){
+      e.preventDefault(); e.stopPropagation();
+      try{
+        const color = await (window.pickEyeDropper ? pickEyeDropper('col-custom') : (async ()=>null)());
+        if (color) applySectionColor(title, color);
+      }catch(_){ }
+    }, true);
+    title.appendChild(pip);
+  }
+  function bootstrap(){
+    document.querySelectorAll('.column-header').forEach(addColumnPipette);
+    document.querySelectorAll('.section-title').forEach(addSectionPipette);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootstrap, { once:true }); else bootstrap();
+  try{
+    var mo = new MutationObserver(function(muts){
+      for (var m of muts){
+        for (var n of m.addedNodes||[]){
+          if (n.nodeType!==1) continue;
+          if (n.classList && n.classList.contains('column-header')) addColumnPipette(n);
+          if (n.classList && n.classList.contains('section-title')) addSectionPipette(n);
+          if (n.querySelectorAll){
+            n.querySelectorAll('.column-header').forEach(addColumnPipette);
+            n.querySelectorAll('.section-title').forEach(addSectionPipette);
+          }
+        }
+      }
+    });
+    mo.observe(document.body, {childList:true, subtree:true});
+  }catch(_){ }
+})();
+</script>
+<script>
+(function(){
   if (typeof window.applyHeaderColor !== 'function') {
     window.applyHeaderColor = function(header, color){
       if(!header) return;
@@ -3180,11 +3277,31 @@ window.showColumnColorPicker = function(btn){
   header.appendChild(p);
   requestAnimationFrame(function(){ p.classList.add('show'); });
 
+  // Enhance custom row: mark apply button and add pipette
+  try{
+    var row = p.querySelector('div.row');
+    if(row){
+      var firstBtn = row.querySelector('button');
+      if(firstBtn){ firstBtn.setAttribute('data-action','apply'); firstBtn.textContent = 'Übernehmen'; }
+      // Add pipette icon button that reuses existing pickEyeDropper helper
+      if(!row.querySelector('button[data-action="pipette"]')){
+        var pip = document.createElement('button');
+        pip.className = 'btn small-btn pipette-btn'; pip.type = 'button'; pip.setAttribute('data-action','pipette'); pip.title='Pipette'; pip.textContent = '🧪';
+        pip.setAttribute('onclick', "pickEyeDropper('col-custom')");
+        row.appendChild(pip);
+        ['mousedown','pointerdown','click'].forEach(function(evt){ pip.addEventListener(evt, function(e){ e.stopPropagation(); }, true); });
+      }
+    }
+  }catch(_){ }
+
   p.addEventListener('click', function(e){
     var sw = e.target.closest && e.target.closest('.swatch');
     if(sw){ applyHeaderColor(header, sw.getAttribute('data-c')); p.remove(); return; }
     if(e.target && e.target.tagName === 'BUTTON'){
-      var c = p.querySelector('#col-custom').value; applyHeaderColor(header, c); p.remove(); return;
+      var act = e.target.getAttribute('data-action');
+      if(act === 'apply'){
+        var c = p.querySelector('#col-custom').value; applyHeaderColor(header, c); p.remove(); return;
+      }
     }
   }, true);
 
@@ -3280,6 +3397,8 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   ['pointerdown','mousedown','dragstart'].forEach(evt => {
     document.addEventListener(evt, function(ev){
       if (ev.target && ev.target.closest && ev.target.closest('.color-column-btn, .column-color-picker')) {
+        // Allow pipette buttons to receive a real user gesture
+        if (ev.target.closest('.pipette-btn')) return;
         // prevent column header drag when interacting with the color UI
         ev.preventDefault();
         ev.stopPropagation();
@@ -3342,11 +3461,75 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
         input.addEventListener('blur', finishEditing);
         input.addEventListener('keypress', handleKeyPress);
     });
+// Override global pipette with safe wrapper to ensure accurate sampling
+(function(){
+  if (window.__pipetteWrapperInstalled__) return; window.__pipetteWrapperInstalled__ = true;
+  window.pickEyeDropper = async function(targetId){
+    try{
+      if (!('EyeDropper' in window)) { alert('Pipette wird von diesem Browser nicht unterstützt.'); return; }
+      document.body.classList.add('eye-drop-mode');
+      const ed = new EyeDropper();
+      const res = await ed.open();
+      const input = document.getElementById(targetId);
+      if (input) {
+        input.value = res.sRGBHex;
+        try { if (typeof updateColorPreview === 'function') updateColorPreview(); } catch(_){ }
+      }
+      return res && res.sRGBHex ? res.sRGBHex : null;
+    } catch(_) { /* cancelled or not available */ }
+    finally { document.body.classList.remove('eye-drop-mode'); }
+  };
+})();
 </script>
 
 
 </body>
 </html>
+
+<script>
+// Enhance section color picker with pipette + custom color row
+(function(){
+  try{
+    function enhance(picker){
+      try{
+        if (!picker || !picker.classList || !picker.classList.contains('section-color-picker')) return;
+        if (picker.querySelector('.section-custom-color')) return; // already enhanced
+        const sectionTitle = picker.closest('.section-title');
+        const row = document.createElement('div');
+        row.className = 'row';
+        row.style.cssText = 'width:100%; display:flex; gap:8px; align-items:center; margin-top:8px;';
+        var cid = 'sec-col-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+        row.innerHTML = '<button class="btn small-btn pipette-btn" type="button" data-action="pipette" title="Pipette" onclick="pickEyeDropper(\''+cid+'\')">🧪</button>'
+                       + '<input type="color" id="'+cid+'" class="section-custom-color" value="#8B4513" style="flex:0 0 40px; border:none; padding:0;" />'
+                       + '<button class="btn small-btn" type="button" data-action="apply">Übernehmen</button>';
+        picker.appendChild(row);
+        ['mousedown','pointerdown','click'].forEach(evt => row.addEventListener(evt, e => e.stopPropagation(), true));
+        const applyBtn = row.querySelector('button[data-action="apply"]');
+        if (applyBtn && sectionTitle){
+          applyBtn.addEventListener('click', function(ev){
+            ev.preventDefault(); ev.stopPropagation();
+            const inp = picker.querySelector('.section-custom-color');
+            if (inp && typeof applySectionColor === 'function') applySectionColor(sectionTitle, inp.value);
+            picker.remove();
+          }, true);
+        }
+        // No extra JS for pipette; inline onclick uses existing pickEyeDropper
+      }catch(_){ }
+    }
+    const obs = new MutationObserver(function(muts){
+      for (let m of muts){
+        for (let n of m.addedNodes||[]){
+          if (n.nodeType===1){
+            if (n.classList && n.classList.contains('section-color-picker')) enhance(n);
+            else if (n.querySelectorAll) n.querySelectorAll('.section-color-picker').forEach(enhance);
+          }
+        }
+      }
+    });
+    obs.observe(document.body, {childList:true, subtree:true});
+  }catch(_){ }
+})();
+</script>
 
 
 
