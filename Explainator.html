@@ -981,7 +981,7 @@
                     <input type="text" id="categoryName" placeholder="Kategorie Name (z.B. Cloud Services)">
                     <div class="color-input-group" id="catColorGroup">
                         <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px; flex-wrap:wrap;">
-                            <label style="min-width: 60px;" data-translate="color1">Farbe:</label>
+                            <label style="min-width: 60px;" data-translate="color1">Box-Farbe:</label>
                             <input type="color" id="categoryColor1" value="#8B4513" style="flex:0 0 40px; border:none; padding:0;">
                             <button class="btn small-btn" type="button" onclick="pickEyeDropper('categoryColor1')">Pipette</button>
                             <label style="margin-left:16px; display:flex; align-items:center; gap:6px;">
@@ -995,7 +995,12 @@
                             <button class="btn small-btn" type="button" onclick="pickEyeDropper('categoryColor2')">Pipette</button>
                         </div>
                         <div id="catSwatches2" style="display:none; flex-wrap:wrap; gap:6px; margin-bottom:10px;"></div>
-                        <div id="colorPreview" style="width: 120px; height: 30px; border-radius: 4px; background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%);"></div>
+                        <div style="display:flex; align-items:center; gap:8px; margin:8px 0;">
+                            <label style="min-width: 60px;">Text-Farbe:</label>
+                            <input type="color" id="categoryTextColor" value="#ffffff" style="flex:0 0 40px; border:none; padding:0;">
+                            <button class="btn small-btn" type="button" onclick="pickEyeDropper('categoryTextColor')">Pipette</button>
+                        </div>
+                        <div id="colorPreview" style="display:inline-flex; align-items:center; justify-content:center; width: 180px; height: 36px; border-radius: 6px; background: linear-gradient(135deg, #8B4513 0%, #8B4513 100%); color:#ffffff; font-weight:600; border:1px solid #ddd;">Vorschau</div>
                     </div>
                     <button class="btn btn-success" onclick="addCategory()" data-translate="addCategory">➕ Kategorie hinzufügen</button>
                 </div>
@@ -1339,11 +1344,11 @@
         
         // Category management - Start with default categories
         let categories = {
-            'cat1': { name: 'Cat. 1', color1: '#667eea', color2: '#764ba2' },
-            'cat2': { name: 'Cat. 2', color1: '#f093fb', color2: '#f5576c' },
-            'cat3': { name: 'Cat. 3', color1: '#fa709a', color2: '#fee140' },
-            'cat4': { name: 'Cat. 4', color1: '#84fab0', color2: '#8fd3f4' },
-            'cat5': { name: 'Cat. 5', color1: '#a8edea', color2: '#fed6e3' }
+            'cat1': { name: 'Cat. 1', color1: '#667eea', color2: '#764ba2', textColor: '#ffffff' },
+            'cat2': { name: 'Cat. 2', color1: '#f093fb', color2: '#f5576c', textColor: '#ffffff' },
+            'cat3': { name: 'Cat. 3', color1: '#fa709a', color2: '#fee140', textColor: '#1a1a1a' },
+            'cat4': { name: 'Cat. 4', color1: '#84fab0', color2: '#8fd3f4', textColor: '#1a1a1a' },
+            'cat5': { name: 'Cat. 5', color1: '#a8edea', color2: '#fed6e3', textColor: '#1a1a1a' }
         };
         
         // Image modal state + last focused section box-container
@@ -1371,6 +1376,8 @@
         
             document.getElementById('categoryColor1').addEventListener('input', updateColorPreview);
             document.getElementById('categoryColor2').addEventListener('input', updateColorPreview);
+            var tci = document.getElementById('categoryTextColor');
+            if (tci) tci.addEventListener('input', updateColorPreview);
         });
 
         function equalizeHeaderHeights() {
@@ -1649,7 +1656,10 @@
             const color1 = document.getElementById('categoryColor1').value;
             const useGrad = document.getElementById('useGradient') && document.getElementById('useGradient').checked;
             const color2 = useGrad ? (document.getElementById('categoryColor2').value || color1) : color1;
-            document.getElementById('colorPreview').style.background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+            const textColor = (document.getElementById('categoryTextColor') && document.getElementById('categoryTextColor').value) || '#ffffff';
+            const prev = document.getElementById('colorPreview');
+            prev.style.background = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
+            prev.style.color = textColor;
         }
         
         function updateCategoryStyles() {
@@ -1662,7 +1672,8 @@
             let styles = '';
             for (const [key, cat] of Object.entries(categories)) {
                 const c1 = cat.color1; const c2 = cat.color2 || cat.color1;
-                styles += `.${key} { background: linear-gradient(135deg, ${c1} 0%, ${c2} 100%); color: ${isLightColor(c1) ? '#1a1a1a' : 'white'}; border: none; }`;
+                const tc = cat.textColor ? cat.textColor : (isLightColor(c1) ? '#1a1a1a' : 'white');
+                styles += `.${key} { background: linear-gradient(135deg, ${c1} 0%, ${c2} 100%); color: ${tc}; border: none; }`;
             }
             styleEl.innerHTML = styles;
         }
@@ -1804,11 +1815,12 @@
                 item.className = 'category-item';
                 const c2 = cat.color2 || cat.color1;
                 item.innerHTML = `
-                    <div class="category-preview" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${c2} 100%);"></div>
+                    <div class="category-preview" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${c2} 100%); color:${cat.textColor || (isLightColor(cat.color1)?'#1a1a1a':'#ffffff')}; display:flex; align-items:center; justify-content:center; font-weight:600;">Box</div>
                     <div class="category-controls">
                         <input type="text" value="${cat.name}" onchange="updateCategoryName('${key}', this.value)">
                         <input type="color" value="${cat.color1}" onchange="updateCategoryColor('${key}', this.value, '${c2}')">
                         <input type="color" value="${c2}" onchange="updateCategoryColor('${key}', '${cat.color1}', this.value)">
+                        <input type="color" value="${cat.textColor || '#ffffff'}" title="Text-Farbe" onchange="updateCategoryTextColor('${key}', this.value)">
                         <button class="btn btn-danger small-btn" onclick="deleteCategory('${key}')">${t.delete}</button>
                     </div>`;
                 list.appendChild(item);
@@ -1820,11 +1832,12 @@
             const color1 = document.getElementById('categoryColor1').value;
             const useGrad = document.getElementById('useGradient').checked;
             const color2 = useGrad ? (document.getElementById('categoryColor2').value || color1) : color1;
+            const textColor = (document.getElementById('categoryTextColor') && document.getElementById('categoryTextColor').value) || '#ffffff';
             const t = translations[currentLanguage];
             if (!name) { alert(t.alertEnterName); return; }
             
             const key = 'cat-' + Date.now();
-            categories[key] = { name, color1, color2 };
+            categories[key] = { name, color1, color2, textColor };
             
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend(); updateCategoryList();
             document.getElementById('categoryName').value = '';
@@ -1840,6 +1853,13 @@
         function updateCategoryColor(key, color1, color2) {
             if (categories[key]) {
                 categories[key].color1 = color1; categories[key].color2 = color2;
+                updateCategoryStyles(); updateLegend(); updateCategoryList();
+            }
+        }
+
+        function updateCategoryTextColor(key, textColor) {
+            if (categories[key]) {
+                categories[key].textColor = textColor;
                 updateCategoryStyles(); updateLegend(); updateCategoryList();
             }
         }
@@ -2244,6 +2264,24 @@ function insertSplitBlock(btn) {
                 if (dz) { dz.classList.remove('dragover'); dz.textContent = t.imageSelectOrDrop || dz.textContent; }
                 pendingImageDataUrl = null;
             } catch (e) {}
+
+            // Initialize text color from selected category; Manage Categories is master
+            try {
+                const typeSel = document.getElementById('boxType');
+                const tci = document.getElementById('boxTextColor');
+                window.__boxTextColorDirty = false;
+                const setFromCategory = () => {
+                    if (!tci || !typeSel) return;
+                    const cat = categories[typeSel.value];
+                    if (!window.__boxTextColorDirty && cat){
+                        const def = cat.textColor || (isLightColor(cat.color1) ? '#1a1a1a' : '#ffffff');
+                        tci.value = def;
+                    }
+                };
+                setFromCategory();
+                if (tci) tci.addEventListener('input', () => { window.__boxTextColorDirty = true; });
+                if (typeSel) typeSel.addEventListener('change', setFromCategory);
+            } catch(_) {}
         }
         
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
@@ -2287,12 +2325,14 @@ function insertSplitBlock(btn) {
                 newBox.dataset.lines = String(lines);
                 const minHeight = ((lines * 26) + 12);
                 newBox.style.minHeight = `${minHeight}px`;
-                newBox.style.color = textColor;
+                // Only apply inline color if user changed it in Add Box dialog
+                if (window.__boxTextColorDirty) newBox.style.color = textColor;
             }
 
             const target = getTargetBoxContainer();
             if (target) target.appendChild(newBox);
             closeModal('addBoxModal');
+            window.__boxTextColorDirty = false;
         }
 
         function addBox() {
