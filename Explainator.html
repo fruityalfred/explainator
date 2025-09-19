@@ -410,7 +410,8 @@
             align-items: center;
             justify-content: center;
             white-space: pre-line; /* preserve user line breaks */
-            transition: all 0.3s;
+            /* Avoid animating size to prevent wobble */
+            transition: box-shadow 0.2s ease;
             flex: 0 0 auto;
             max-width: 100%;
             word-break: break-word; /* legacy */
@@ -427,8 +428,10 @@
         }
         
         .app-box:hover {
-            transform: scale(1.02);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            /* Slight visual widen without layout shift */
+            margin-left: -2px;
+            margin-right: -2px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.18);
             z-index: 10;
         }
         
@@ -446,8 +449,8 @@
         
         .app-box .delete-btn {
             position: absolute;
-            top: -8px;
-            right: -8px;
+            top: 4px;
+            right: 4px;
             background: #f44336;
             color: white;
             border: none;
