@@ -270,7 +270,8 @@
         .column-content {
             padding: 12px;
             flex: 1;
-            overflow-y: auto;
+            /* Keine Scrollleisten in Spalten */
+            overflow: visible;
             display: flex;
             flex-direction: column;
             gap: 8px; /* slightly tighter vertical spacing */
@@ -392,6 +393,8 @@
             flex-wrap: wrap;
             gap: 6px;
             min-height: 30px;
+            /* keine Scrollleisten innerhalb von Sections */
+            overflow: visible;
         }
         
         .app-box {
@@ -410,7 +413,9 @@
             transition: all 0.3s;
             flex: 0 0 auto;
             max-width: 100%;
-            word-break: break-word;
+            word-break: break-word; /* legacy */
+            overflow-wrap: anywhere; /* ensure long words wrap */
+            overflow: hidden; /* never show inner scrollbars */
         }
         
         .app-box.half-width {
@@ -1374,11 +1379,14 @@
             setupDeleteIconObserver();
             equalizeHeaderHeights();
             window.addEventListener('resize', () => equalizeHeaderHeights());
-        
+
             document.getElementById('categoryColor1').addEventListener('input', updateColorPreview);
             document.getElementById('categoryColor2').addEventListener('input', updateColorPreview);
             var tci = document.getElementById('categoryTextColor');
             if (tci) tci.addEventListener('input', updateColorPreview);
+
+            // Ensure initial box heights reflect their line count
+            try { applyBoxLayoutAll(document); } catch(_){}
         });
 
         function equalizeHeaderHeights() {
@@ -1709,6 +1717,51 @@
                 item.innerHTML = `<div class="legend-box" style="background: linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%)"></div><span>${cat.name}</span>`;
                 legend.appendChild(item);
             }
+        }
+
+        // ============ Box height model (base-lines + dynamic) ============
+        const ROW_HEIGHT = 30;
+        function getBaseLines(box){
+            return parseInt(box.getAttribute('data-base-lines') || box.getAttribute('data-lines') || box.dataset.lines || '1', 10) || 1;
+        }
+        function setBaseLines(box, ln){
+            box.setAttribute('data-base-lines', String(ln));
+            box.setAttribute('data-lines', String(ln)); // backward compatibility
+        }
+        function setDynamic(box, dyn){ box.setAttribute('data-dynamic', dyn ? '1' : '0'); }
+        function isDynamic(box){ return (box.getAttribute('data-dynamic') || '0') === '1'; }
+        function applyBoxLayout(box){
+            const ln = getBaseLines(box);
+            const base = (ln * ROW_HEIGHT) + 'px';
+            box.style.minHeight = base;
+            // Image boxes: never fix height; allow image CSS to control size
+            if (box.classList && box.classList.contains('image-box')) {
+                box.style.height = '';
+                return;
+            }
+            if (!isDynamic(box)) {
+                // fixed-height box
+                box.style.height = base;
+            } else {
+                // dynamic box grows with content
+                box.style.height = '';
+            }
+        }
+        function enforceBoxHeights(root){
+            const scope = root || document;
+            scope.querySelectorAll('.app-box').forEach(applyBoxLayout);
+        }
+        function applyBoxLayoutAll(root){
+            const scope = root || document;
+            enforceBoxHeights(scope);
+            scope.querySelectorAll('.app-box').forEach(checkOverflowAndToggle);
+        }
+        function checkOverflowAndToggle(box){
+            const ln = getBaseLines(box);
+            const baseH = ln * ROW_HEIGHT;
+            const over = box.scrollHeight > (baseH + 1);
+            if (over && !isDynamic(box)) setDynamic(box, true);
+            applyBoxLayout(box);
         }
         
         function showCategoryModal() {
@@ -2324,7 +2377,9 @@ function insertSplitBlock(btn) {
                 newBox.className = `app-box ${type} ${width}`;
                 newBox.innerHTML = `${name}<button class="delete-btn" onclick="deleteBox(this)">�</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>`;
                 newBox.dataset.lines = String(lines);
-                const minHeight = ((lines * 26) + 12);
+                newBox.setAttribute('data-base-lines', String(lines));
+                newBox.setAttribute('data-dynamic','0');
+                const minHeight = (lines * 30);
                 newBox.style.minHeight = `${minHeight}px`;
                 // Only apply inline color if user changed it in Add Box dialog
                 if (window.__boxTextColorDirty) newBox.style.color = textColor;
@@ -2332,6 +2387,7 @@ function insertSplitBlock(btn) {
 
             const target = getTargetBoxContainer();
             if (target) target.appendChild(newBox);
+            try { applyBoxLayout(newBox); } catch(_){}
             closeModal('addBoxModal');
             window.__boxTextColorDirty = false;
         }
@@ -2348,8 +2404,10 @@ function insertSplitBlock(btn) {
             newBox.draggable = true;
             newBox.innerHTML = `${name}<button class="delete-btn" onclick="deleteBox(this)">×</button><button class="resize-btn" onclick="toggleBoxWidth(this)">↔</button>`;
             newBox.dataset.lines = String(lines);
+            newBox.setAttribute('data-base-lines', String(lines));
+            newBox.setAttribute('data-dynamic','0');
             
-            const minHeight = ((lines * 26) + 12);
+            const minHeight = (lines * 30);
             newBox.style.minHeight = `${minHeight}px`;
 
             // ALT: if (textColor !== '#000000') newBox.style.color = textColor;
@@ -2600,10 +2658,12 @@ function insertSplitBlock(btn) {
                                     } else {
                                         return {
                                             isImage: false,
-                                            text: box.childNodes[0].textContent.trim(),
+                                            // extract only direct text nodes, ignore button labels
+                                            text: (function(b){ var s=''; b.childNodes.forEach(function(n){ if(n.nodeType===3) s+=n.nodeValue; }); return s.trim(); })(box),
                                             type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
                                             width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
-                                            lines: box.dataset.lines || '1',
+                                            baseLines: (box.getAttribute('data-base-lines') || box.getAttribute('data-lines') || box.dataset.lines || '1'),
+                                            dynamic: ((box.getAttribute('data-dynamic') || '0') === '1'),
                                             textColor: box.style.color || ''
                                         };
                                     }
@@ -2722,6 +2782,7 @@ function insertSplitBlock(btn) {
             categories = tpl.categories || categories;
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
             applyLayoutData(tpl.layout);
+            applyBoxLayoutAll(document);
             window.currentTemplateName = tpl.name || key;
             closeModal('loadTemplateModal');
         }
@@ -2764,6 +2825,7 @@ function insertSplitBlock(btn) {
             categories = template.categories || categories;
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
             applyLayoutData(template.layout);
+            try { applyBoxLayoutAll(document); } catch(_){}
             window.currentTemplateName = template.name || templateName;
             
             closeModal('loadTemplateModal');
@@ -2887,11 +2949,12 @@ function insertSplitBlock(btn) {
             let boxesHtml = '';
             if (sectionData.boxes && Array.isArray(sectionData.boxes)) {
                 sectionData.boxes.forEach(boxData => {
-                    const lines = parseInt(boxData.lines, 10) || 1;
-                    const minHeight = (lines * 26) + 12;
-                    const dataLinesAttr = `data-lines="${lines}"`;
+                    const lines = parseInt((boxData.baseLines || boxData.lines || '1'), 10) || 1;
+                    const minHeight = (lines * 30);
+                    const isDyn = !!boxData.dynamic;
+                    const dataLinesAttr = `data-lines="${lines}" data-base-lines="${lines}" data-dynamic="${isDyn ? '1':'0'}"`;
 
-                    let styleString = `min-height: ${minHeight}px;`;
+                    let styleString = `min-height: ${minHeight}px;` + (isDyn ? '' : ` height: ${minHeight}px; overflow-y: hidden;`);
                     if (boxData.textColor) styleString += ` color: ${boxData.textColor};`;
                     const styleAttr = `style="${styleString}"`;
 
@@ -2928,10 +2991,11 @@ function insertSplitBlock(btn) {
                                 <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
                             </div>`;
                     } else {
-                        const lines = parseInt((boxData && boxData.lines) || '1', 10) || 1;
-                        const minHeight = (lines * 26) + 12;
-                        const dataLinesAttr = `data-lines="${lines}"`;
-                        let styleString = `min-height: ${minHeight}px;`;
+                        const lines = parseInt((boxData && (boxData.baseLines || boxData.lines) ) || '1', 10) || 1;
+                        const minHeight = (lines * 30);
+                        const isDyn = !!(boxData && boxData.dynamic);
+                        const dataLinesAttr = `data-lines="${lines}" data-base-lines="${lines}" data-dynamic="${isDyn ? '1':'0'}"`;
+                        let styleString = `min-height: ${minHeight}px;` + (isDyn ? '' : ` height: ${minHeight}px; overflow-y: hidden;`);
                         if (boxData && boxData.textColor) styleString += ` color: ${boxData.textColor};`;
                         const styleAttr = `style="${styleString}"`;
                         boxesHtml += `
@@ -2991,6 +3055,7 @@ function insertSplitBlock(btn) {
                     categories = templateData.categories;
                     updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
                     applyLayoutData(templateData.layout);
+                    enforceBoxHeights(document);
                     window.currentTemplateName = templateData.name || '';
                     
                     closeModal('loadTemplateModal');
@@ -3001,7 +3066,7 @@ function insertSplitBlock(btn) {
                 }
             };
             reader.readAsText(file);
-        }    
+        }
         
         // === PNG EXPORT FUNCTIONS ===
         function exportToPNG() {
@@ -3546,6 +3611,40 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     }
     const firstNode = box.childNodes[0];
     const currentText = (firstNode && firstNode.nodeType===3 ? firstNode.nodeValue : getBoxTextOnly(box)).trim();
+
+    // Path A: Alt + DblClick => dynamic editor (textarea)
+    if (e.altKey) {
+      box.setAttribute('data-dynamic','1');
+      try { applyBoxLayout(box); } catch(_){}
+    } else {
+      // Path B: plain DblClick => single-line quick edit (fixed height)
+      const deleteBtn = box.querySelector('.delete-btn');
+      const resizeBtn = box.querySelector('.resize-btn');
+      if(deleteBtn) deleteBtn.style.display='none';
+      if(resizeBtn) resizeBtn.style.display='none';
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.className = 'app-box-editor';
+      input.value = currentText;
+      if (firstNode && firstNode.nodeType===3) firstNode.replaceWith(input); else box.insertBefore(input, box.firstChild);
+      input.focus(); input.select();
+      const finishQuick = (apply=true)=>{
+        const txt = apply ? (input.value || currentText) : currentText;
+        const tn = document.createTextNode(txt);
+        input.replaceWith(tn);
+        box.setAttribute('data-dynamic','0');
+        try { applyBoxLayout(box); } catch(_){}
+        if(deleteBtn) deleteBtn.style.display='';
+        if(resizeBtn) resizeBtn.style.display='';
+        input.removeEventListener('keydown', onKey, true);
+        input.removeEventListener('blur', onBlur, true);
+      };
+      const onKey = (ev)=>{ if(ev.key==='Escape'){ ev.preventDefault(); finishQuick(false);} if(ev.key==='Enter'){ ev.preventDefault(); finishQuick(true);} };
+      const onBlur = ()=> finishQuick(true);
+      input.addEventListener('keydown', onKey, true);
+      input.addEventListener('blur', onBlur, true);
+      return;
+    }
     const deleteBtn = box.querySelector('.delete-btn');
     const resizeBtn = box.querySelector('.resize-btn');
     if(deleteBtn) deleteBtn.style.display='none';
@@ -3568,9 +3667,10 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     }
     let align = (box.style.textAlign || window.getComputedStyle(box).textAlign || 'center');
     const ta = document.createElement('textarea');
-    ta.className='app-box-editor';
-    ta.style.height=Math.max(40,(box.clientHeight-12))+'px';
-    ta.style.resize='vertical'; ta.value=currentText; ta.style.textAlign=align;
+        ta.className='app-box-editor';
+        // ensure editor is comfortably visible (at least 140px)
+        ta.style.height=Math.max(140,(box.clientHeight-12))+'px';
+        ta.style.resize='vertical'; ta.value=currentText; ta.style.textAlign=align;
     options.forEach(o=>{ const b=document.createElement('button'); b.type='button'; b.innerHTML=alignIcon(o.k); b.title=o.t; b.className='btn small-btn'; b.style.padding='2px 8px'; if(align===o.k) b.style.outline='2px solid #2196F3';
       // prevent textarea blur on toolbar interaction
       b.addEventListener('mousedown', ev => { ev.preventDefault(); });
@@ -3593,6 +3693,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
         else if (align === 'center') box.style.justifyContent = 'center';
         else if (align === 'justify') box.style.justifyContent = 'flex-start';
       }catch(_){ }
+      try { applyBaseMinHeight(box); checkOverflowAndToggle(box); } catch(_){ }
       cleanup();
       ta.removeEventListener('keydown',onKey,true);
       ta.removeEventListener('blur',onBlur,true);
