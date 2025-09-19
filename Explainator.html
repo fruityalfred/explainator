@@ -406,6 +406,7 @@
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            white-space: pre-line; /* preserve user line breaks */
             transition: all 0.3s;
             flex: 0 0 auto;
             max-width: 100%;
@@ -3526,6 +3527,85 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 </body>
 </html>
 
+<script>
+// Rich text editor override for app-box (capture-phase to bypass old handler)
+(function(){
+  const mc = document.getElementById('mainContainer');
+  if(!mc) return;
+  mc.addEventListener('dblclick', function(e){
+    const box = e.target && e.target.closest && e.target.closest('.app-box');
+    if(!box || box.classList.contains('image-box')) return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    e.preventDefault(); e.stopPropagation();
+
+    // Helper: extract only plain text from direct text nodes (ignore button labels)
+    function getBoxTextOnly(el){
+      let t = '';
+      el.childNodes.forEach(n => { if(n.nodeType===3) t += n.nodeValue; });
+      return t;
+    }
+    const firstNode = box.childNodes[0];
+    const currentText = (firstNode && firstNode.nodeType===3 ? firstNode.nodeValue : getBoxTextOnly(box)).trim();
+    const deleteBtn = box.querySelector('.delete-btn');
+    const resizeBtn = box.querySelector('.resize-btn');
+    if(deleteBtn) deleteBtn.style.display='none';
+    if(resizeBtn) resizeBtn.style.display='none';
+
+    const editorWrap = document.createElement('div');
+    editorWrap.style.cssText='width:100%; display:flex; flex-direction:column; gap:6px;';
+    const toolbar = document.createElement('div');
+    toolbar.style.cssText='display:flex; gap:6px; justify-content:center;';
+    const options=[{k:'left',t:'Links'},{k:'center',t:'Mitte'},{k:'right',t:'Rechts'},{k:'justify',t:'Blocksatz'}];
+    function alignIcon(kind){
+      // small 16x16 inline SVGs for text alignment
+      const base = {
+        left:  '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="12" height="2" rx="1" fill="#333"/><rect x="2" y="7" width="9" height="2" rx="1" fill="#333"/><rect x="2" y="11" width="12" height="2" rx="1" fill="#333"/></svg>',
+        center:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="12" height="2" rx="1" fill="#333"/><rect x="3.5" y="7" width="9" height="2" rx="1" fill="#333"/><rect x="2" y="11" width="12" height="2" rx="1" fill="#333"/></svg>',
+        right: '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="12" height="2" rx="1" fill="#333"/><rect x="5" y="7" width="9" height="2" rx="1" fill="#333"/><rect x="2" y="11" width="12" height="2" rx="1" fill="#333"/></svg>',
+        justify:'<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="3" width="12" height="2" rx="1" fill="#333"/><rect x="2" y="7" width="12" height="2" rx="1" fill="#333"/><rect x="2" y="11" width="12" height="2" rx="1" fill="#333"/></svg>'
+      };
+      return base[kind] || '';
+    }
+    let align = (box.style.textAlign || window.getComputedStyle(box).textAlign || 'center');
+    const ta = document.createElement('textarea');
+    ta.className='app-box-editor';
+    ta.style.height=Math.max(40,(box.clientHeight-12))+'px';
+    ta.style.resize='vertical'; ta.value=currentText; ta.style.textAlign=align;
+    options.forEach(o=>{ const b=document.createElement('button'); b.type='button'; b.innerHTML=alignIcon(o.k); b.title=o.t; b.className='btn small-btn'; b.style.padding='2px 8px'; if(align===o.k) b.style.outline='2px solid #2196F3';
+      // prevent textarea blur on toolbar interaction
+      b.addEventListener('mousedown', ev => { ev.preventDefault(); });
+      b.addEventListener('click',()=>{ align=o.k; ta.style.textAlign=align; Array.from(toolbar.children).forEach(c=>c.style.outline=''); b.style.outline='2px solid #2196F3'; ta.focus(); });
+      toolbar.appendChild(b);
+    });
+    editorWrap.appendChild(toolbar); editorWrap.appendChild(ta);
+    if(firstNode && firstNode.nodeType===3) firstNode.replaceWith(editorWrap); else box.insertBefore(editorWrap, box.firstChild);
+    ta.focus(); ta.select();
+    const cleanup=()=>{ if(deleteBtn) deleteBtn.style.display=''; if(resizeBtn) resizeBtn.style.display=''; };
+    const finish=(apply=true)=>{
+      const txt = apply ? (ta.value||currentText) : currentText;
+      const tn = document.createTextNode(txt);
+      editorWrap.replaceWith(tn);
+      box.style.textAlign = align;
+      // Keep flex centering in sync so alignment is visible
+      try{
+        if (align === 'left') box.style.justifyContent = 'flex-start';
+        else if (align === 'right') box.style.justifyContent = 'flex-end';
+        else if (align === 'center') box.style.justifyContent = 'center';
+        else if (align === 'justify') box.style.justifyContent = 'flex-start';
+      }catch(_){ }
+      cleanup();
+      ta.removeEventListener('keydown',onKey,true);
+      ta.removeEventListener('blur',onBlur,true);
+    };
+    const onKey=(ev)=>{ if(ev.key==='Escape'){ ev.preventDefault(); finish(false);} if(ev.key==='Enter' && (ev.ctrlKey||ev.metaKey)){ ev.preventDefault(); finish(true);} };
+    ta.addEventListener('keydown', onKey, true);
+    ta.addEventListener('blur', function(){
+      // defer to see where focus went; close only if focus leaves editorWrap
+      setTimeout(function(){ if (!editorWrap.contains(document.activeElement)) finish(true); }, 0);
+    }, true);
+  }, true);
+})();
+</script>
 <script>
 // Enhance section color picker with pipette + custom color row
 (function(){
