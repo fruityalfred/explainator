@@ -1934,6 +1934,20 @@
             // insert after original
             parent.insertBefore(clone, orig.nextSibling);
             // placeholders entfernt
+            // Harden interactive buttons on the clone so clicks are not swallowed by drag
+            try {
+                const harden = (root) => {
+                    root.querySelectorAll('.color-column-btn, .section-menu, .pipette-column-btn, .section-pipette').forEach(btnEl => {
+                        btnEl.setAttribute('draggable','false');
+                        ['pointerdown','mousedown','dragstart'].forEach(evt => {
+                            btnEl.addEventListener(evt, (ev) => { ev.stopPropagation(); ev.preventDefault(); }, true);
+                        });
+                    });
+                };
+                harden(clone);
+            } catch(_) {}
+            // Trigger observers to (re)attach any dynamic icons (pipette etc.)
+            try { requestAnimationFrame(() => { /* no-op to allow MutationObservers to run */ }); } catch(_){}
         }
         
         function updateColorPreview() {
@@ -2717,6 +2731,17 @@ function insertSplitBlock(btn) {
             const menuHTML = title.getAttribute('data-menu') || '';
             title.innerHTML = newTitle + ' ' + menuHTML;
             title.removeAttribute('data-menu');
+            // Safety: ensure the section color menu exists after rename
+            try {
+                if (!title.querySelector('.section-menu')) {
+                    const btn = document.createElement('span');
+                    btn.className = 'section-menu';
+                    btn.setAttribute('title', 'Farbe ändern');
+                    btn.textContent = '🎨';
+                    btn.setAttribute('onclick', 'showSectionColorPicker(this)');
+                    title.appendChild(btn);
+                }
+            } catch(_) {}
         }
         
         document.addEventListener('dblclick', e => {
@@ -2734,6 +2759,18 @@ function insertSplitBlock(btn) {
             const header = input.parentElement;
             const buttonsHTML = Array.from(header.querySelectorAll('.header-btn')).map(btn => btn.outerHTML).join('');
             header.innerHTML = newTitle + ' ' + buttonsHTML;
+            // If buttons were missing, recreate color button so picker stays available
+            try {
+                if (!header.querySelector('.color-column-btn')) {
+                    var btn = document.createElement('span');
+                    btn.className = 'header-btn color-column-btn';
+                    btn.title = 'Header-Farbe ändern';
+                    btn.setAttribute('draggable','false');
+                    btn.textContent = '🖌️';
+                    btn.setAttribute('onclick', "showColumnColorPicker(this)");
+                    header.appendChild(btn);
+                }
+            } catch(_) {}
             requestAnimationFrame(equalizeHeaderHeights);
         }
 
@@ -3654,14 +3691,7 @@ window.showColumnColorPicker = function(btn){
     if(row){
       var firstBtn = row.querySelector('button');
       if(firstBtn){ firstBtn.setAttribute('data-action','apply'); firstBtn.textContent = 'Übernehmen'; }
-      // Add pipette icon button that reuses existing pickEyeDropper helper
-      if(!row.querySelector('button[data-action="pipette"]')){
-        var pip = document.createElement('button');
-        pip.className = 'btn small-btn pipette-btn'; pip.type = 'button'; pip.setAttribute('data-action','pipette'); pip.title='Pipette'; pip.textContent = '🧪';
-        pip.setAttribute('onclick', "pickEyeDropper('col-custom')");
-        row.appendChild(pip);
-        ['mousedown','pointerdown','click'].forEach(function(evt){ pip.addEventListener(evt, function(e){ e.stopPropagation(); }, true); });
-      }
+      // Pipette in Column-Colorpicker entfernen (nur Farbfelder + Custom-Farbe)
     }
   }catch(_){ }
 
@@ -3689,8 +3719,47 @@ window.showColumnColorPicker = function(btn){
 
 <script>
 (function(){
+  // Helper to make header/menu buttons immune to drag swallowing
+  function hardenInteractive(root){
+    try{
+      var scope = root || document;
+      var sel = '.color-column-btn, .section-menu, .pipette-column-btn, .section-pipette';
+      scope.querySelectorAll(sel).forEach(function(btnEl){
+        try{
+          btnEl.setAttribute('draggable','false');
+          ['pointerdown','mousedown','dragstart'].forEach(function(evt){
+            btnEl.addEventListener(evt, function(ev){ ev.stopPropagation(); ev.preventDefault(); }, true);
+          });
+        }catch(_){ }
+      });
+    }catch(_){ }
+  }
+
   if(!window.__ea_color_delegate_v2__){
     window.__ea_color_delegate_v2__ = true;
+    // Delegated pipette handlers so cloned icons always work
+    document.addEventListener('click', function(e){
+      var pip = e.target && e.target.closest && e.target.closest('.pipette-column-btn');
+      if(!pip) return;
+      e.preventDefault(); e.stopPropagation();
+      try{
+        var header = pip.closest('.column-header');
+        Promise.resolve(window.pickEyeDropper ? pickEyeDropper() : null)
+          .then(function(color){ if(color && header && typeof applyHeaderColor==='function') applyHeaderColor(header, color); })
+          .catch(function(){ /* ignore */ });
+      }catch(_){ }
+    }, true);
+    document.addEventListener('click', function(e){
+      var pip = e.target && e.target.closest && e.target.closest('.section-pipette');
+      if(!pip) return;
+      e.preventDefault(); e.stopPropagation();
+      try{
+        var title = pip.closest('.section-title');
+        Promise.resolve(window.pickEyeDropper ? pickEyeDropper() : null)
+          .then(function(color){ if(color && title && typeof applySectionColor==='function') applySectionColor(title, color); })
+          .catch(function(){ /* ignore */ });
+      }catch(_){ }
+    }, true);
     document.addEventListener('click', function(e){
       var b = e.target && e.target.closest && e.target.closest('.color-column-btn');
       if(!b) return;
@@ -3701,7 +3770,104 @@ window.showColumnColorPicker = function(btn){
       var b = e.target && e.target.closest && e.target.closest('.color-column-btn');
       if(b){ e.preventDefault(); e.stopPropagation(); }
     }, true);
+    // Initial harden on load
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ hardenInteractive(document); }, { once:true });
+    else hardenInteractive(document);
+    // Re-harden after any drag lifecycle events
+    ['dragend','drop'].forEach(function(evt){
+      document.addEventListener(evt, function(){ hardenInteractive(document); }, true);
+    });
+    // Re-harden on dynamic DOM changes
+    try{
+      var obs = new MutationObserver(function(muts){
+        for (var i=0;i<muts.length;i++){
+          var m = muts[i];
+          for (var j=0;j<(m.addedNodes?m.addedNodes.length:0); j++){
+            var n = m.addedNodes[j];
+            if (n && n.nodeType===1) hardenInteractive(n);
+          }
+          if (m.target && m.target.nodeType===1) hardenInteractive(m.target);
+        }
+      });
+      obs.observe(document.body, { childList:true, subtree:true });
+    }catch(_){ }
   }
+})();
+</script>
+
+<script>
+// Delegated handler for section color menu to survive clones/moves/renames
+(function(){
+  if (window.__ea_section_menu_delegate__) return;
+  window.__ea_section_menu_delegate__ = true;
+  // Open picker on click
+  document.addEventListener('click', function(e){
+    var m = e.target && e.target.closest && e.target.closest('.section-menu');
+    if (!m) return;
+    e.preventDefault(); e.stopPropagation();
+    try { (window.showSectionColorPicker||showSectionColorPicker)(m); } catch(err){ console.warn(err); }
+  }, true);
+  // Prevent drags from swallowing clicks
+  ['pointerdown','mousedown','dragstart'].forEach(function(evt){
+    document.addEventListener(evt, function(ev){
+      if (ev.target && ev.target.closest && ev.target.closest('.section-menu, .section-color-picker')){
+        ev.preventDefault(); ev.stopPropagation();
+      }
+    }, true);
+  });
+  // Ensure every section-title has a section-menu; auto-repair if missing
+  function ensureSectionMenu(title){
+    try{
+      if (!title || !title.classList || !title.classList.contains('section-title')) return;
+      if (!title.querySelector('.section-menu')){
+        var btn = document.createElement('span');
+        btn.className = 'section-menu';
+        btn.title = 'Farbe ändern';
+        btn.textContent = '🎨';
+        btn.setAttribute('onclick', 'showSectionColorPicker(this)');
+        btn.setAttribute('draggable','false');
+        ['pointerdown','mousedown','click','dragstart'].forEach(function(evt){
+          btn.addEventListener(evt, function(ev){ ev.stopPropagation(); if(evt!=='click') ev.preventDefault(); }, true);
+        });
+        title.appendChild(btn);
+      }
+      // Harden existing buttons as well
+      title.querySelectorAll('.section-menu').forEach(function(btn){
+        btn.setAttribute('draggable','false');
+        ['pointerdown','mousedown','dragstart'].forEach(function(evt){
+          btn.addEventListener(evt, function(ev){ ev.stopPropagation(); ev.preventDefault(); }, true);
+        });
+      });
+    }catch(_){ }
+  }
+  function ensureAll(){ document.querySelectorAll('.section-title').forEach(ensureSectionMenu); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureAll, { once:true }); else ensureAll();
+  try{
+    var obs = new MutationObserver(function(muts){
+      for (var i=0;i<muts.length;i++){
+        var m = muts[i];
+        for (var j=0;j<(m.addedNodes?m.addedNodes.length:0); j++){
+          var n = m.addedNodes[j];
+          if(n.nodeType===1){
+            if (n.classList && n.classList.contains('section-title')) ensureSectionMenu(n);
+            else if (n.querySelectorAll) n.querySelectorAll('.section-title').forEach(ensureSectionMenu);
+          }
+        }
+        if (m.target && m.target.nodeType===1 && m.target.classList && m.target.classList.contains('section-title')){
+          ensureSectionMenu(m.target);
+        }
+      }
+    });
+    obs.observe(document.body, { childList:true, subtree:true });
+  }catch(_){ }
+  // Close any open pickers when starting/ending a drag to avoid interference
+  ['dragstart','dragend','drop'].forEach(function(evt){
+    document.addEventListener(evt, function(){
+      try {
+        document.querySelectorAll('.section-color-picker, .column-color-picker').forEach(function(p){ p.remove(); });
+      } catch(_){ }
+    }, true);
+  });
 })();
 </script>
 
@@ -3985,6 +4151,8 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 // Enhance section color picker with pipette + custom color row
 (function(){
   try{
+    // Disable pipette/custom row as requested
+    if (true) return;
     function enhance(picker){
       try{
         if (!picker || !picker.classList || !picker.classList.contains('section-color-picker')) return;
