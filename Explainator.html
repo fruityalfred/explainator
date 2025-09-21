@@ -1061,58 +1061,330 @@
             <div class="modal-header" data-translate="helpTitle">❓ Hilfe</div>
             <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
                 <div class="help-content help-de">
-                    <h3>Willkommen</h3>
-                    <p>Explainator ist ein flexibles Canvas für Organigramme, Office‑Maps, Boards u. v. m.</p>
-                    <h4>Grundlagen</h4>
-                    <ul>
-                        <li>Neue Spalten: „Neue Spalte“ im Kopfbereich.</li>
-                        <li>Sections/Boxen: „Neue Box“ öffnet den Dialog; Boxen per Drag & Drop verschieben.</li>
-                        <li>Splitten: In der Spalten‑Leiste den Split‑Zähler nutzen (2–3 Teile).</li>
-                        <li>Zwischen Splits und normalen Bereichen wechseln: Beim Ziehen einer Split‑Section Alt gedrückt halten, um als volle Breite abzulegen. Ohne Alt bleibt die Section gesplittet.</li>
-                        <li>Farben: ⚙/🎨 im Section‑Header öffnet den Farbwähler.</li>
-                        <li>Raster: „Hilfslinien“ zeigt dezente Ausrichtungslinien.</li>
-                    </ul>
-                    <h4>Speichern & Laden</h4>
-                    <ul>
-                        <li>„Template speichern“ – speichert in der Liste und lädt eine JSON‑Datei herunter.</li>
-                        <li>„Template laden“ – gespeicherte Einträge oder JSON‑Datei importieren; oben findest du auch eingebaute Vorlagen (Organigramm, Office Map, Kanban).</li>
-                    </ul>
-                    <h4>Export</h4>
-                    <ul>
-                        <li>„Als PNG exportieren“ – erstellt einen sauberen PNG‑Export (Icons und Rahmen werden bereinigt).</li>
-                    </ul>
-                    <h4>Tastatur‑Tipps</h4>
-                    <ul>
-                        <li>Alt beim Ablegen einer Split‑Section ⇒ als volle Breite einfügen.</li>
-                        <li>Ctrl beim Ziehen ⇒ duplizieren (sofern aktiv).</li>
-                    </ul>
+<h2>Benutzerhandbuch (Deutsch)</h2>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">1. Einführung</h4>
+<p>Explainator ist eine webbasierte Anwendung zur Erstellung und Bearbeitung visueller Layouts. Sie unterstützt:</p>
+<ul style="margin-left: 20px;">
+<li><strong>Organigramme</strong> (Hierarchische Strukturen, z. B. Firmenorganisationen).</li>
+<li><strong>Office-Maps</strong> (Raumpläne oder Bürolayouts).</li>
+<li><strong>Kanban-Boards</strong> (Aufgabenverwaltung mit Spalten).</li>
+<li><strong>Weitere Canvas-basierte Inhalte</strong> (z. B. benutzerdefinierte Boards).</li>
+</ul>
+<p>Die App ist multilingual (Deutsch und Englisch) und bietet eine intuitive Drag-and-Drop-Oberfläche. Mit dieser App können Sie fast alles einfach und sichtbar erklären. Die einzige Grenze sind Sie selbst. Sie lädt keine externen Ressourcen (außer potenziell Benutzerbilder) und speichert Daten lokal oder als JSON-Dateien.</p>
+<p><strong>Systemvoraussetzungen</strong>:</p>
+<ul style="margin-left: 20px;">
+<li>Moderner Webbrowser (z. B. Chrome, Firefox).</li>
+<li>Keine Internetverbindung erforderlich (außer für lokale Datei-Uploads).</li>
+<li>Unterstützte Dateiformate: JPG/PNG für Bilder, JSON für Templates.</li>
+</ul>
+<p><strong>Starten der App</strong>:</p>
+<ul style="margin-left: 20px;">
+<li>Öffnen Sie die HTML-Datei in einem Browser. Die Oberfläche lädt automatisch mit einem Header-Menü und einem Canvas-Bereich.</li>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">2. Oberfläche und Navigation</h4>
+<p>Die Hauptoberfläche besteht aus:</p>
+<ul style="margin-left: 20px;">
+<li><strong>Header-Menü</strong> (oben): Enthält Icons und Buttons für Kernfunktionen.</li>
+<ul style="margin-left: 20px;">
+<li>🏢 <strong>Explainator - Ultimate Edition</strong>: Titel der App.</li>
+<li><strong>Sprachauswahl</strong>: "EN" für Englisch (wechselt zwischen DE/EN).</li>
+<li><strong>Menü-Optionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>📦 <strong>Neue Box</strong>: Öffnet den Dialog zum Hinzufügen einer neuen Box.</li>
+<li>🎨 <strong>Kategorien verwalten</strong>: Öffnet den Kategorien-Manager.</li>
+<li>🔠 <strong>Formatierung</strong>: Öffnet den Schriftart-Anpassungsdialog (siehe unten).</li>
+<li>📸 <strong>Als PNG exportieren</strong>: Exportiert das Canvas als PNG-Bild.</li>
+<li>💾 <strong>Template speichern</strong>: Speichert das aktuelle Layout als Template.</li>
+<li>📂 <strong>Template laden</strong>: Lädt ein gespeichertes oder vordefiniertes Template.</li>
+<li>🔄 <strong>Layout zurücksetzen</strong>: Setzt das Layout auf Standard zurück.</li>
+<li>🗑️ <strong>Alles löschen</strong>: Löscht den gesamten Inhalt.</li>
+<li>❓ <strong>Hilfe</strong>: Öffnet den Hilfe-Dialog.</li>
+</ul>
+</ul>
+<li><strong>Canvas-Bereich</strong>: Der Hauptarbeitsbereich, wo Spalten, Sections und Boxen platziert werden. Unterstützt Drag-and-Drop für Verschieben und Neuanordnen.</li>
+<li><strong>Modals/Dialoge</strong>: Überlagernde Fenster für spezifische Aktionen (z. B. "Neue Box hinzufügen"). Jeder Modal hat Buttons wie "Hinzufügen", "Abbrechen" oder "Fertig".</li>
+</ul>
+<p><strong>Navigationstipps</strong>:</p>
+<ul style="margin-left: 20px;">
+<li>Klicken Sie auf Header-Icons, um Modals zu öffnen.</li>
+<li>Ziehen Sie Elemente (Boxen/Sections) mit der Maus, um sie zu verschieben.</li>
+<li>Halten Sie Tastenkombinationen für erweiterte Aktionen (siehe Abschnitt 5).</li>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">3. Hauptfunktionen</h4>
+<p>Hier eine schritt-für-schritt-Beschreibung der Kernfeatures.</p>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.1 Neue Box hinzufügen (📦)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Öffnen</strong>: Klicken auf "Neue Box" im Header.</li>
+<li><strong>Dialog-Elemente</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Breite</strong>: Wählen Sie "Volle Breite" oder "Halbe Breite".</li>
+<li><strong>Höhe (Zeilen)</strong>: 1 Zeile (Standard), 2 Zeilen oder 3 Zeilen.</li>
+<li><strong>Text</strong>: Eingabefeld für den Box-Inhalt.</li>
+<li><strong>Bild statt Text</strong>: Checkbox zum Ersetzen des Texts durch ein Bild.</li>
+<ul style="margin-left: 20px;">
+<li><strong>Bild auswählen</strong>: Datei-Upload (JPG/PNG) oder Drag-and-Drop.</li>
+<li><strong>Maximale Höhe</strong>: Bis zu 3 × 3-Zeilen-Boxen.</li>
+</ul>
+</ul>
+<li><strong>Aktionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Füllen Sie die Felder aus.</li>
+<li>2. Klicken Sie auf "Hinzufügen" – die Box erscheint im Canvas.</li>
+<li>3. Oder "Abbrechen" zum Verwerfen.</li>
+</ul>
+<li><strong>Tipps</strong>: Boxen können später per Drag-and-Drop verschoben werden. In gesplitteten Spalten passen halbe Breiten perfekt.</li>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.2 Layout Builder</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Öffnen</strong>: Implizit über "Neue Spalte" (nicht direkt im HTML sichtbar, aber im Hilfe-Text erwähnt).</li>
+<li><strong>Dialog-Elemente</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Spalten</strong>: Eingabefeld für die Anzahl der Spalten.</li>
+<li><strong>Aktualisieren</strong>: Button zum Anwenden.</li>
+</ul>
+<li><strong>Aktionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Geben Sie die Spaltenanzahl ein.</li>
+<li>2. Klicken Sie auf "Erstellen" – erstellt neue Spalten im Canvas.</li>
+<li>3. Oder "Abbrechen".</li>
+</ul>
+<li><strong>Erweiterung</strong>: Spalten können gesplittet werden (2–3 Teile) via Split-Zähler in der Spaltenleiste.</li>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.3 Kategorien verwalten (🎨)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Öffnen</strong>: Klicken auf "Kategorien verwalten".</li>
+<li><strong>Dialog-Elemente</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Neue Kategorie hinzufügen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>Name: Eingabefeld.</li>
+<li><strong>Box-Farbe</strong>: Farbwähler mit Pipette; Checkbox für Verlauf.</li>
+<li><strong>Farbe 2</strong>: Zweite Farbe für Verlauf.</li>
+<li><strong>Text-Farbe</strong>: Farbwähler mit Pipette.</li>
+<li><strong>Vorschau</strong>: Zeigt eine Live-Vorschau.</li>
+<li>➕ <strong>Kategorie hinzufügen</strong>: Fügt die Kategorie hinzu.</li>
+</ul>
+<li><strong>Vorhandene Kategorien</strong>: Liste mit Bearbeitungsoptionen.</li>
+</ul>
+<li><strong>Aktionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Erstellen Sie eine neue Kategorie und wählen Farben.</li>
+<li>2. Klicken Sie auf "Fertig" zum Schließen.</li>
+</ul>
+<li><strong>Anwendung</strong>: Kategorien werden auf Sections/Boxen angewendet via ⚙/🎨 im Section-Header.</li>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.4 Schriftart anpassen (🔠)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Öffnen</strong>: Klicken auf "Formatierung".</li>
+<li><strong>Dialog-Elemente</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Bereich auswählen</strong>: Spalten, Sections oder Boxen.</li>
+<li><strong>Schriftart</strong>: Dropdown (Segoe UI (Default), Arial, Times New Roman, Courier New, Verdana, Georgia).</li>
+<li><strong>Schriftgröße (px)</strong>: Eingabefeld.</li>
+<li><strong>Formatierungen</strong>: Checkboxen für Fett (Bold) und Kursiv (Italic).</li>
+</ul>
+<li><strong>Aktionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Wählen Sie den Bereich und Einstellungen.</li>
+<li>2. Klicken Sie auf "Anwenden & Schließen".</li>
+<li>3. Oder "Abbrechen".</li>
+</ul>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.5 Template speichern/laden (💾 / 📂)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Speichern</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>Öffnet Dialog zum Speichern in Liste und Download als JSON.</li>
+</ul>
+<li><strong>Laden</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Vorlagen</strong>: Vordefinierte (Organigramm, Office Map, Kanban).</li>
+<li><strong>Gespeicherte Templates</strong>: Liste lokaler Speicherungen.</li>
+<li><strong>Template aus Datei laden</strong>: Upload einer JSON-Datei.</li>
+</ul>
+<li><strong>Aktionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Wählen Sie ein Template.</li>
+<li>2. Klicken Sie auf "Schließen" nach dem Laden.</li>
+</ul>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">4. Erweiterte Features</h4>
+<ul style="margin-left: 20px;">
+<li><strong>Splitten von Spalten</strong>: Nutzen Sie den Split-Zähler (2–3 Teile). Beim Ziehen einer Split-Section: Halten Sie Alt, um als volle Breite abzulegen.</li>
+<li><strong>Farben und Raster</strong>: ⚙/🎨 für Farben; "Hilfslinien" zeigt Grid-Linien.</li>
+<li><strong>Bilder</strong>: Nur in Boxen, maximale Größe beachten.</li>
+<li><strong>Hilfe-Dialog (❓)</strong>: Enthält detaillierte Grundlagen, Speichern/Laden, Export und Tastatur-Tipps (auf DE/EN).</li>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">5. Tastaturkürzel und Tipps</h4>
+<ul style="margin-left: 20px;">
+<li><strong>Alt + Drop</strong>: Split-Section als volle Breite einfügen.</li>
+<li><strong>Ctrl + Ziehen</strong>: Duplizieren (falls aktiviert).</li>
+<li><strong>Allgemein</strong>: Drag-and-Drop für alle Elemente; "Neue Spalte" im Kopfbereich für Erweiterung.</li>
+<li><strong>Tipps aus Hilfe</strong>: Nutzen Sie Raster für Ausrichtung; Export bereinigt Rahmen/Icons.</li>
+</ul>
                 </div>
                 <div class="help-content help-en" style="display:none;">
-                    <h3>Welcome</h3>
-                    <p>Explainator is a flexible canvas for org charts, office maps, boards and more.</p>
-                    <h4>Basics</h4>
-                    <ul>
-                        <li>Add columns via “New Column”.</li>
-                        <li>Add boxes via “New Box”, drag & drop anywhere.</li>
-                        <li>Split columns using the split counter (2–3 parts).</li>
-                        <li>Switch between split and full‑width: While dragging a split‑section hold Alt to drop as full‑width; otherwise it stays split.</li>
-                        <li>Colors: ⚙/🎨 in section header opens the picker.</li>
-                        <li>Grid: “Grid Lines” shows alignment helpers.</li>
-                    </ul>
-                    <h4>Save & Load</h4>
-                    <ul>
-                        <li>“Save Template” stores to the list and downloads a JSON file.</li>
-                        <li>“Load Template” loads saved entries or a JSON file; built‑ins (Organigram, Office Map, Kanban) are available on top.</li>
-                    </ul>
-                    <h4>Export</h4>
-                    <ul>
-                        <li>“Export as PNG” produces a clean PNG (UI elements hidden).</li>
-                    </ul>
-                    <h4>Keyboard</h4>
-                    <ul>
-                        <li>Alt on drop of split‑section ⇒ insert as full‑width.</li>
-                        <li>Ctrl while dragging ⇒ duplicate (if enabled).</li>
-                    </ul>
+<h2>User Manual (English)</h2>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">1. Introduction</h4>
+<p>Explainator is a web-based application for creating and editing visual layouts. It supports:</p>
+<ul style="margin-left: 20px;">
+<li><strong>Organizational Charts</strong> (Hierarchical structures, e.g., company organizations).</li>
+<li><strong>Office Maps</strong> (Floor plans or office layouts).</li>
+<li><strong>Kanban Boards</strong> (Task management with columns).</li>
+<li><strong>Other Canvas-Based Content</strong> (e.g., custom boards).</li>
+</ul>
+<p>The app is multilingual (German and English) and features an intuitive drag-and-drop interface. You can explain mostly everything easy and visible using this App. The only limit is you. It does not load external resources (except potentially user images) and saves data locally or as JSON files.</p>
+<p><strong>System Requirements</strong>:</p>
+<ul style="margin-left: 20px;">
+<li>Modern web browser (e.g., Chrome, Firefox).</li>
+<li>No internet connection required (except for local file uploads).</li>
+<li>Supported file formats: JPG/PNG for images, JSON for templates.</li>
+</ul>
+<p><strong>Starting the App</strong>:</p>
+<ul style="margin-left: 20px;">
+<li>Open the HTML file in a browser. The interface loads automatically with a header menu and a canvas area.</li>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">2. Interface and Navigation</h4>
+<p>The main interface consists of:</p>
+<ul style="margin-left: 20px;">
+<li><strong>Header Menu</strong> (top): Contains icons and buttons for core functions.</li>
+<ul style="margin-left: 20px;">
+<li>🏢 <strong>Explainator - Ultimate Edition</strong>: Title of the app.</li>
+<li><strong>Language Selection</strong>: "EN" for English (switches between DE/EN).</li>
+<li><strong>Menu Options</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>📦 <strong>New Box</strong>: Opens the dialog to add a new box.</li>
+<li>🎨 <strong>Manage Categories</strong>: Opens the category manager.</li>
+<li>🔠 <strong>Formatting</strong>: Opens the font customization dialog (see below).</li>
+<li>📸 <strong>Export as PNG</strong>: Exports the canvas as a PNG image.</li>
+<li>💾 <strong>Save Template</strong>: Saves the current layout as a template.</li>
+<li>📂 <strong>Load Template</strong>: Loads a saved or predefined template.</li>
+<li>🔄 <strong>Reset Layout</strong>: Resets the layout to default.</li>
+<li>🗑️ <strong>Clear All</strong>: Deletes all content.</li>
+<li>❓ <strong>Help</strong>: Opens the help dialog.</li>
+</ul>
+</ul>
+<li><strong>Canvas Area</strong>: The main workspace where columns, sections, and boxes are placed. Supports drag-and-drop for moving and rearranging.</li>
+<li><strong>Modals/Dialogs</strong>: Overlay windows for specific actions (e.g., "Add New Box"). Each modal has buttons like "Add", "Cancel", or "Done".</li>
+</ul>
+<p><strong>Navigation Tips</strong>:</p>
+<ul style="margin-left: 20px;">
+<li>Click on header icons to open modals.</li>
+<li>Drag elements (boxes/sections) with the mouse to move them.</li>
+<li>Hold down key combinations for advanced actions (see section 5).</li>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">3. Main Features</h4>
+<p>Here is a step-by-step description of the core features.</p>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.1 Add New Box (📦)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Open</strong>: Click on "New Box" in the header.</li>
+<li><strong>Dialog Elements</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Width</strong>: Choose "Full Width" or "Half Width".</li>
+<li><strong>Height (Lines)</strong>: 1 line (default), 2 lines, or 3 lines.</li>
+<li><strong>Text</strong>: Input field for the box content.</li>
+<li><strong>Image instead of Text</strong>: Checkbox to replace text with an image.</li>
+<ul style="margin-left: 20px;">
+<li><strong>Select Image</strong>: File upload (JPG/PNG) or drag-and-drop.</li>
+<li><strong>Maximum Height</strong>: Up to 3 × 3-line boxes.</li>
+</ul>
+</ul>
+<li><strong>Actions</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Fill in the fields.</li>
+<li>2. Click "Add" – the box appears on the canvas.</li>
+<li>3. Or "Cancel" to discard.</li>
+</ul>
+<li><strong>Tips</strong>: Boxes can be moved later via drag-and-drop. In split columns, half-widths fit perfectly.</li>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.2 Layout Builder</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Open</strong>: Implicitly via "New Column" (not directly visible in HTML, but mentioned in the help text).</li>
+<li><strong>Dialog Elements</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Columns</strong>: Input field for the number of columns.</li>
+<li><strong>Update</strong>: Button to apply.</li>
+</ul>
+<li><strong>Actions</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Enter the number of columns.</li>
+<li>2. Click "Create" – creates new columns on the canvas.</li>
+<li>3. Or "Cancel".</li>
+</ul>
+<li><strong>Extension</strong>: Columns can be split (2–3 parts) via the split counter in the column bar.</li>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.3 Manage Categories (🎨)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Open</strong>: Click on "Manage Categories".</li>
+<li><strong>Dialog Elements</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Add New Category</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>Name: Input field.</li>
+<li><strong>Box Color</strong>: Color picker with eyedropper; checkbox for gradient.</li>
+<li><strong>Color 2</strong>: Second color for gradient.</li>
+<li><strong>Text Color</strong>: Color picker with eyedropper.</li>
+<li><strong>Preview</strong>: Shows a live preview.</li>
+<li>➕ <strong>Add Category</strong>: Adds the category.</li>
+</ul>
+<li><strong>Existing Categories</strong>: List with editing options.</li>
+</ul>
+<li><strong>Actions</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Create a new category and choose colors.</li>
+<li>2. Click "Done" to close.</li>
+</ul>
+<li><strong>Application</strong>: Categories are applied to sections/boxes via ⚙/🎨 in the section header.</li>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.4 Customize Font (🔠)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Open</strong>: Click on "Formatting".</li>
+<li><strong>Dialog Elements</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Select Area</strong>: Columns, Sections, or Boxes.</li>
+<li><strong>Font</strong>: Dropdown (Segoe UI (Default), Arial, Times New Roman, Courier New, Verdana, Georgia).</li>
+<li><strong>Font Size (px)</strong>: Input field.</li>
+<li><strong>Formatting</strong>: Checkboxes for Bold and Italic.</li>
+</ul>
+<li><strong>Aktionen</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Select the area and settings.</li>
+<li>2. Click "Apply & Close".</li>
+<li>3. Or "Cancel".</li>
+</ul>
+</ul>
+<h5 style="margin-top: 15px; margin-bottom: 5px;">3.5 Save/Load Template (💾 / 📂)</h5>
+<ul style="margin-left: 20px;">
+<li><strong>Save</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>Opens a dialog to save to a list and download as JSON.</li>
+</ul>
+<li><strong>Load</strong>:</li>
+<ul style="margin-left: 20px;">
+<li><strong>Templates</strong>: Predefined (Organizational Chart, Office Map, Kanban).</li>
+<li><strong>Saved Templates</strong>: List of local saves.</li>
+<li><strong>Load Template from File</strong>: Upload a JSON file.</li>
+</ul>
+<li><strong>Actions</strong>:</li>
+<ul style="margin-left: 20px;">
+<li>1. Select a template.</li>
+<li>2. Click "Close" after loading.</li>
+</ul>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">4. Advanced Features</h4>
+<ul style="margin-left: 20px;">
+<li><strong>Splitting Columns</strong>: Use the split counter (2–3 parts). When dragging a split section: Hold Alt to drop it as full-width.</li>
+<li><strong>Colors and Grid</strong>: ⚙/🎨 for colors; "Grid Lines" shows grid lines.</li>
+<li><strong>Images</strong>: Only in boxes, note the maximum size.</li>
+<li><strong>Help Dialog (❓)</strong>: Contains detailed basics, save/load, export, and keyboard tips (in DE/EN).</li>
+</ul>
+<h4 style="margin-top: 20px; border-bottom: 1px solid #eee; padding-bottom: 5px;">5. Keyboard Shortcuts and Tips</h4>
+<ul style="margin-left: 20px;">
+<li><strong>Alt + Drop</strong>: Insert a split section as full-width.</li>
+<li><strong>Ctrl + Drag</strong>: Duplicate (if enabled).</li>
+<li><strong>General</strong>: Drag-and-drop for all elements; "New Column" in the header for expansion.</li>
+<li><strong>Tips from Help</strong>: Use the grid for alignment; export cleans up borders/icons.</li>
+</ul>
                 </div>
             </div>
             <div class="modal-footer">
@@ -3276,18 +3548,12 @@ function insertSplitBlock(btn) {
       e.preventDefault(); e.stopPropagation();
       try{
         var headerEl = header; // capture via closure
-        var color = null;
-        if (window.pickEyeDropper) {
-          color = await pickEyeDropper('col-custom');
-        } else if ('EyeDropper' in window) {
-          document.body.classList.add('eye-drop-mode');
-          const ed = new EyeDropper();
-          const res = await ed.open();
-          color = res && res.sRGBHex;
+        // Call picker without a target ID, just get the color back
+        const color = await (window.pickEyeDropper ? pickEyeDropper() : (async ()=>null)());
+        if (color && headerEl) {
+            applyHeaderColor(headerEl, color);
         }
-        if (color && headerEl) applyHeaderColor(headerEl, color);
       }catch(_){ }
-      finally { try { document.body.classList.remove('eye-drop-mode'); } catch(_){} }
     }, true);
     header.appendChild(pip);
   }
@@ -3301,8 +3567,11 @@ function insertSplitBlock(btn) {
     pip.addEventListener('click', async function(e){
       e.preventDefault(); e.stopPropagation();
       try{
-        const color = await (window.pickEyeDropper ? pickEyeDropper('col-custom') : (async ()=>null)());
-        if (color) applySectionColor(title, color);
+        // Call picker without a target ID, just get the color back
+        const color = await (window.pickEyeDropper ? pickEyeDropper() : (async ()=>null)());
+        if (color) {
+            applySectionColor(title, color);
+        }
       }catch(_){ }
     }, true);
     title.appendChild(pip);
@@ -3575,17 +3844,26 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   if (window.__pipetteWrapperInstalled__) return; window.__pipetteWrapperInstalled__ = true;
   window.pickEyeDropper = async function(targetId){
     try{
-      if (!('EyeDropper' in window)) { alert('Pipette wird von diesem Browser nicht unterstützt.'); return; }
+      if (!('EyeDropper' in window)) {
+        alert('Pipette wird von diesem Browser nicht unterstützt.');
+        return null;
+      }
       document.body.classList.add('eye-drop-mode');
       const ed = new EyeDropper();
       const res = await ed.open();
-      const input = document.getElementById(targetId);
-      if (input) {
-        input.value = res.sRGBHex;
-        try { if (typeof updateColorPreview === 'function') updateColorPreview(); } catch(_){ }
+      const color = res && res.sRGBHex ? res.sRGBHex : null;
+      if (color && targetId) {
+          const input = document.getElementById(targetId);
+          if (input) {
+            input.value = color;
+            // Trigger change event for any listeners, e.g. the color preview
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+          }
       }
-      return res && res.sRGBHex ? res.sRGBHex : null;
-    } catch(_) { /* cancelled or not available */ }
+      return color;
+    } catch(_) {
+      return null; // User cancelled or browser doesn't support it
+    }
     finally { document.body.classList.remove('eye-drop-mode'); }
   };
 })();
