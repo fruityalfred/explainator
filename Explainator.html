@@ -2238,21 +2238,24 @@
         
 // HELFER-FUNKTION: Findet heraus, vor welches BOX-Element eingefügt werden soll.
         function getDragAfterElement(container, x, y) {
-            const draggableElements = [...container.querySelectorAll('.app-box:not(.dragging-placeholder)')];
+            const draggableElements = [...container.querySelectorAll('.app-box:not(.dragging)')];
+
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offsetY = y - box.top - box.height / 2;
-                if (offsetY < 0 && offsetY > closest.offsetY) {
-                    return { offsetY: offsetY, element: child };
+                
+                // Find the element we are vertically closest to being "before"
+                if (offsetY < 0 && offsetY > closest.offset) {
+                    return { offset: offsetY, element: child };
                 } else {
                     return closest;
                 }
-            }, { offsetY: Number.NEGATIVE_INFINITY }).element;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
         }
 
         // HELFER-FUNKTION: Findet heraus, vor welches SECTION-Element eingefügt werden soll.
         function getDragAfterSection(container, y) {
-            const draggableElements = [...container.querySelectorAll('.section-group:not(.dragging-placeholder)')];
+            const draggableElements = [...container.querySelectorAll('.section-group:not(.dragging)')];
             return draggableElements.reduce((closest, child) => {
                 const box = child.getBoundingClientRect();
                 const offset = y - box.top - box.height / 2;
@@ -2266,7 +2269,7 @@
 
         // Calculates insertion point among direct children (sections or split blocks)
         function getDragAfterBlock(container, y) {
-            const selector = ':scope > .section-group:not(.dragging-placeholder), :scope > .column-split-content';
+            const selector = ':scope > .section-group:not(.dragging), :scope > .column-split-content:not(.dragging)';
             const elements = [...container.querySelectorAll(selector)];
             return elements.reduce((closest, el) => {
                 const rect = el.getBoundingClientRect();
@@ -2433,16 +2436,6 @@
         // Sorgt dafr, dass in jedem Content-Bereich (unsplitted oder .column-part)
         // genau ein "+ New Section"-Button vorhanden ist und am Ende steht.
         function normalizeAddButtons(){ /* Placeholder-Buttons entfernt: no-op */ }
-        
-        function getDragAfterElement(container, x) {
-            const draggableElements = [...container.querySelectorAll('.app-box:not(.dragging)')];
-            return draggableElements.reduce((closest, child) => {
-                const box = child.getBoundingClientRect();
-                const offset = x - box.left - box.width / 2;
-                if (offset < 0 && offset > closest.offset) return { offset, element: child };
-                else return closest;
-            }, { offset: Number.NEGATIVE_INFINITY }).element;
-        }
         
         function initializeResize() {
             document.addEventListener('mousedown', e => {
