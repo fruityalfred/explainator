@@ -2741,6 +2741,21 @@ function insertSplitBlock(btn) {
                     btn.setAttribute('onclick', 'showSectionColorPicker(this)');
                     title.appendChild(btn);
                 }
+                // Ensure pipette icon exists after rename
+                if (!title.querySelector('.section-pipette')) {
+                    if (typeof addSectionPipette === 'function') {
+                        addSectionPipette(title);
+                    } else {
+                        const pip = document.createElement('span');
+                        pip.className = 'section-pipette pipette-btn';
+                        pip.setAttribute('title', 'Farbe mit Pipette wählen');
+                        pip.textContent = '🧪';
+                        pip.setAttribute('draggable','false');
+                        ['pointerdown','mousedown','dragstart'].forEach(evt => pip.addEventListener(evt, ev => { ev.stopPropagation(); ev.preventDefault(); }, true));
+                        // Click delegated globally, so no inline handler nötig
+                        title.appendChild(pip);
+                    }
+                }
             } catch(_) {}
         }
         
