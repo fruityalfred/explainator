@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Explainator - Ultimate Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -2059,6 +2060,7 @@
             if (box.classList && (box.classList.contains('image-box') || box.classList.contains('line-box'))) return;
             if (box.dataset && box.dataset.resized === '1') { return; }
             if (box.dataset && box.dataset.noauto === '1') { return; }
+            if ((box.getAttribute && box.getAttribute('data-dynamic') === '1')) { return; }
             const ln = getBaseLines(box);
             const baseH = ln * ROW_HEIGHT;
             const ch = box.clientHeight || baseH;
@@ -3106,15 +3108,17 @@ function insertSplitBlock(btn) {
                                             width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width'
                                         };
                                     } else {
-                                        return {
-                                            isImage: false,
-                                            // extract only direct text nodes, ignore button labels
-                                            text: (function(b){ var s=''; b.childNodes.forEach(function(n){ if(n.nodeType===3) s+=n.nodeValue; }); return s.trim(); })(box),
-                                            type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
-                                            width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
-                                            baseLines: (box.getAttribute('data-base-lines') || box.getAttribute('data-lines') || box.dataset.lines || '1'),
-                                            dynamic: ((box.getAttribute('data-dynamic') || '0') === '1'),
+                                            return {
+                                                isImage: false,
+                                                // extract only direct text nodes, ignore button labels
+                                                text: (function(b){ var s=''; b.childNodes.forEach(function(n){ if(n.nodeType===3) s+=n.nodeValue; }); return s.trim(); })(box),
+                                                type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
+                                                width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
+                                                baseLines: (box.getAttribute('data-base-lines') || box.getAttribute('data-lines') || box.dataset.lines || '1'),
+                                                dynamic: ((box.getAttribute('data-dynamic') || '0') === '1'),
                                             textColor: box.style.color || '',
+                                            textAlign: box.style.textAlign || '',
+                                            justify: box.style.justifyContent || '',
                                             resized: (box.dataset && box.dataset.resized === '1'),
                                             heightPx: (function(){
                                                 try {
@@ -3124,7 +3128,7 @@ function insertSplitBlock(btn) {
                                                     return lines * lh; // normalize to exact multiples to avoid growth on reload
                                                 } catch(_){ return null; }
                                             })()
-                                        };
+                                            };
                                     }
                                 })
                         };
@@ -3401,6 +3405,11 @@ function insertSplitBlock(btn) {
             addBtn.onclick = addNewColumn;
             addBtn.innerHTML = '<span>+</span>';
             container.appendChild(addBtn);
+
+            // Post-load normalization: ensure resizers exist and alignment defaults are applied
+            try {
+                if (typeof applyBoxLayoutAll === 'function') applyBoxLayoutAll(document);
+            } catch(_) {}
         }
 
 // HELFER-FUNKTION: Baut das HTML für eine einzelne Sektion (wird von applyLayoutData genutzt)
@@ -3464,6 +3473,19 @@ function insertSplitBlock(btn) {
                         let restoredH = (boxData && boxData.resized && boxData.heightPx) ? Math.max(30, Math.round(boxData.heightPx / 30) * 30) : null;
                         let styleString = `min-height: ${minHeight}px;` + (isDyn && !restoredH ? '' : ` height: ${(restoredH || minHeight)}px; overflow-y: hidden;`);
                         if (boxData && boxData.textColor) styleString += ` color: ${boxData.textColor};`;
+                        // restore alignment; default to centered if empty
+                        const align = (boxData && boxData.textAlign) ? boxData.textAlign : 'center';
+                        styleString += ` text-align: ${align};`;
+                        // map text-align to flex justification (persist exact value if present)
+                        let justify = (boxData && boxData.justify) ? boxData.justify : '';
+                        if (!justify) {
+                            if (align === 'left') justify = 'flex-start';
+                            else if (align === 'right') justify = 'flex-end';
+                            else if (align === 'center') justify = 'center';
+                            else if (align === 'justify') justify = 'flex-start';
+                        }
+                        if (justify) styleString += ` justify-content: ${justify};`;
+                        styleString += ' align-items: center;';
                         const styleAttr = `style="${styleString}"`;
                         const noAuto = (!isDyn && !restoredH && lines===1) ? 'data-noauto="1"' : '';
                         boxesHtml += `
@@ -3911,6 +3933,81 @@ function insertSplitBlock(btn) {
 </script>
 
 <script>
+// Excel export (columns -> sections -> boxes). Images become placeholders image1, image2, ...
+(function(){
+  function ensureExcelButton(){
+    try{
+      var controls = document.querySelector('.controls'); if(!controls) return;
+      if (controls.querySelector('[data-role="excel-export-btn"]')) return;
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-info'; btn.type='button'; btn.setAttribute('data-role','excel-export-btn');
+      btn.textContent = '📊 Excel';
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try{ exportToExcel(); }catch(err){ console.warn(err); } }, true);
+      var anchor = controls.querySelector('[onclick*="showCategoryModal"]');
+      controls.insertBefore(btn, anchor || controls.firstChild);
+    }catch(_){ }
+  }
+
+  function collectExcelColumns(){
+    var columns = [];
+    var imgCount = 0; // placeholders only; no sources to avoid Excel cell limits
+    var main = document.getElementById('mainContainer'); if(!main) return {columns:[], images:[]};
+    main.querySelectorAll(':scope > .column').forEach(function(col){
+      var title = (col.querySelector('.column-header') && col.querySelector('.column-header').childNodes[0] && col.querySelector('.column-header').childNodes[0].textContent.trim()) || '';
+      var lines = [];
+      var content = col.querySelector('.column-content'); if(!content){ columns.push({title:title, lines:lines}); return; }
+      function pushSection(sec){
+        var secTitleEl = sec.querySelector('.section-title');
+        var secTitle = (secTitleEl && secTitleEl.childNodes[0] && secTitleEl.childNodes[0].textContent.trim()) || '';
+        if (secTitle) lines.push(secTitle);
+        var bc = sec.querySelector(':scope > .box-container'); if(!bc) return;
+        bc.querySelectorAll(':scope > .app-box').forEach(function(box){
+          if (box.classList.contains('image-box')){
+            imgCount++; var ph = (imgCount<10? 'image0'+imgCount : 'image'+imgCount);
+            // Only put placeholder in worksheet; do not include source anywhere to prevent 32767 char limit
+            lines.push(ph);
+          } else if (box.classList.contains('line-box')){
+            lines.push('—');
+          } else {
+            var text=''; box.childNodes.forEach(function(n){ if(n.nodeType===3) text+=n.nodeValue; }); lines.push(text.trim());
+          }
+        });
+        // spacer between sections
+        lines.push('');
+      }
+      content.querySelectorAll(':scope > .section-group').forEach(pushSection);
+      content.querySelectorAll(':scope > .column-split-content > .column-part > .section-group').forEach(pushSection);
+      columns.push({title:title, lines:lines});
+    });
+    return {columns:columns, images:[]};
+  }
+
+  window.exportToExcel = function(){
+    try{
+      if (typeof XLSX === 'undefined' || !XLSX || !XLSX.utils) { alert('Excel export not available'); return; }
+      var data = collectExcelColumns();
+      var wb = XLSX.utils.book_new();
+      var ws = XLSX.utils.aoa_to_sheet([[]]);
+      // place each canvas column into its own Excel column (with a blank spacer column in-between)
+      var colOffset = 0; var maxRows = 0;
+      data.columns.forEach(function(c){ if (c.lines.length+1 > maxRows) maxRows = c.lines.length+1; });
+      data.columns.forEach(function(c){
+        XLSX.utils.sheet_add_aoa(ws, [[c.title]], {origin: {r:0, c:colOffset}});
+        var colData = c.lines.map(function(v){ return [v]; });
+        if (colData.length) XLSX.utils.sheet_add_aoa(ws, colData, {origin: {r:1, c:colOffset}});
+        colOffset += 2; // spacer
+      });
+      XLSX.utils.book_append_sheet(wb, ws, 'Content');
+      // No Images sheet: avoid huge Base64 URLs that exceed Excel cell limits
+      var name = (window.currentTemplateName || 'Explainator') + '_export.xlsx';
+      XLSX.writeFile(wb, name);
+    }catch(err){ console.warn(err); alert('Excel export failed: '+err.message); }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureExcelButton, { once:true }); else ensureExcelButton();
+})();
+</script>
+<script>
 // Batch importer: paste lines -> create 1-line boxes into a new Import column split into 2 parts
 (function(){
   function t(key, fallback){
@@ -4001,6 +4098,9 @@ function insertSplitBlock(btn) {
         var box = document.createElement('div');
         box.className = 'app-box saas ' + width; box.draggable = true;
         box.innerHTML = txt + '<button class="delete-btn" onclick="deleteBox(this)">x</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>';
+        // ensure centered like normal boxes
+        box.style.textAlign = 'center';
+        box.style.justifyContent = 'center';
         box.dataset.lines = '1'; box.setAttribute('data-base-lines','1'); box.setAttribute('data-dynamic','0'); box.setAttribute('data-noauto','1');
         box.style.minHeight = (1*30)+'px'; box.style.height = (1*30)+'px'; box.style.overflowY = 'hidden';
         ((idx%2===0)? bc1 : bc2).appendChild(box);
@@ -4647,11 +4747,6 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   }catch(_){ }
 })();
 </script>
-
-
-
-
-
 
 
 
