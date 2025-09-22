@@ -428,10 +428,10 @@
             flex: 0 0 100%;
         }
         
+        .app-box { will-change: box-shadow; }
         .app-box:hover {
-            transform: scale(1.02);
+            /* Avoid transform to prevent any perceived size change/jitter */
             box-shadow: 0 6px 12px rgba(0,0,0,0.2);
-            z-index: 10;
         }
         
         .app-box.dragging {
@@ -458,15 +458,14 @@
             height: 20px;
             font-size: 12px;
             cursor: pointer;
-            display: none;
+            display: flex; /* always in flow for stability */
             align-items: center;
             justify-content: center;
             font-weight: bold;
+            opacity: 0; visibility: hidden; transition: opacity .12s ease;
         }
         
-        .app-box:hover .delete-btn {
-            display: flex;
-        }
+        .app-box:hover .delete-btn { opacity: 1; visibility: visible; }
         
         .app-box .resize-btn {
             position: absolute;
@@ -481,14 +480,13 @@
             height: 20px;
             font-size: 10px;
             cursor: pointer;
-            display: none;
+            display: flex; /* always in flow for stability */
             align-items: center;
             justify-content: center;
+            opacity: 0; visibility: hidden; transition: opacity .12s ease;
         }
         
-        .app-box:hover .resize-btn {
-            display: flex;
-        }
+        .app-box:hover .resize-btn { opacity: 1; visibility: visible; }
         
         /* Add Column Button */
         .add-column {
@@ -3425,6 +3423,11 @@ function insertSplitBlock(btn) {
 
                     let styleString = `min-height: ${minHeight}px;` + (isDyn ? '' : ` height: ${minHeight}px; overflow-y: hidden;`);
                     if (boxData.textColor) styleString += ` color: ${boxData.textColor};`;
+                    // enforce flex centering (vertical) and default horizontal centering for one-liners
+                    styleString += ` display: inline-flex; align-items: center;`;
+                    if (!isDyn && lines === 1) {
+                        styleString += ` justify-content: center; line-height: ${minHeight}px;`;
+                    }
                     const styleAttr = `style="${styleString}"`;
 
                     boxesHtml += `
@@ -3949,6 +3952,8 @@ function insertSplitBlock(btn) {
         // enforce inline-flex and vertical centering
         if (st.display !== 'inline-flex') st.display = 'inline-flex';
         if (st.alignItems !== 'center') st.alignItems = 'center';
+        // ensure baseline line-height does not clip/crop text
+        if (!st.lineHeight || st.lineHeight === '') st.lineHeight = 'normal';
         // map text-align to justify-content if not explicitly set
         if (!st.justifyContent || st.justifyContent === ''){
           var ta = st.textAlign || window.getComputedStyle(box).textAlign || 'center';
@@ -3962,6 +3967,18 @@ function insertSplitBlock(btn) {
   };
 })();
 </script>
+
+<style id="box-stability-fixes">
+/* Ensure control buttons never influence box height */
+.app-box { position: relative; }
+.app-box .delete-btn,
+.app-box .resize-btn { position: absolute; }
+/* keep center grip visual without affecting layout */
+.app-box .resize-btn { bottom: 4px; left: 50%; transform: translateX(-50%); }
+.app-box .delete-btn { top: 4px; right: 6px; }
+</style>
+
+
 <script>
 // Excel export (columns -> sections -> boxes). Images become placeholders image1, image2, ...
 (function(){
