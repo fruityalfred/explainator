@@ -3904,36 +3904,6 @@ function insertSplitBlock(btn) {
   // Drag behavior
   (function(){
     let active = null, startY = 0, startH = 0;
-    let snapTargets = [];
-    let snapGuide = null;
-
-    function ensureSnapGuide(){
-      if (snapGuide && document.body.contains(snapGuide)) return snapGuide;
-      snapGuide = document.createElement('div');
-      snapGuide.id = 'snapGuideLine';
-      snapGuide.style.cssText = 'position:absolute; left:0; right:0; height:0; border-top:1px dashed #2196F3; pointer-events:none; z-index:20000; display:none;';
-      document.body.appendChild(snapGuide);
-      return snapGuide;
-    }
-
-    function collectSnapTargets(exclude){
-      const list = [];
-      document.querySelectorAll('.app-box').forEach(box => {
-        if (!box || box === exclude) return;
-        // include image-boxes as valid snap targets; skip only helper line-boxes
-        if (box.classList.contains('line-box')) return;
-        const r = box.getBoundingClientRect();
-        const y = Math.round(r.bottom + window.scrollY);
-        list.push(y);
-      });
-      // de-duplicate close values
-      list.sort((a,b)=>a-b);
-      const unique = [];
-      for (let i=0;i<list.length;i++){
-        if (!unique.length || Math.abs(list[i]-unique[unique.length-1])>1) unique.push(list[i]);
-      }
-      return unique;
-    }
     function onDown(e){
       const grip = e.target.closest && e.target.closest('.height-resizer');
       if(!grip) return;
@@ -3941,9 +3911,6 @@ function insertSplitBlock(btn) {
       active = grip.parentElement;
       startY = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
       startH = active.getBoundingClientRect().height;
-      // prepare snapping
-      snapTargets = collectSnapTargets(active);
-      ensureSnapGuide(); snapGuide.style.display = 'none';
       document.addEventListener('mousemove', onMove, true);
       document.addEventListener('touchmove', onMove, { passive:false, capture:true });
       document.addEventListener('mouseup', onUp, true);
@@ -3953,25 +3920,7 @@ function insertSplitBlock(btn) {
       if(!active) return;
       const y = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
       const dy = y - startY;
-      let nh = Math.max(30, Math.round(startH + dy));
-      // snapping: align bottom to nearest target (within tolerance)
-      try{
-        const topAbs = Math.round(active.getBoundingClientRect().top + window.scrollY);
-        const tentativeBottom = topAbs + nh;
-        let best = null, bestDelta = Infinity;
-        for (let i=0;i<snapTargets.length;i++){
-          const t = snapTargets[i];
-          const d = Math.abs(t - tentativeBottom);
-          if (d < bestDelta){ bestDelta = d; best = t; }
-        }
-        const TOL = 6; // px
-        if (best !== null && bestDelta <= TOL){
-          nh = Math.max(30, best - topAbs);
-          if (snapGuide){ snapGuide.style.top = best + 'px'; snapGuide.style.display = 'block'; }
-        } else {
-          if (snapGuide) snapGuide.style.display = 'none';
-        }
-      }catch(_){ if (snapGuide) snapGuide.style.display = 'none'; }
+      const nh = Math.max(30, Math.round(startH + dy));
       active.style.height = nh + 'px';
       active.dataset.resized = '1';
       try { active.removeAttribute('data-noauto'); } catch(_){ }
@@ -3983,7 +3932,6 @@ function insertSplitBlock(btn) {
       document.removeEventListener('touchmove', onMove, true);
       document.removeEventListener('mouseup', onUp, true);
       document.removeEventListener('touchend', onUp, true);
-      try{ if (snapGuide) snapGuide.style.display = 'none'; }catch(_){ }
       active = null;
     }
     document.addEventListener('mousedown', onDown, true);
