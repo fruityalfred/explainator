@@ -2028,6 +2028,14 @@
                 box.style.height = '';
                 return;
             }
+            // Line boxes: keep their own thin height/border rendering; do not alter
+            if (box.classList && box.classList.contains('line-box')) {
+                return;
+            }
+            // If user resized via handle, preserve explicit height
+            if (box.dataset && box.dataset.resized === '1') {
+                return;
+            }
             if (!isDynamic(box)) {
                 // fixed-height box
                 box.style.height = base;
@@ -2844,6 +2852,7 @@ function insertSplitBlock(btn) {
             const seen = new Set();
             base.concat(extraColors).forEach(c=>{ if(!seen.has(c)){ seen.add(c); merged.push(c);} });
             picker.innerHTML = merged.map(c => `<div class="swatch" data-c="${c}" style="background:${c}" title="${c}"></div>`).join('');
+            
             sectionTitle.appendChild(picker);
 
             // After render, prevent off-screen clipping (left/right)
@@ -2968,11 +2977,19 @@ function insertSplitBlock(btn) {
                             color: sectionTitle.getAttribute('data-color') || '#8B4513',
                                 boxes: Array.from(section.querySelectorAll('.app-box')).map(box => {
                                     const isImage = box.classList.contains('image-box');
+                                    const isLine = box.classList.contains('line-box');
                                     if (isImage) {
                                         const img = box.querySelector('img');
                                         return {
                                             isImage: true,
                                             imageSrc: img ? img.getAttribute('src') : '',
+                                            width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width'
+                                        };
+                                    } else if (isLine) {
+                                        const cls = Array.from(box.classList).find(c => c.startsWith('line-')) || 'line-solid-1';
+                                        return {
+                                            isLine: true,
+                                            lineClass: cls,
                                             width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width'
                                         };
                                     } else {
@@ -2984,7 +3001,9 @@ function insertSplitBlock(btn) {
                                             width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
                                             baseLines: (box.getAttribute('data-base-lines') || box.getAttribute('data-lines') || box.dataset.lines || '1'),
                                             dynamic: ((box.getAttribute('data-dynamic') || '0') === '1'),
-                                            textColor: box.style.color || ''
+                                            textColor: box.style.color || '',
+                                            resized: (box.dataset && box.dataset.resized === '1'),
+                                            heightPx: (function(){ try { return Math.round(box.getBoundingClientRect().height); } catch(_){ return null; } })()
                                         };
                                     }
                                 })
@@ -3310,16 +3329,23 @@ function insertSplitBlock(btn) {
                                 <button class="delete-btn" onclick="deleteBox(this)">x</button>
                                 <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
                             </div>`;
+                    } else if (boxData && boxData.isLine) {
+                        const lineCls = boxData.lineClass || 'line-solid-1';
+                        boxesHtml += `
+                            <div class="app-box line-box ${boxData.width || 'full-width'} ${lineCls}" draggable="true">
+                                <button class="delete-btn" onclick="deleteBox(this)">x</button>
+                            </div>`;
                     } else {
                         const lines = parseInt((boxData && (boxData.baseLines || boxData.lines) ) || '1', 10) || 1;
                         const minHeight = (lines * 30);
                         const isDyn = !!(boxData && boxData.dynamic);
                         const dataLinesAttr = `data-lines="${lines}" data-base-lines="${lines}" data-dynamic="${isDyn ? '1':'0'}"`;
                         let styleString = `min-height: ${minHeight}px;` + (isDyn ? '' : ` height: ${minHeight}px; overflow-y: hidden;`);
+                        if (boxData && boxData.resized && boxData.heightPx) styleString += ` height: ${boxData.heightPx}px;`;
                         if (boxData && boxData.textColor) styleString += ` color: ${boxData.textColor};`;
                         const styleAttr = `style="${styleString}"`;
                         boxesHtml += `
-                            <div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr}>
+                            <div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr} ${(boxData && boxData.resized)? 'data-resized="1"' : ''}>
                                 ${(boxData && boxData.text) || ''}
                                 <button class="delete-btn" onclick="deleteBox(this)">x</button>
                                 <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
@@ -3465,6 +3491,8 @@ function insertSplitBlock(btn) {
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.header-btn, .split-counter, .resize-handle').forEach(el => el.style.visibility = 'hidden');
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'hidden');
+            // Also hide per-box controls and resize grips
+            document.querySelectorAll('.delete-btn, .resize-btn, .height-resizer').forEach(el => el.style.visibility = 'hidden');
             document.querySelectorAll('.column-color-picker, .section-color-picker').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = 'none'; section.style.background = 'transparent'; });
         }
@@ -3478,6 +3506,7 @@ function insertSplitBlock(btn) {
             document.querySelectorAll('.header-btn').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.split-counter, .resize-handle').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'visible');
+            document.querySelectorAll('.delete-btn, .resize-btn, .height-resizer').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = '2px dashed #999'; section.style.background = ''; });
         }
     </script>
@@ -3578,6 +3607,185 @@ function insertSplitBlock(btn) {
 })();
 </script>
 
+<script>
+// Inject "Linien" feature: button + modal + logic, without touching existing header markup
+(function(){
+  try{
+    function t(key, fallback){
+      try{ return (translations && translations[currentLanguage] && translations[currentLanguage][key]) || fallback; }catch(_){ return fallback; }
+    }
+    // 1) Inject Lines button next to "Neue Box"
+    function ensureLinesButton(){
+      var controls = document.querySelector('.controls');
+      if(!controls) return;
+      if(controls.querySelector('[data-role="add-lines-btn"]')) return;
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-secondary';
+      btn.type = 'button';
+      btn.setAttribute('data-role','add-lines-btn');
+      btn.textContent = t('addLine','— Linien');
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); showAddLineModal(); }, true);
+      var ref = controls.querySelector('[onclick*="showAddBoxModal"]');
+      if(ref && ref.nextSibling) controls.insertBefore(btn, ref.nextSibling); else controls.appendChild(btn);
+    }
+
+    // 2) Inject CSS for line boxes
+    function ensureLineStyles(){
+      if(document.getElementById('line-box-styles')) return;
+      var css = '/* line boxes */\n'
+        + '.app-box.line-box{display:block;width:100%;min-height:30px;height:30px;margin:0;padding:0;background:transparent;border:none;box-shadow:none;cursor:move;position:relative;}\n'
+        + '.app-box.line-box .delete-btn{top:-6px;right:-6px;}\n'
+        + '.app-box.line-box .resize-btn{display:none;}\n'
+        + '.app-box.line-box::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);}\n'
+        + '.app-box.line-box.line-solid-1::before{border-top:2px solid #444;} .app-box.line-box.line-solid-2::before{border-top:4px solid #444;} .app-box.line-box.line-solid-3::before{border-top:6px solid #444;}\n'
+        + '.app-box.line-box.line-dashed-1::before{border-top:2px dashed #444;} .app-box.line-box.line-dashed-2::before{border-top:4px dashed #444;} .app-box.line-box.line-dashed-3::before{border-top:6px dashed #444;}\n'
+        + '.section-separator{width:100%;margin:6px 0;position:relative;height:30px;}\n'
+        + '.section-separator::before{content:"";position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);}\n'
+        + '.section-separator.line-solid-1::before{border-top:2px solid #444;} .section-separator.line-solid-2::before{border-top:4px solid #444;} .section-separator.line-solid-3::before{border-top:6px solid #444;}\n'
+        + '.section-separator.line-dashed-1::before{border-top:2px dashed #444;} .section-separator.line-dashed-2::before{border-top:4px dashed #444;} .section-separator.line-dashed-3::before{border-top:6px dashed #444;}\n';
+      var st = document.createElement('style'); st.id='line-box-styles'; st.textContent = css; document.head.appendChild(st);
+    }
+
+    // 3) Inject modal markup
+    function ensureLineModal(){
+      if(document.getElementById('addLineModal')) return;
+      var wrap = document.createElement('div'); wrap.className='modal'; wrap.id='addLineModal';
+      wrap.innerHTML = '\n<div class="modal-content">\n'
+        + '  <div class="modal-header">'+t('addLineModalTitle','Linie hinzufügen')+'</div>\n'
+        + '  <div class="modal-body">\n'
+        + '    <div style="display:flex; gap:16px; align-items:center; margin-bottom:10px;">\n'
+        + '      <label style="min-width:120px;">'+t('lineStyle','Stil')+'</label>\n'
+        + '      <label><input type="radio" name="lineStyle" value="solid" checked> '+t('solid','Durchgehend')+'</label>\n'
+        + '      <label><input type="radio" name="lineStyle" value="dashed"> '+t('dashed','Gestrichelt')+'</label>\n'
+        + '    </div>\n'
+        + '    <div style="display:flex; gap:16px; align-items:center;">\n'
+        + '      <label style="min-width:120px;">'+t('lineThickness','Stärke')+'</label>\n'
+        + '      <label><input type="radio" name="lineThk" value="1" checked> 1</label>\n'
+        + '      <label><input type="radio" name="lineThk" value="2"> 2</label>\n'
+        + '      <label><input type="radio" name="lineThk" value="3"> 3</label>\n'
+        + '    </div>\n'
+        + '  </div>\n'
+        + '  <div class="modal-footer">\n'
+        + '    <button class="btn btn-primary" data-action="add">'+t('add','Hinzufügen')+'</button>\n'
+        + '    <button class="btn btn-danger" data-action="cancel">'+t('cancel','Abbrechen')+'</button>\n'
+        + '  </div>\n'
+        + '</div>';
+      document.body.appendChild(wrap);
+      wrap.addEventListener('click', function(e){
+        if(e.target.getAttribute && e.target.getAttribute('data-action')==='add'){ addLineNew(); }
+        if(e.target.getAttribute && e.target.getAttribute('data-action')==='cancel'){ closeModal('addLineModal'); }
+      }, true);
+    }
+
+    // 4) Public helpers
+    // target for section separators
+    window.__lineInsertTarget = { mode:'box', section:null, position:null };
+    window.showAddLineModal = function(opts){
+      ensureLineStyles(); ensureLineModal();
+      window.__lineInsertTarget = Object.assign({ mode:'box', section:null, position:null }, opts||{});
+      var m=document.getElementById('addLineModal'); if(m) m.classList.add('show');
+    };
+    window.addLineNew = function(){
+      try{
+        var style = (document.querySelector('input[name="lineStyle"]:checked')||{}).value || 'solid';
+        var thk = (document.querySelector('input[name="lineThk"]:checked')||{}).value || '1';
+        var cls = 'line-'+style+'-'+thk;
+        if (window.__lineInsertTarget && window.__lineInsertTarget.mode === 'section' && window.__lineInsertTarget.section) {
+          // Insert as section separator
+          var sep = document.createElement('div');
+          sep.className = 'section-separator '+cls;
+          var sec = window.__lineInsertTarget.section;
+          var pos = window.__lineInsertTarget.position === 'before' ? 'before' : 'after';
+          if (pos === 'before') sec.parentNode.insertBefore(sep, sec);
+          else sec.parentNode.insertBefore(sep, sec.nextSibling);
+        } else {
+          // Default: line inside current section's box-container
+          var box = document.createElement('div');
+          box.className = 'app-box line-box full-width '+cls;
+          box.draggable = true;
+          box.innerHTML = '<button class="delete-btn" onclick="deleteBox(this)">x</button>';
+          var target = (typeof getTargetBoxContainer==='function') ? getTargetBoxContainer() : document.querySelector('.box-container');
+          if(target) target.appendChild(box);
+          try { if (typeof applyBoxLayout==='function') applyBoxLayout(box); } catch(_){ }
+        }
+        closeModal('addLineModal');
+      } catch(err){ console.warn(err); }
+    };
+
+    // Initialize
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ ensureLinesButton(); ensureLineStyles(); }, { once:true });
+    else { ensureLinesButton(); ensureLineStyles(); }
+  }catch(err){ console.warn(err); }
+})();
+</script>
+
+<script>
+// Vertical height resizer for all app-box (except line/image boxes)
+(function(){
+  function ensureHandle(box){
+    try{
+      if (!box || !box.classList || box.classList.contains('image-box') || box.classList.contains('line-box')) return;
+      if (box.querySelector('.height-resizer')) return;
+      const h = document.createElement('div');
+      h.className = 'height-resizer';
+      h.style.cssText = 'position:absolute; left:6px; bottom:-3px; width:36px; height:6px; cursor:ns-resize; background:#bbb; border-radius:3px; opacity:0.8;';
+      box.style.position = box.style.position || 'relative';
+      box.appendChild(h);
+    }catch(_){ }
+  }
+  function ensureAll(){ document.querySelectorAll('.app-box').forEach(ensureHandle); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureAll, { once:true }); else ensureAll();
+  try{
+    const obs = new MutationObserver(muts => {
+      muts.forEach(m => {
+        (m.addedNodes||[]).forEach(n => {
+          if (n.nodeType===1){
+            if (n.classList && n.classList.contains('app-box')) ensureHandle(n);
+            else if (n.querySelectorAll) n.querySelectorAll('.app-box').forEach(ensureHandle);
+          }
+        });
+      });
+    });
+    obs.observe(document.body, { childList:true, subtree:true });
+  }catch(_){ }
+
+  // Drag behavior
+  (function(){
+    let active = null, startY = 0, startH = 0;
+    function onDown(e){
+      const grip = e.target.closest && e.target.closest('.height-resizer');
+      if(!grip) return;
+      e.preventDefault(); e.stopPropagation();
+      active = grip.parentElement;
+      startY = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+      startH = active.getBoundingClientRect().height;
+      document.addEventListener('mousemove', onMove, true);
+      document.addEventListener('touchmove', onMove, { passive:false, capture:true });
+      document.addEventListener('mouseup', onUp, true);
+      document.addEventListener('touchend', onUp, true);
+    }
+    function onMove(e){
+      if(!active) return;
+      const y = e.clientY || (e.touches && e.touches[0] && e.touches[0].clientY) || 0;
+      const dy = y - startY;
+      const nh = Math.max(30, Math.round(startH + dy));
+      active.style.height = nh + 'px';
+      active.dataset.resized = '1';
+      active.setAttribute('data-dynamic','1');
+      if (e.cancelable) { e.preventDefault(); }
+    }
+    function onUp(){
+      document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('touchmove', onMove, true);
+      document.removeEventListener('mouseup', onUp, true);
+      document.removeEventListener('touchend', onUp, true);
+      active = null;
+    }
+    document.addEventListener('mousedown', onDown, true);
+    document.addEventListener('touchstart', onDown, { passive:false, capture:true });
+  })();
+})();
+</script>
 
 <script>
 (function(){
@@ -3965,6 +4173,8 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     document.getElementById('mainContainer').addEventListener('dblclick', function(e) {
         const box = e.target.closest('.app-box');
         if (!box) return;
+        // Do not edit line boxes
+        if (box.classList && box.classList.contains('line-box')) return;
 
         // Verhindern, dass ein Input-Feld in sich selbst erstellt wird
         if (e.target.tagName === 'INPUT') return;
@@ -4055,6 +4265,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   mc.addEventListener('dblclick', function(e){
     const box = e.target && e.target.closest && e.target.closest('.app-box');
     if(!box || box.classList.contains('image-box')) return;
+    if (box.classList && box.classList.contains('line-box')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     e.preventDefault(); e.stopPropagation();
 
@@ -4208,10 +4419,6 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   }catch(_){ }
 })();
 </script>
-
-
-
-
 
 
 
