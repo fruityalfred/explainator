@@ -429,10 +429,8 @@
         }
         
         .app-box:hover {
-            /* Slight visual widen without layout shift */
-            margin-left: -2px;
-            margin-right: -2px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.18);
+            transform: scale(1.02);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.2);
             z-index: 10;
         }
         
@@ -3290,7 +3288,7 @@ function insertSplitBlock(btn) {
             // Restore font settings if present
             if (template.fontSettings) { try { window.fontSettings = template.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
             applyLayoutData(template.layout);
-            try { applyBoxLayoutAll(document); } catch(_){}
+            try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); } catch(_){}
             window.currentTemplateName = template.name || templateName;
             
             closeModal('loadTemplateModal');
@@ -3410,6 +3408,7 @@ function insertSplitBlock(btn) {
 
             // Post-load normalization: ensure resizers exist and alignment defaults are applied
             try {
+                if (typeof enforceBoxFlex === 'function') enforceBoxFlex(document);
                 if (typeof applyBoxLayoutAll === 'function') applyBoxLayoutAll(document);
             } catch(_) {}
         }
@@ -3478,6 +3477,9 @@ function insertSplitBlock(btn) {
                         // restore alignment; default to centered if empty
                         const align = (boxData && boxData.textAlign) ? boxData.textAlign : 'center';
                         styleString += ` text-align: ${align};`;
+                        // ensure correct flexbox for vertical centering
+                        // some inline styles from templates may override CSS; enforce here
+                        styleString += ` display: inline-flex; align-items: center;`;
                         // map text-align to flex justification (persist exact value if present)
                         let justify = (boxData && boxData.justify) ? boxData.justify : '';
                         if (!justify) {
@@ -3548,7 +3550,7 @@ function insertSplitBlock(btn) {
                     updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
                     if (templateData.fontSettings) { try { window.fontSettings = templateData.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
                     applyLayoutData(templateData.layout);
-                    enforceBoxHeights(document);
+                    try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); else if (typeof enforceBoxHeights==='function') enforceBoxHeights(document); } catch(_){}
                     window.currentTemplateName = templateData.name || '';
                     
                     closeModal('loadTemplateModal');
@@ -3935,6 +3937,31 @@ function insertSplitBlock(btn) {
 })();
 </script>
 
+<script>
+// Post-pass to ensure all boxes have proper flex centering and sane geometry
+(function(){
+  window.enforceBoxFlex = function(root){
+    try{
+      var scope = root && root.querySelectorAll ? root : document;
+      scope.querySelectorAll('.app-box').forEach(function(box){
+        if (box.classList.contains('image-box') || box.classList.contains('line-box')) return;
+        var st = box.style;
+        // enforce inline-flex and vertical centering
+        if (st.display !== 'inline-flex') st.display = 'inline-flex';
+        if (st.alignItems !== 'center') st.alignItems = 'center';
+        // map text-align to justify-content if not explicitly set
+        if (!st.justifyContent || st.justifyContent === ''){
+          var ta = st.textAlign || window.getComputedStyle(box).textAlign || 'center';
+          if (ta === 'left') st.justifyContent = 'flex-start';
+          else if (ta === 'right') st.justifyContent = 'flex-end';
+          else st.justifyContent = 'center';
+        }
+        
+      });
+    }catch(_){ }
+  };
+})();
+</script>
 <script>
 // Excel export (columns -> sections -> boxes). Images become placeholders image1, image2, ...
 (function(){
