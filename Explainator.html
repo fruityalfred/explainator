@@ -829,6 +829,7 @@
   opacity: 1 !important;
   filter: none !important;
 }
+.app-box.selected { outline: 2px solid #2196F3; box-shadow: 0 0 0 2px rgba(33,150,243,0.15) inset; }
 </style>
 
 <style>
@@ -2054,6 +2055,9 @@
             scope.querySelectorAll('.app-box').forEach(checkOverflowAndToggle);
         }
         function checkOverflowAndToggle(box){
+            // Never auto-toggle for special/resized boxes
+            if (box.classList && (box.classList.contains('image-box') || box.classList.contains('line-box'))) return;
+            if (box.dataset && box.dataset.resized === '1') { return; }
             const ln = getBaseLines(box);
             const baseH = ln * ROW_HEIGHT;
             const over = box.scrollHeight > (baseH + 1);
@@ -2314,6 +2318,17 @@
             let draggedFromSplit = false; // Ursprung in .column-part?
             let sourceSplitParts = 0;      // Anzahl Parts im Ursprungs-Split
             let lastDragX = 0;             // letzte Maus-X-Position
+            let selectedGroup = null;      // Mehrfachauswahl von Boxen
+
+            // Mehrfachauswahl per STRG-Klick
+            function getSelectedBoxes(){ return Array.from(document.querySelectorAll('.app-box.selected')); }
+            function clearSelection(){ document.querySelectorAll('.app-box.selected').forEach(el => el.classList.remove('selected')); }
+            document.addEventListener('click', function(e){
+                const box = e.target && e.target.closest && e.target.closest('.app-box');
+                if (!box) { if (!e.ctrlKey) clearSelection(); return; }
+                if (e.ctrlKey) { e.preventDefault(); e.stopPropagation(); box.classList.toggle('selected'); }
+                else { clearSelection(); }
+            }, true);
 
             document.addEventListener('dragstart', function(e) {
                 const target = e.target.closest && e.target.closest('.app-box, .section-group, .column-split-content');
@@ -2322,7 +2337,14 @@
 
                 isCloning = e.ctrlKey;
                 
-                if (isCloning) {
+                // Build group when dragging a selected app-box (non-clone)
+                selectedGroup = null;
+                if (target.classList.contains('app-box')) {
+                    const sel = getSelectedBoxes();
+                    if (sel.length > 1 && sel.includes(target)) selectedGroup = sel;
+                }
+
+                if (isCloning && !selectedGroup) {
                     draggedElement = target.cloneNode(true);
                     draggedElement.classList.add('dragging');
                 } else {
@@ -2334,6 +2356,8 @@
                 placeholder.classList.add('dragging-placeholder');
                 if (target.classList.contains('section-group')) {
                     placeholder.style.height = '100px';
+                } else if (selectedGroup && target.classList.contains('app-box')) {
+                    try { const sum = selectedGroup.reduce((s,el)=>s+el.offsetHeight,0); placeholder.style.height = sum + 'px'; } catch(_){ placeholder.style.height = target.offsetHeight + 'px'; }
                 } else {
                     placeholder.style.height = target.offsetHeight + 'px';
                 }
@@ -2434,24 +2458,38 @@
                     targetPart.appendChild(draggedElement);
                     dropContainer.replaceChild(splitContainer, placeholder);
                     }
+                } else if (draggedElement && draggedElement.classList && draggedElement.classList.contains('app-box') && selectedGroup && selectedGroup.length>1) {
+                    // Move group (or clone if ctrl during dragstart)
+                    const parent = dropContainer;
+                    const ref = placeholder;
+                    selectedGroup.forEach(el => {
+                        let node = el;
+                        if (isCloning) { node = el.cloneNode(true); node.classList.remove('selected'); }
+                        parent.insertBefore(node, ref);
+                    });
+                    parent.removeChild(ref);
                 } else {
                     dropContainer.replaceChild(draggedElement, placeholder);
                 }
-                draggedElement.classList.remove('dragging');
+                // Clean any leftover dragging class
+                try { draggedElement.classList.remove('dragging'); } catch(_){ }
+                try { document.querySelectorAll('.app-box.dragging').forEach(n => n.classList.remove('dragging')); } catch(_){ }
+                // Clear selection after move
+                if (selectedGroup && selectedGroup.length>1 && !isCloning) clearSelection();
 
                 // placeholders entfernt
             });
 
             document.addEventListener('dragend', function(e) {
-                if(draggedElement) {
-                    draggedElement.classList.remove('dragging');
-                }
+                if(draggedElement) { try { draggedElement.classList.remove('dragging'); } catch(_){ } }
+                try { document.querySelectorAll('.app-box.dragging').forEach(n => n.classList.remove('dragging')); } catch(_){ }
                 if (placeholder && placeholder.parentElement) {
                     placeholder.remove();
                 }
                 draggedElement = null;
                 placeholder = null;
                 isCloning = false;
+                selectedGroup = null;
             });
         }
 
@@ -3075,7 +3113,14 @@ function insertSplitBlock(btn) {
                                             dynamic: ((box.getAttribute('data-dynamic') || '0') === '1'),
                                             textColor: box.style.color || '',
                                             resized: (box.dataset && box.dataset.resized === '1'),
-                                            heightPx: (function(){ try { return Math.round(box.getBoundingClientRect().height); } catch(_){ return null; } })()
+                                            heightPx: (function(){
+                                                try {
+                                                    var h = box.getBoundingClientRect().height;
+                                                    var lh = 30; // ROW_HEIGHT baseline
+                                                    var lines = Math.max(1, Math.round(h / lh));
+                                                    return lines * lh; // normalize to exact multiples to avoid growth on reload
+                                                } catch(_){ return null; }
+                                            })()
                                         };
                                     }
                                 })
@@ -3412,8 +3457,9 @@ function insertSplitBlock(btn) {
                         const minHeight = (lines * 30);
                         const isDyn = !!(boxData && boxData.dynamic);
                         const dataLinesAttr = `data-lines="${lines}" data-base-lines="${lines}" data-dynamic="${isDyn ? '1':'0'}"`;
-                        let styleString = `min-height: ${minHeight}px;` + (isDyn ? '' : ` height: ${minHeight}px; overflow-y: hidden;`);
-                        if (boxData && boxData.resized && boxData.heightPx) styleString += ` height: ${boxData.heightPx}px;`;
+                        // Normalize restored height to 30px grid to prevent growth on reload
+                        let restoredH = (boxData && boxData.resized && boxData.heightPx) ? Math.max(30, Math.round(boxData.heightPx / 30) * 30) : null;
+                        let styleString = `min-height: ${minHeight}px;` + (isDyn && !restoredH ? '' : ` height: ${(restoredH || minHeight)}px; overflow-y: hidden;`);
                         if (boxData && boxData.textColor) styleString += ` color: ${boxData.textColor};`;
                         const styleAttr = `style="${styleString}"`;
                         boxesHtml += `
