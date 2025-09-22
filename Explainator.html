@@ -3860,6 +3860,111 @@ function insertSplitBlock(btn) {
 </script>
 
 <script>
+// Batch importer: paste lines -> create 1-line boxes into a new Import column split into 2 parts
+(function(){
+  function t(key, fallback){
+    try{ return (translations && translations[currentLanguage] && translations[currentLanguage][key]) || fallback; }catch(_){ return fallback; }
+  }
+  function ensureImportButton(){
+    var controls = document.querySelector('.controls'); if(!controls) return;
+    if (controls.querySelector('[data-role="batch-import-btn"]')) return;
+    var btn = document.createElement('button');
+    btn.className = 'btn btn-secondary'; btn.type = 'button'; btn.setAttribute('data-role','batch-import-btn');
+    btn.textContent = t('batchImport','📥 Batch Import');
+    btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); showBatchImportModal(); }, true);
+    // place after "Neue Box"
+    var ref = controls.querySelector('[onclick*="showAddBoxModal"]');
+    if (ref && ref.nextSibling) controls.insertBefore(btn, ref.nextSibling); else controls.appendChild(btn);
+  }
+
+  function ensureImportModal(){
+    if (document.getElementById('batchImportModal')) return;
+    var wrap = document.createElement('div'); wrap.className = 'modal'; wrap.id = 'batchImportModal';
+    wrap.innerHTML = '\n  <div class="modal-content">\n'
+      + '    <div class="modal-header">'+t('batchImportTitle','Text → Box (1 line)')+'</div>\n'
+      + '    <div class="modal-body">\n'
+      + '      <div style="font-size:12px; color:#555; margin-bottom:6px;">'+t('batchImportHint','Eine Zeile pro Box. Leere Zeilen werden ignoriert.')+'</div>\n'
+      + '      <textarea id="batchImportText" style="width:100%; min-height:180px; border:2px solid #ddd; border-radius:6px; padding:8px; font-family:inherit; font-size:13px;" placeholder="'+t('batchImportPlaceholder','Zeilen hier einfügen...')+'"></textarea>\n'
+      + '      <div style="display:flex; gap:12px; align-items:center; margin-top:10px;">\n'
+      + '        <label>'+t('width','Breite')+': </label>\n'
+      + '        <select id="batchImportWidth"><option value="full-width">'+t('fullWidth','Volle Breite')+'</option><option value="half-width">'+t('halfWidth','Halbe Breite')+'</option></select>\n'
+      + '      </div>\n'
+      + '    </div>\n'
+      + '    <div class="modal-footer">\n'
+      + '      <button class="btn btn-primary" data-action="apply">'+t('add','Hinzufügen')+'</button>\n'
+      + '      <button class="btn btn-danger" data-action="cancel">'+t('cancel','Abbrechen')+'</button>\n'
+      + '    </div>\n'
+      + '  </div>';
+    document.body.appendChild(wrap);
+    wrap.addEventListener('click', function(e){
+      var act = e.target && e.target.getAttribute && e.target.getAttribute('data-action');
+      if (act === 'apply') { applyBatchImport(); }
+      if (act === 'cancel') { closeModal('batchImportModal'); }
+    }, true);
+  }
+
+  window.showBatchImportModal = function(){ ensureImportModal(); var m=document.getElementById('batchImportModal'); if(m) m.classList.add('show'); };
+
+  function uniqueImportTitle(base){
+    var name = base || 'Import';
+    var exists = function(t){ return Array.from(document.querySelectorAll('.column-header')).some(h => (h.childNodes[0] && (h.childNodes[0].textContent||'').trim()===t)); };
+    if (!exists(name)) return name;
+    var i=2; while(exists(base+' '+i)) i++; return base+' '+i;
+  }
+
+  window.applyBatchImport = function(){
+    try{
+      var raw = (document.getElementById('batchImportText')||{}).value || '';
+      var width = (document.getElementById('batchImportWidth')||{}).value || 'full-width';
+      var lines = raw.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      if (!lines.length) { closeModal('batchImportModal'); return; }
+
+      var tdict = translations && translations[currentLanguage] || {};
+      var title = uniqueImportTitle(tdict.importColumnTitle || 'Import');
+      // Create column
+      var col = createColumnElement(title, ++window.columnIdCounter);
+      // Insert before the "+" add-column button if present
+      var mc = document.getElementById('mainContainer');
+      var addBtn = mc && mc.querySelector('.add-column');
+      if (addBtn) mc.insertBefore(col, addBtn); else mc.appendChild(col);
+      // Split into 2 parts
+      try { applySplit(col, 2); } catch(_){ }
+      // Prepare a section in each part
+      var parts = col.querySelectorAll('.column-part');
+      function ensureSectionIn(el){
+        var s = document.createElement('div'); s.className='section-group'; s.setAttribute('draggable','true');
+        var st = document.createElement('div'); st.className='section-title'; st.textContent = (tdict.newSection || 'Neue Section');
+        var del = document.createElement('span'); del.className='section-delete'; del.textContent='x'; del.setAttribute('onclick','deleteSection(this)');
+        var menu = document.createElement('span'); menu.className='section-menu'; menu.textContent='🎨'; menu.setAttribute('onclick','showSectionColorPicker(this)');
+        st.appendChild(del); st.appendChild(menu);
+        var bc = document.createElement('div'); bc.className='box-container';
+        s.appendChild(st); s.appendChild(bc);
+        el.appendChild(s);
+        return bc;
+      }
+      var bc1 = (parts[0] && parts[0].querySelector('.box-container')) || ensureSectionIn(parts[0]||col.querySelector('.column-content'));
+      var bc2 = (parts[1] && parts[1].querySelector('.box-container')) || ensureSectionIn(parts[1]||col.querySelector('.column-content'));
+
+      // Create boxes alternating between the two parts
+      lines.forEach(function(txt, idx){
+        var box = document.createElement('div');
+        box.className = 'app-box saas ' + width; box.draggable = true;
+        box.innerHTML = txt + '<button class="delete-btn" onclick="deleteBox(this)">x</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>';
+        box.dataset.lines = '1'; box.setAttribute('data-base-lines','1'); box.setAttribute('data-dynamic','0');
+        box.style.minHeight = (1*30)+'px'; box.style.height = (1*30)+'px';
+        ((idx%2===0)? bc1 : bc2).appendChild(box);
+        try { applyBoxLayout(box); } catch(_){ }
+      });
+
+      closeModal('batchImportModal');
+    }catch(err){ console.warn(err); }
+  };
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', ensureImportButton, { once:true }); else ensureImportButton();
+})();
+</script>
+
+<script>
 (function(){
   function addColumnPipette(header){
     if (!header || header.querySelector('.pipette-column-btn')) return;
