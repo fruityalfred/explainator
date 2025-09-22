@@ -3055,7 +3055,7 @@ function insertSplitBlock(btn) {
                 if (!overwrite) name = nextName(name);
             }
 
-            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData() };
+            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData(), fontSettings: (function(fs){ try { return JSON.parse(JSON.stringify(fs)); } catch(_) { return fs||null; } })(window.fontSettings) };
             templates[name] = templateData;
             // localStorage write guarded; full template always downloaded below
             try { localStorage.setItem('architectureTemplates', JSON.stringify(templates)); } catch(_) {}
@@ -3287,6 +3287,8 @@ function insertSplitBlock(btn) {
             
             categories = template.categories || categories;
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+            // Restore font settings if present
+            if (template.fontSettings) { try { window.fontSettings = template.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
             applyLayoutData(template.layout);
             try { applyBoxLayoutAll(document); } catch(_){}
             window.currentTemplateName = template.name || templateName;
@@ -3544,6 +3546,7 @@ function insertSplitBlock(btn) {
                     
                     categories = templateData.categories;
                     updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+                    if (templateData.fontSettings) { try { window.fontSettings = templateData.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
                     applyLayoutData(templateData.layout);
                     enforceBoxHeights(document);
                     window.currentTemplateName = templateData.name || '';
