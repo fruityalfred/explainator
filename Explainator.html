@@ -2840,6 +2840,78 @@ function insertSplitBlock(btn) {
             }
         });
 
+        // Right-click cycles forward; Alt+Left-Click cycles backward (safe: no conflict with rename)
+        (function(){
+            const basePalette = ['#FFFFFF', '#000000', '#8B4513','#A0522D','#CD853F','#D2691E','#FF9800','#FFC107','#FF5722','#2196F3','#1E88E5','#64B5F6','#00BCD4','#009688','#4CAF50','#8BC34A','#9C27B0','#AB47BC','#E91E63','#F44336','#607D8B','#455A64','#333333','#666666','#999999','#CCCCCC'];
+            function norm(c){ return (c||'').toLowerCase(); }
+            function toHex(rgb){
+                try{
+                    if (!rgb) return '';
+                    if (rgb.startsWith('#')) return rgb;
+                    const m = rgb.match(/rgba?\((\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i);
+                    if (!m) return '';
+                    const r = (parseInt(m[1])|0).toString(16).padStart(2,'0');
+                    const g = (parseInt(m[2])|0).toString(16).padStart(2,'0');
+                    const b = (parseInt(m[3])|0).toString(16).padStart(2,'0');
+                    return ('#'+r+g+b).toLowerCase();
+                }catch(_){ return ''; }
+            }
+            function cycleHeaderTextColor(el, reverse){
+                if (!el) return;
+                const cs = window.getComputedStyle(el);
+                const current = toHex(cs.color) || '#ffffff';
+                // create deduped palette starting with white, black, then others
+                const seen = new Set();
+                const palette = [];
+                basePalette.forEach(c=>{ const k=norm(c); if(!seen.has(k)){ seen.add(k); palette.push(k); } });
+                let idx = palette.indexOf(norm(current));
+                if (reverse) {
+                    idx = (idx < 0) ? 0 : (idx - 1 + palette.length) % palette.length;
+                } else {
+                    idx = (idx < 0) ? 0 : (idx + 1) % palette.length;
+                }
+                const next = palette[idx];
+                el.style.color = next;
+                // keep inline inputs (during rename) in sync
+                const inp = el.querySelector('input'); if (inp) inp.style.color = next;
+            }
+            document.addEventListener('contextmenu', function(e){
+                const isBtn = (sel, n)=> n && n.closest && n.closest(sel);
+                // Section title
+                const st = e.target && e.target.closest && e.target.closest('.section-title');
+                if (st && !isBtn('.section-menu, .section-delete', e.target)){
+                    e.preventDefault(); e.stopPropagation();
+                    cycleHeaderTextColor(st, false);
+                    return;
+                }
+                // Column header
+                const ch = e.target && e.target.closest && e.target.closest('.column-header');
+                if (ch && !isBtn('.header-btn, .split-counter', e.target)){
+                    e.preventDefault(); e.stopPropagation();
+                    cycleHeaderTextColor(ch, false);
+                    return;
+                }
+            }, true);
+
+            // Alt+Left-Click cycles backward to avoid breaking existing left-click behaviors
+            document.addEventListener('click', function(e){
+                if (!e.altKey) return;
+                const isBtn = (sel, n)=> n && n.closest && n.closest(sel);
+                const st = e.target && e.target.closest && e.target.closest('.section-title');
+                if (st && !isBtn('.section-menu, .section-delete', e.target)){
+                    e.preventDefault(); e.stopPropagation();
+                    cycleHeaderTextColor(st, true);
+                    return;
+                }
+                const ch = e.target && e.target.closest && e.target.closest('.column-header');
+                if (ch && !isBtn('.header-btn, .split-counter', e.target)){
+                    e.preventDefault(); e.stopPropagation();
+                    cycleHeaderTextColor(ch, true);
+                    return;
+                }
+            }, true);
+        })();
+
         function showSectionColorPicker(menuBtn) {
             document.querySelectorAll('.section-color-picker').forEach(picker => picker.remove());
             const sectionTitle = menuBtn.closest('.section-title');
