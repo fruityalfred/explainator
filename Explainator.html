@@ -765,7 +765,14 @@
         .section-color-picker.show { display: flex; flex-wrap: wrap; gap: 8px; }
         .section-color-picker .swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #bbb; cursor: pointer; }
         .section-color-picker .swatch:hover, .column-color-picker .swatch:hover { outline: 2px solid #888; }
-    </style>
+  </style>
+  <style>
+  /* Open Canvas Mode */
+  .main-container.canvas-mode { display:block !important; position:relative; width:1920px; height:1080px; margin:0 auto; background-image: linear-gradient(transparent 39px, rgba(0,0,0,0.05) 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.05) 40px); background-size: 40px 40px, 40px 40px; border: 2px dashed #bbb; }
+  .main-container.canvas-mode .column { position:absolute !important; cursor:move; }
+  .main-container.canvas-mode .column .column-header { cursor:grab; }
+  .main-container.canvas-mode .add-column { display:none !important; }
+  </style>
 
 <style>
 .column, .column-header { overflow: visible !important; }
@@ -3051,7 +3058,7 @@ function insertSplitBlock(btn) {
                 if (!overwrite) name = nextName(name);
             }
 
-            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData(), fontSettings: (function(fs){ try { return JSON.parse(JSON.stringify(fs)); } catch(_) { return fs||null; } })(window.fontSettings) };
+            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData(), fontSettings: (function(fs){ try { return JSON.parse(JSON.stringify(fs)); } catch(_) { return fs||null; } })(window.fontSettings), canvas: (function(){ try{ var mc=document.getElementById('mainContainer'); var enabled = mc && mc.classList.contains('canvas-mode'); if(!enabled) return {enabled:false}; var w=parseInt(mc.style.width)||1920, h=parseInt(mc.style.height)||1080; return {enabled:true, width:w, height:h}; }catch(_){ return {enabled:false}; } })() };
             templates[name] = templateData;
             // localStorage write guarded; full template always downloaded below
             try { localStorage.setItem('architectureTemplates', JSON.stringify(templates)); } catch(_) {}
@@ -3076,6 +3083,14 @@ function insertSplitBlock(btn) {
                     splitParts: parseInt(column.getAttribute('data-split-parts') || (function(ss){ if(ss==='split-2') return 2; if(ss==='split-3') return 3; return 1; })(column.getAttribute('data-split-state')||'normal'), 10),
                     contentAreas: []
                 };
+                // Save canvas positions when in canvas mode
+                try{
+                    var mc=document.getElementById('mainContainer');
+                    if (mc && mc.classList.contains('canvas-mode')){
+                        var lx = parseInt(column.style.left)||0; var ty = parseInt(column.style.top)||0;
+                        columnData.canvasX = lx; columnData.canvasY = ty;
+                    }
+                }catch(_){ }
                 
                 const contentWrapper = column.querySelector('.column-content');
 
@@ -3303,6 +3318,9 @@ function insertSplitBlock(btn) {
             if (layoutData.columns) {
                 layoutData.columns.forEach(columnData => {
                     const column = createColumnElement(columnData.title, columnData.id);
+                    // carry canvas positions as attributes (applied when enabling canvas later)
+                    if (typeof columnData.canvasX !== 'undefined') column.setAttribute('data-canvas-x', String(columnData.canvasX));
+                    if (typeof columnData.canvasY !== 'undefined') column.setAttribute('data-canvas-y', String(columnData.canvasY));
                     if(columnData.width) column.style.width = columnData.width;
 
                     const splitState = columnData.splitState || 'normal';
@@ -3409,6 +3427,13 @@ function insertSplitBlock(btn) {
                 if (typeof enforceBoxFlex === 'function') enforceBoxFlex(document);
                 if (typeof applyBoxLayoutAll === 'function') applyBoxLayoutAll(document);
             } catch(_) {}
+            // If template saved canvas mode, restore it and positions
+            try{
+                if (layoutData && layoutData.canvas && layoutData.canvas.enabled){
+                    if (typeof setCanvasSize==='function') setCanvasSize(layoutData.canvas.width||1920, layoutData.canvas.height||1080);
+                    if (typeof toggleCanvasMode==='function') { var mc=document.getElementById('mainContainer'); if (mc && !mc.classList.contains('canvas-mode')) toggleCanvasMode(); }
+                }
+            }catch(_){ }
         }
 
 // HELFER-FUNKTION: Baut das HTML für eine einzelne Sektion (wird von applyLayoutData genutzt)
@@ -4047,6 +4072,35 @@ function insertSplitBlock(btn) {
     }catch(_){ }
   }
 
+  // Canvas toggle button
+  function ensureCanvasToggle(){
+    try{
+      var controls = document.querySelector('.controls'); if(!controls) return;
+      if (controls.querySelector('[data-role="canvas-toggle-btn"]')) return;
+      var btn = document.createElement('button');
+      btn.className = 'btn btn-secondary'; btn.type='button'; btn.setAttribute('data-role','canvas-toggle-btn');
+      btn.textContent = '🖼️ Canvas'; btn.title = 'Open Canvas Mode ein/aus';
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try{ toggleCanvasMode(); }catch(err){ console.warn(err); } }, true);
+      var anchor = controls.querySelector('[onclick*="exportToPNG"]');
+      if (anchor && anchor.nextSibling) controls.insertBefore(btn, anchor.nextSibling); else controls.appendChild(btn);
+    }catch(_){ }
+  }
+
+  // Resolution selector for canvas (HD / Full HD)
+  function ensureCanvasResolution(){
+    try{
+      var controls = document.querySelector('.controls'); if(!controls) return;
+      if (controls.querySelector('[data-role="canvas-res-select"]')) return;
+      var sel = document.createElement('select'); sel.className='btn'; sel.style.padding='6px 8px'; sel.setAttribute('data-role','canvas-res-select'); sel.title='Canvas Auflösung';
+      sel.innerHTML = '<option value="1280x720">HD 1280×720</option><option value="1920x1080" selected>Full HD 1920×1080</option>';
+      sel.addEventListener('change', function(){ try{ var v=this.value.split('x'); setCanvasSize(parseInt(v[0],10), parseInt(v[1],10)); }catch(_){ } });
+      var anchor = controls.querySelector('[data-role="canvas-toggle-btn"]');
+      if (anchor && anchor.nextSibling) controls.insertBefore(sel, anchor.nextSibling); else controls.appendChild(sel);
+    }catch(_){ }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); }, { once:true }); else { ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); }
+
   function collectExcelColumns(){
     var columns = [];
     var imgCount = 0; // placeholders only; no sources to avoid Excel cell limits
@@ -4277,6 +4331,137 @@ function insertSplitBlock(btn) {
     });
     mo.observe(document.body, {childList:true, subtree:true});
   }catch(_){ }
+})();
+</script>
+
+<script>
+// Open Canvas Mode: free repositioning of columns on a fixed canvas
+(function(){
+  if (window.__canvas_mode_installed__) return; window.__canvas_mode_installed__ = true;
+  var state = { enabled:false, width:1920, height:1080 };
+
+  window.toggleCanvasMode = function(){
+    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    state.enabled = !state.enabled;
+    if (state.enabled) enableCanvas(); else disableCanvas();
+  };
+
+  window.setCanvasSize = function(w,h){
+    state.width = Math.max(640, parseInt(w,10)||state.width);
+    state.height = Math.max(360, parseInt(h,10)||state.height);
+    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    if (state.enabled){ mc.style.width = state.width+'px'; mc.style.height = state.height+'px'; clampColumnsIntoCanvas(); }
+  };
+
+  function enableCanvas(){
+    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    mc.classList.add('canvas-mode');
+    mc.style.width = state.width + 'px';
+    mc.style.height = state.height + 'px';
+    // position columns in a simple grid initially
+    var cols = Array.from(mc.querySelectorAll(':scope > .column'));
+    var x = 10, y = 10, maxH = 0; var gap = 10;
+    cols.forEach(function(c, idx){
+      var sx = c.getAttribute('data-canvas-x'); var sy = c.getAttribute('data-canvas-y');
+      if (sx!=null && sy!=null){
+        c.style.left = parseInt(sx,10)+'px'; c.style.top = parseInt(sy,10)+'px';
+      } else {
+        c.setAttribute('data-canvas-x', x);
+        c.setAttribute('data-canvas-y', y);
+        c.style.left = x + 'px';
+        c.style.top = y + 'px';
+      }
+      var h = c.getBoundingClientRect().height; if (h>maxH) maxH=h;
+      x += (c.offsetWidth + gap);
+      if (x + c.offsetWidth + gap > state.width){ x = 10; y += (maxH + gap); maxH = 0; }
+    });
+    installColumnDrag();
+  }
+
+  function disableCanvas(){
+    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    mc.classList.remove('canvas-mode');
+    mc.style.width = '';
+    mc.style.height = '';
+    // remove absolute positioning
+    mc.querySelectorAll(':scope > .column').forEach(function(c){
+      c.style.left = ''; c.style.top = ''; c.style.position='';
+      c.removeAttribute('data-canvas-x'); c.removeAttribute('data-canvas-y');
+    });
+    uninstallColumnDrag();
+  }
+
+  var dragging = null, dx=0, dy=0;
+  function onHeaderDown(e){
+    var mc = document.getElementById('mainContainer'); if(!mc || !mc.classList.contains('canvas-mode')) return;
+    var hdr = e.target.closest && e.target.closest('.column-header');
+    if (!hdr) return;
+    var col = hdr.parentElement; if(!col) return;
+    dragging = col;
+    hdr.style.cursor='grabbing';
+    var r = col.getBoundingClientRect();
+    dx = e.clientX - r.left; dy = e.clientY - r.top;
+    document.addEventListener('mousemove', onMove, true);
+    document.addEventListener('mouseup', onUp, true);
+    e.preventDefault(); e.stopPropagation();
+  }
+  function onMove(e){
+    if (!dragging) return;
+    var mc = document.getElementById('mainContainer');
+    var mcr = mc.getBoundingClientRect();
+    var nx = e.clientX - mcr.left - dx; var ny = e.clientY - mcr.top - dy;
+    // clamp
+    nx = Math.max(0, Math.min(nx, mcr.width - dragging.offsetWidth));
+    ny = Math.max(0, Math.min(ny, mcr.height - dragging.offsetHeight));
+    // snap to grid (40px) for edges (left/top and right/bottom)
+    var STEP = 40, TOL = 8;
+    function snap(val, size, max){
+      var leftQuot = Math.round(val/STEP)*STEP;
+      if (Math.abs(leftQuot - val) <= TOL) val = leftQuot;
+      // right edge snap
+      var right = val + size;
+      var rightQuot = Math.round(right/STEP)*STEP;
+      if (Math.abs(rightQuot - right) <= TOL){ val = rightQuot - size; }
+      return Math.max(0, Math.min(val, max - size));
+    }
+    nx = snap(nx, dragging.offsetWidth, mcr.width);
+    ny = snap(ny, dragging.offsetHeight, mcr.height);
+    dragging.style.left = Math.round(nx) + 'px';
+    dragging.style.top  = Math.round(ny) + 'px';
+  }
+  function onUp(){
+    if (dragging){
+      var hdr = dragging.querySelector('.column-header'); if (hdr) hdr.style.cursor='grab';
+      document.removeEventListener('mousemove', onMove, true);
+      document.removeEventListener('mouseup', onUp, true);
+      // persist current positions in attributes for saving
+      try{
+        var mc = document.getElementById('mainContainer'); var mcr = mc.getBoundingClientRect();
+        var cr = dragging.getBoundingClientRect();
+        dragging.setAttribute('data-canvas-x', Math.round(cr.left - mcr.left));
+        dragging.setAttribute('data-canvas-y', Math.round(cr.top - mcr.top));
+      }catch(_){ }
+      dragging = null;
+    }
+  }
+  function installColumnDrag(){
+    document.addEventListener('mousedown', onHeaderDown, true);
+  }
+  function uninstallColumnDrag(){
+    document.removeEventListener('mousedown', onHeaderDown, true);
+  }
+
+  function clampColumnsIntoCanvas(){
+    try{
+      var mc = document.getElementById('mainContainer'); var mcr = mc.getBoundingClientRect();
+      mc.querySelectorAll(':scope > .column').forEach(function(c){
+        var r = c.getBoundingClientRect();
+        var nx = Math.max(0, Math.min(r.left - mcr.left, mcr.width - c.offsetWidth));
+        var ny = Math.max(0, Math.min(r.top - mcr.top,  mcr.height - c.offsetHeight));
+        c.style.left = Math.round(nx)+'px'; c.style.top = Math.round(ny)+'px';
+      });
+    }catch(_){ }
+  }
 })();
 </script>
 <script>
@@ -4540,8 +4725,20 @@ window.showColumnColorPicker = function(btn){
     }, true);
     header.appendChild(btn);
   }
+  function ensureCloneButton(header){
+    if(!header) return;
+    if(header.querySelector('.clone-column')) return;
+    var btn = document.createElement('span');
+    btn.className = 'header-btn clone-column';
+    btn.title = 'Spalte klonen';
+    btn.setAttribute('draggable','false');
+    btn.textContent = '⧉';
+    btn.addEventListener('pointerdown', function(ev){ ev.stopPropagation(); }, true);
+    btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try{ cloneColumn(btn); }catch(err){ console.warn(err);} }, true);
+    header.appendChild(btn);
+  }
   function ensureAll(){
-    document.querySelectorAll('.column-header').forEach(ensureColorButton);
+    document.querySelectorAll('.column-header').forEach(function(h){ ensureColorButton(h); ensureCloneButton(h); });
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', ensureAll, { once:true });
@@ -4556,8 +4753,8 @@ window.showColumnColorPicker = function(btn){
         for (var j=0;j<(m.addedNodes?m.addedNodes.length:0); j++){
           var n = m.addedNodes[j];
           if(n.nodeType===1){
-            if (n.classList && n.classList.contains('column-header')) ensureColorButton(n);
-            else if (n.querySelectorAll) n.querySelectorAll('.column-header').forEach(ensureColorButton);
+            if (n.classList && n.classList.contains('column-header')) { ensureColorButton(n); ensureCloneButton(n); }
+            else if (n.querySelectorAll) n.querySelectorAll('.column-header').forEach(function(h){ ensureColorButton(h); ensureCloneButton(h); });
           }
         }
       }
