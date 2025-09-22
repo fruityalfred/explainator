@@ -2058,9 +2058,12 @@
             // Never auto-toggle for special/resized boxes
             if (box.classList && (box.classList.contains('image-box') || box.classList.contains('line-box'))) return;
             if (box.dataset && box.dataset.resized === '1') { return; }
+            if (box.dataset && box.dataset.noauto === '1') { return; }
             const ln = getBaseLines(box);
             const baseH = ln * ROW_HEIGHT;
-            const over = box.scrollHeight > (baseH + 1);
+            const ch = box.clientHeight || baseH;
+            // Robust overflow detection with tolerance to avoid jitter from subpixel/layout effects
+            const over = (box.scrollHeight > (baseH + 4)) && (box.scrollHeight > (ch + 2));
             if (over && !isDynamic(box)) setDynamic(box, true);
             applyBoxLayout(box);
         }
@@ -3462,8 +3465,9 @@ function insertSplitBlock(btn) {
                         let styleString = `min-height: ${minHeight}px;` + (isDyn && !restoredH ? '' : ` height: ${(restoredH || minHeight)}px; overflow-y: hidden;`);
                         if (boxData && boxData.textColor) styleString += ` color: ${boxData.textColor};`;
                         const styleAttr = `style="${styleString}"`;
+                        const noAuto = (!isDyn && !restoredH && lines===1) ? 'data-noauto="1"' : '';
                         boxesHtml += `
-                            <div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr} ${(boxData && boxData.resized)? 'data-resized="1"' : ''}>
+                            <div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr} ${(boxData && boxData.resized)? 'data-resized="1"' : ''} ${noAuto}>
                                 ${(boxData && boxData.text) || ''}
                                 <button class="delete-btn" onclick="deleteBox(this)">x</button>
                                 <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
@@ -3889,6 +3893,7 @@ function insertSplitBlock(btn) {
       const nh = Math.max(30, Math.round(startH + dy));
       active.style.height = nh + 'px';
       active.dataset.resized = '1';
+      try { active.removeAttribute('data-noauto'); } catch(_){ }
       active.setAttribute('data-dynamic','1');
       if (e.cancelable) { e.preventDefault(); }
     }
@@ -3996,8 +4001,8 @@ function insertSplitBlock(btn) {
         var box = document.createElement('div');
         box.className = 'app-box saas ' + width; box.draggable = true;
         box.innerHTML = txt + '<button class="delete-btn" onclick="deleteBox(this)">x</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>';
-        box.dataset.lines = '1'; box.setAttribute('data-base-lines','1'); box.setAttribute('data-dynamic','0');
-        box.style.minHeight = (1*30)+'px'; box.style.height = (1*30)+'px';
+        box.dataset.lines = '1'; box.setAttribute('data-base-lines','1'); box.setAttribute('data-dynamic','0'); box.setAttribute('data-noauto','1');
+        box.style.minHeight = (1*30)+'px'; box.style.height = (1*30)+'px'; box.style.overflowY = 'hidden';
         ((idx%2===0)? bc1 : bc2).appendChild(box);
         try { applyBoxLayout(box); } catch(_){ }
       });
