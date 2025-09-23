@@ -1818,6 +1818,8 @@
             container.appendChild(addBtn);
             try { window.columnIdCounter = Math.max(window.columnIdCounter||0, columnIdCounter); } catch(_) {}
         }
+
+        
         
         function createColumnElement(title, id) {
             const column = document.createElement('div');
@@ -4193,7 +4195,7 @@ function insertSplitBlock(btn) {
     }catch(_){ }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); ensureConnectorToggle(); }, { once:true }); else { ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); ensureConnectorToggle(); }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); ensureConnectorToggle(); ensureHeaderModeToggles(); }, { once:true }); else { ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); ensureConnectorToggle(); ensureHeaderModeToggles(); }
 
   function collectExcelColumns(){
     var columns = [];
@@ -4475,6 +4477,67 @@ function insertSplitBlock(btn) {
     try{ updateAllConnectors(); }catch(_){ }
   }
 
+  // Column/Section header visibility toggles
+  window.ensureHeaderModeToggles = function(){
+    try{ ensureHeaderModeCss(); }catch(_){ }
+    try{
+      var controls = document.querySelector('.controls'); if(!controls) return;
+      // Column mode toggle (default ON => headers visible)
+      if (!controls.querySelector('[data-role="columns-mode-toggle"]')){
+        var cbtn = document.createElement('button');
+        cbtn.className = 'btn btn-secondary';
+        cbtn.type = 'button';
+        cbtn.setAttribute('data-role','columns-mode-toggle');
+        cbtn.textContent = 'Spalten: An';
+        cbtn.title = 'Spalten-Header ein/aus';
+        cbtn.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          var root = document.documentElement;
+          var off = root.classList.toggle('mode-columns-off');
+          cbtn.textContent = off ? 'Spalten: Aus' : 'Spalten: An';
+          try{ if (typeof updateAllConnectors==='function') updateAllConnectors(); }catch(_){ }
+        }, true);
+        var anchor = controls.querySelector('[data-role="canvas-toggle-btn"]');
+        if (anchor && anchor.nextSibling) controls.insertBefore(cbtn, anchor.nextSibling); else controls.appendChild(cbtn);
+      }
+      // Section mode toggle (default ON => section titles visible)
+      if (!controls.querySelector('[data-role="sections-mode-toggle"]')){
+        var sbtn = document.createElement('button');
+        sbtn.className = 'btn btn-secondary';
+        sbtn.type = 'button';
+        sbtn.setAttribute('data-role','sections-mode-toggle');
+        sbtn.textContent = 'Sections: An';
+        sbtn.title = 'Section-Header ein/aus';
+        sbtn.addEventListener('click', function(e){
+          e.preventDefault(); e.stopPropagation();
+          var root = document.documentElement;
+          var off = root.classList.toggle('mode-sections-off');
+          sbtn.textContent = off ? 'Sections: Aus' : 'Sections: An';
+        }, true);
+        controls.appendChild(sbtn);
+      }
+    }catch(_){ }
+  }
+
+  window.ensureHeaderModeCss = function(){
+    if (document.getElementById('header-modes-css')) return;
+    var css = [
+      '/* Header visibility modes */',
+      '.mode-columns-off .column-header{display:none!important}',
+      '.mode-columns-off .column{border-color:transparent;box-shadow:inset 0 0 0 1px #ddd}',
+      '.mode-columns-off .column-content{padding-top:8px}',
+      '.mode-columns-off .section-group{border:1px solid #ddd}',
+      '.mode-columns-off .app-box{border-color:#ddd}',
+      '.mode-sections-off .section-title{display:none!important}',
+      '.mode-sections-off .section-group{border:1px solid #ddd;padding-top:10px}',
+      '.mode-columns-off.mode-sections-off .section-group{border:none;padding:0}'
+    ].join('\n');
+    var st = document.createElement('style');
+    st.id = 'header-modes-css';
+    st.textContent = css;
+    document.head.appendChild(st);
+  }
+
   function disableCanvas(){
     var mc = document.getElementById('mainContainer'); if(!mc) return;
     mc.classList.remove('canvas-mode');
@@ -4645,11 +4708,13 @@ function updateAllConnectors(){
     var btn = document.querySelector('[data-role="connector-toggle-btn"]'); 
     if (btn) { btn.classList.toggle('is-active', connectorMode); btn.setAttribute('aria-pressed', connectorMode? 'true':'false'); }
   };
-  // capture clicks on column headers to build connections in connector mode
+  // capture clicks on columns to build connections in connector mode
   document.addEventListener('click', function(e){
     if (!connectorMode) return;
-    var hdr = e.target && e.target.closest && e.target.closest('.column-header'); if (!hdr) return;
-    var col = hdr.parentElement; var id = col && col.getAttribute('data-column-id'); if (!id) return;
+    // ignore UI chrome clicks
+    if (e.target && e.target.closest && (e.target.closest('.controls') || e.target.closest('.modal') || e.target.closest('.column-color-picker') || e.target.closest('.section-color-picker'))) return;
+    var col = e.target && e.target.closest && e.target.closest('.column'); if (!col) return;
+    var id = col.getAttribute('data-column-id'); if (!id) return;
     e.preventDefault(); e.stopPropagation();
     if (!pendingFrom){ pendingFrom = String(id); }
     else if (pendingFrom && pendingFrom !== id){
