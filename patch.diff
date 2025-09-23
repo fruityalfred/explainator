@@ -1,0 +1,42 @@
+*** Begin Patch
+*** Update File: Explainator.html
+@@
+         function loadTemplate(templateName) {
+@@
+-            categories = template.categories || categories;
++            categories = template.categories || categories;
+             updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+-            // Restore font settings if present
++            // Restore font settings if present
+             if (template.fontSettings) { try { window.fontSettings = template.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
+             applyLayoutData(template.layout);
+-            try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); } catch(_){}
++            try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); } catch(_){}
++            // Restore canvas mode + connectors from template root
++            try{
++                if (template.canvas && template.canvas.enabled){
++                    if (typeof setCanvasSize==='function') setCanvasSize(template.canvas.width||1920, template.canvas.height||1080);
++                    var mc=document.getElementById('mainContainer'); if (typeof toggleCanvasMode==='function' && mc && !mc.classList.contains('canvas-mode')) toggleCanvasMode();
++                    if (template.canvas.connectors && typeof window.__setCanvasConnectors==='function') window.__setCanvasConnectors(template.canvas.connectors);
++                }
++            }catch(_){ }
+@@
+         function loadTemplateFromFile() {
+@@
+-                    categories = templateData.categories;
++                    categories = templateData.categories;
+                     updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
+-                    if (templateData.fontSettings) { try { window.fontSettings = templateData.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
++                    if (templateData.fontSettings) { try { window.fontSettings = templateData.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
+                     applyLayoutData(templateData.layout);
+-                    enforceBoxHeights(document);
++                    enforceBoxHeights(document);
++                    // Restore canvas mode + connectors when present
++                    try{
++                        if (templateData.canvas && templateData.canvas.enabled){
++                            if (typeof setCanvasSize==='function') setCanvasSize(templateData.canvas.width||1920, templateData.canvas.height||1080);
++                            var mc=document.getElementById('mainContainer'); if (typeof toggleCanvasMode==='function' && mc && !mc.classList.contains('canvas-mode')) toggleCanvasMode();
++                            if (templateData.canvas.connectors && typeof window.__setCanvasConnectors==='function') window.__setCanvasConnectors(templateData.canvas.connectors);
++                        }
++                    }catch(_){ }
+*** End Patch

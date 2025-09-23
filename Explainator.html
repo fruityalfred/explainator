@@ -772,6 +772,10 @@
   .main-container.canvas-mode .column { position:absolute !important; cursor:move; }
   .main-container.canvas-mode .column .column-header { cursor:grab; }
   .main-container.canvas-mode .add-column { display:none !important; }
+  /* SVG overlay for connectors */
+  .canvas-connectors { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
+  .canvas-connectors path { stroke:#1E88E5; stroke-width:2; fill:none; pointer-events:stroke; }
+  .canvas-connectors path.conn-highlight { stroke:#EF6C00; }
   </style>
 
 <style>
@@ -805,6 +809,11 @@
 .exporting .section-pipette { display: none !important; }
 /* During EyeDropper, remove modal dimming so picked color is accurate */
 .eye-drop-mode .modal { background: transparent !important; }
+</style>
+
+<style>
+/* Hide canvas grid/border during export */
+[data-screenshot="true"] .main-container.canvas-mode { background-image: none !important; border: none !important; }
 </style>
 
 <style>
@@ -3058,7 +3067,7 @@ function insertSplitBlock(btn) {
                 if (!overwrite) name = nextName(name);
             }
 
-            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData(), fontSettings: (function(fs){ try { return JSON.parse(JSON.stringify(fs)); } catch(_) { return fs||null; } })(window.fontSettings), canvas: (function(){ try{ var mc=document.getElementById('mainContainer'); var enabled = mc && mc.classList.contains('canvas-mode'); if(!enabled) return {enabled:false}; var w=parseInt(mc.style.width)||1920, h=parseInt(mc.style.height)||1080; return {enabled:true, width:w, height:h}; }catch(_){ return {enabled:false}; } })() };
+            const templateData = { name, date: new Date().toISOString(), categories, layout: extractLayoutData(), fontSettings: (function(fs){ try { return JSON.parse(JSON.stringify(fs)); } catch(_) { return fs||null; } })(window.fontSettings), canvas: (function(){ try{ var mc=document.getElementById('mainContainer'); var enabled = mc && mc.classList.contains('canvas-mode'); if(!enabled) return {enabled:false}; var w=parseInt(mc.style.width)||1920, h=parseInt(mc.style.height)||1080; var cons = (typeof window.__getCanvasConnectors==='function') ? window.__getCanvasConnectors() : []; return {enabled:true, width:w, height:h, connectors: cons}; }catch(_){ return {enabled:false}; } })() };
             templates[name] = templateData;
             // localStorage write guarded; full template always downloaded below
             try { localStorage.setItem('architectureTemplates', JSON.stringify(templates)); } catch(_) {}
@@ -3079,6 +3088,12 @@ function insertSplitBlock(btn) {
                     id: column.getAttribute('data-column-id'),
                     title: column.querySelector('.column-header').childNodes[0].textContent.trim(),
                     width: column.offsetWidth + 'px',
+                    headerColor: (function(){
+                        try{
+                            var h = column.querySelector('.column-header');
+                            return h.getAttribute('data-header-color') || column.style.borderColor || '';
+                        }catch(_){ return ''; }
+                    })(),
                     splitState: column.getAttribute('data-split-state') || 'normal',
                     splitParts: parseInt(column.getAttribute('data-split-parts') || (function(ss){ if(ss==='split-2') return 2; if(ss==='split-3') return 3; return 1; })(column.getAttribute('data-split-state')||'normal'), 10),
                     contentAreas: []
@@ -3302,6 +3317,14 @@ function insertSplitBlock(btn) {
             if (template.fontSettings) { try { window.fontSettings = template.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
             applyLayoutData(template.layout);
             try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); } catch(_){}
+            // Restore canvas mode + connectors from root canvas block
+            try{
+                if (template.canvas && template.canvas.enabled){
+                    if (typeof setCanvasSize==='function') setCanvasSize(template.canvas.width||1920, template.canvas.height||1080);
+                    var mc=document.getElementById('mainContainer'); if (typeof toggleCanvasMode==='function' && mc && !mc.classList.contains('canvas-mode')) toggleCanvasMode();
+                    if (template.canvas.connectors && typeof window.__setCanvasConnectors==='function') { try{ if (typeof ensureConnectorLayer==='function') ensureConnectorLayer(); }catch(_){ } window.__setCanvasConnectors(template.canvas.connectors); }
+                }
+            }catch(_){ }
             window.currentTemplateName = template.name || templateName;
             
             closeModal('loadTemplateModal');
@@ -3318,6 +3341,14 @@ function insertSplitBlock(btn) {
             if (layoutData.columns) {
                 layoutData.columns.forEach(columnData => {
                     const column = createColumnElement(columnData.title, columnData.id);
+                    // restore header color if present
+                    try{
+                        if (columnData.headerColor){
+                            var headerEl = column.querySelector('.column-header');
+                            if (typeof applyHeaderColor==='function') applyHeaderColor(headerEl, columnData.headerColor);
+                            else { headerEl.style.background = 'linear-gradient(to bottom,'+columnData.headerColor+','+columnData.headerColor+')'; column.style.borderColor = columnData.headerColor; headerEl.setAttribute('data-header-color', columnData.headerColor); }
+                        }
+                    }catch(_){ }
                     // carry canvas positions as attributes (applied when enabling canvas later)
                     if (typeof columnData.canvasX !== 'undefined') column.setAttribute('data-canvas-x', String(columnData.canvasX));
                     if (typeof columnData.canvasY !== 'undefined') column.setAttribute('data-canvas-y', String(columnData.canvasY));
@@ -3432,6 +3463,7 @@ function insertSplitBlock(btn) {
                 if (layoutData && layoutData.canvas && layoutData.canvas.enabled){
                     if (typeof setCanvasSize==='function') setCanvasSize(layoutData.canvas.width||1920, layoutData.canvas.height||1080);
                     if (typeof toggleCanvasMode==='function') { var mc=document.getElementById('mainContainer'); if (mc && !mc.classList.contains('canvas-mode')) toggleCanvasMode(); }
+                    if (layoutData.canvas.connectors && typeof window.__setCanvasConnectors==='function') window.__setCanvasConnectors(layoutData.canvas.connectors);
                 }
             }catch(_){ }
         }
@@ -3603,7 +3635,7 @@ function insertSplitBlock(btn) {
             
             hideExportUIElements();
             
-            // Compute bounding box of currently visible columns with 5px padding
+            // Compute bounding box of currently visible columns (and connectors) with padding
             function getVisibleColumnsBBox(padding){
                 const cols = Array.from(document.querySelectorAll('.column'));
                 const vw = window.innerWidth || document.documentElement.clientWidth || 0;
@@ -3618,12 +3650,26 @@ function insertSplitBlock(btn) {
                     right = Math.max(right, r.right);
                     bottom = Math.max(bottom, r.bottom);
                 });
+                // include connectors if present
+                try{
+                    const svg = document.getElementById('canvasConnectors');
+                    if (svg && svg.style.display !== 'none'){
+                        svg.querySelectorAll('path').forEach(p => {
+                            const r = p.getBoundingClientRect();
+                            left = Math.min(left, r.left);
+                            top = Math.min(top, r.top);
+                            right = Math.max(right, r.right);
+                            bottom = Math.max(bottom, r.bottom);
+                        });
+                    }
+                }catch(_){ }
                 if (right <= left || bottom <= top) return null;
-                const pad = padding || 5;
-                const x = Math.max(0, Math.floor(left) - pad + window.scrollX);
-                const y = Math.max(0, Math.floor(top) - pad + window.scrollY);
-                const width = Math.ceil(right - left) + pad * 2;
-                const height = Math.ceil(bottom - top) + pad * 2;
+                const pad = typeof padding==='number' ? padding : 5;
+                // Coordinates are viewport‑relative for html2canvas(target=document.body)
+                const x = Math.max(0, Math.floor(left) - pad);
+                const y = Math.max(0, Math.floor(top) - pad);
+                const width = Math.ceil((right - left) + pad * 2 + 2);   // +2 to avoid right edge truncation
+                const height = Math.ceil((bottom - top) + pad * 2);
                 return { x, y, width, height };
             }
 
@@ -3640,6 +3686,18 @@ function insertSplitBlock(btn) {
                 };
 
                 html2canvas(target, opts).then(canvas => {
+                    // Wrap with a constant 5px border on all sides
+                    try {
+                        const BORDER = 5;
+                        const out = document.createElement('canvas');
+                        out.width = canvas.width + BORDER*2;
+                        out.height = canvas.height + BORDER*2;
+                        const ctx = out.getContext('2d');
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(0,0,out.width,out.height);
+                        ctx.drawImage(canvas, BORDER, BORDER);
+                        canvas = out;
+                    } catch(_){ }
                     showExportUIElements();
                     const a = document.createElement('a');
                     a.href = canvas.toDataURL('image/png', 0.95);
@@ -4099,7 +4157,19 @@ function insertSplitBlock(btn) {
     }catch(_){ }
   }
 
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); }, { once:true }); else { ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); }
+  // Connector tool toggle
+  function ensureConnectorToggle(){
+    try{
+      var controls = document.querySelector('.controls'); if(!controls) return;
+      if (controls.querySelector('[data-role="connector-toggle-btn"]')) return;
+      var btn = document.createElement('button');
+      btn.className='btn btn-info'; btn.setAttribute('data-role','connector-toggle-btn'); btn.textContent='🔗 Verbindungen'; btn.title='Connector-Modus ein/aus';
+      btn.addEventListener('click', function(e){ e.preventDefault(); e.stopPropagation(); try{ toggleConnectorMode(); }catch(err){ console.warn(err);} }, true);
+      controls.appendChild(btn);
+    }catch(_){ }
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); ensureConnectorToggle(); }, { once:true }); else { ensureExcelButton(); ensureCanvasToggle(); ensureCanvasResolution(); ensureConnectorToggle(); }
 
   function collectExcelColumns(){
     var columns = [];
@@ -4358,6 +4428,8 @@ function insertSplitBlock(btn) {
     mc.classList.add('canvas-mode');
     mc.style.width = state.width + 'px';
     mc.style.height = state.height + 'px';
+    // ensure connector layer
+    ensureConnectorLayer();
     // position columns in a simple grid initially
     var cols = Array.from(mc.querySelectorAll(':scope > .column'));
     var x = 10, y = 10, maxH = 0; var gap = 10;
@@ -4383,6 +4455,8 @@ function insertSplitBlock(btn) {
     mc.classList.remove('canvas-mode');
     mc.style.width = '';
     mc.style.height = '';
+    // hide connector layer
+    var svg = document.getElementById('canvasConnectors'); if (svg) svg.style.display='none';
     // remove absolute positioning
     mc.querySelectorAll(':scope > .column').forEach(function(c){
       c.style.left = ''; c.style.top = ''; c.style.position='';
@@ -4428,6 +4502,8 @@ function insertSplitBlock(btn) {
     ny = snap(ny, dragging.offsetHeight, mcr.height);
     dragging.style.left = Math.round(nx) + 'px';
     dragging.style.top  = Math.round(ny) + 'px';
+    // live update connectors
+    try{ updateAllConnectors(); }catch(_){ }
   }
   function onUp(){
     if (dragging){
@@ -4460,8 +4536,89 @@ function insertSplitBlock(btn) {
         var ny = Math.max(0, Math.min(r.top - mcr.top,  mcr.height - c.offsetHeight));
         c.style.left = Math.round(nx)+'px'; c.style.top = Math.round(ny)+'px';
       });
+      try{ updateAllConnectors(); }catch(_){ }
     }catch(_){ }
   }
+  // ===== Connectors =====
+  var connectors = []; // {from: 'id', to: 'id'}
+  var connectorMode = false; var pendingFrom = null;
+  function ensureConnectorLayer(){
+    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    var svg = document.getElementById('canvasConnectors');
+    if (!svg){
+      svg = document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('id','canvasConnectors');
+      svg.setAttribute('class','canvas-connectors');
+      svg.style.display='block';
+      mc.appendChild(svg);
+    } else { svg.style.display='block'; }
+  }
+  function getColCenterEdge(col){
+    var mc = document.getElementById('mainContainer'); var mcr = mc.getBoundingClientRect(); var r = col.getBoundingClientRect();
+    var cxLeft = r.left - mcr.left; var cxRight = r.right - mcr.left; var cy = r.top - mcr.top + r.height/2;
+    return {left:{x:cxLeft, y:cy}, right:{x:cxRight, y:cy}};
+  }
+  function pathFor(a,b){ // smooth cubic connecting a->b
+    var dx = Math.abs(b.x - a.x);
+    var c1x = a.x + dx*0.5; var c2x = b.x - dx*0.5;
+    return `M ${a.x},${a.y} C ${c1x},${a.y} ${c2x},${b.y} ${b.x},${b.y}`;
+  }
+  function updateAllConnectors(){
+    var svg = document.getElementById('canvasConnectors'); if(!svg) return;
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    connectors.forEach(function(c, idx){
+      var from = document.querySelector(`.column[data-column-id="${c.from}"]`);
+      var to = document.querySelector(`.column[data-column-id="${c.to}"]`);
+      if (!from || !to) return;
+      var fa = getColCenterEdge(from); var ta = getColCenterEdge(to);
+      var start,end;
+      if (fa.right.x <= ta.left.x){ start = fa.right; end = ta.left; }
+      else if (ta.right.x <= fa.left.x){ start = fa.left; end = ta.right; }
+      else {
+        var dLeft = Math.abs(fa.left.x - ta.left.x);
+        var dRight= Math.abs(fa.right.x - ta.right.x);
+        if (dRight <= dLeft){ start = fa.right; end = ta.right; }
+        else { start = fa.left; end = ta.left; }
+      }
+      var p = document.createElementNS('http://www.w3.org/2000/svg','path');
+      p.setAttribute('d', pathFor(start, end));
+      p.setAttribute('data-conn-index', String(idx));
+      svg.appendChild(p);
+    });
+    // enable selection/deletion
+    svg.querySelectorAll('path').forEach(function(path){
+      path.addEventListener('click', function(ev){ ev.preventDefault(); ev.stopPropagation(); selectConnector(parseInt(path.getAttribute('data-conn-index'))); }, true);
+    });
+  }
+  var selectedConn = -1;
+  function selectConnector(i){
+    selectedConn = i;
+    var svg=document.getElementById('canvasConnectors'); if(!svg) return;
+    svg.querySelectorAll('path').forEach(function(p){ p.classList.remove('conn-highlight'); });
+    var el = svg.querySelector(`path[data-conn-index="${i}"]`); if (el) el.classList.add('conn-highlight');
+  }
+  document.addEventListener('keydown', function(e){
+    if (selectedConn>=0 && (e.key==='Delete' || e.key==='Backspace')){
+      connectors.splice(selectedConn,1); selectedConn=-1; updateAllConnectors();
+    }
+  }, true);
+  window.toggleConnectorMode = function(){
+    connectorMode = !connectorMode; pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
+    var btn = document.querySelector('[data-role="connector-toggle-btn"]'); if (btn) btn.classList.toggle('btn-primary', connectorMode);
+  };
+  // capture clicks on column headers to build connections in connector mode
+  document.addEventListener('click', function(e){
+    if (!connectorMode) return;
+    var hdr = e.target && e.target.closest && e.target.closest('.column-header'); if (!hdr) return;
+    var col = hdr.parentElement; var id = col && col.getAttribute('data-column-id'); if (!id) return;
+    e.preventDefault(); e.stopPropagation();
+    if (!pendingFrom){ pendingFrom = id; } else if (pendingFrom && pendingFrom !== id){
+      connectors.push({from: pendingFrom, to: id}); pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
+    }
+  }, true);
+  // expose connectors for template persistence
+  window.__getCanvasConnectors = function(){ return connectors.slice(); };
+  window.__setCanvasConnectors = function(list){ connectors = Array.isArray(list)? list.slice(): []; ensureConnectorLayer(); updateAllConnectors(); };
 })();
 </script>
 <script>
@@ -4470,6 +4627,7 @@ function insertSplitBlock(btn) {
     window.applyHeaderColor = function(header, color){
       if(!header) return;
       header.style.background = 'linear-gradient(to bottom,'+color+','+color+')';
+      try { header.setAttribute('data-header-color', color); } catch(_){ }
       var col = header.closest('.column'); if(col) col.style.borderColor = color;
     };
   }
@@ -5057,9 +5215,5 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   }catch(_){ }
 })();
 </script>
-
-
-
-
 
 
