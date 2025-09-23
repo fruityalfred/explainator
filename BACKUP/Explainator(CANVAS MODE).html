@@ -776,11 +776,6 @@
   .canvas-connectors { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
   .canvas-connectors path { stroke:#1E88E5; stroke-width:2; fill:none; pointer-events:stroke; }
   .canvas-connectors path.conn-highlight { stroke:#EF6C00; }
-  /* Visual feedback for active connector mode button */
-  .controls [data-role="connector-toggle-btn"].is-active { 
-    outline: 2px solid #1E88E5; 
-    box-shadow: 0 0 0 2px rgba(30,136,229,0.15);
-  }
   </style>
 
 <style>
@@ -1627,7 +1622,6 @@
         // Global variables
         let draggedElement = null;
         let columnIdCounter = 1;
-        try { window.columnIdCounter = columnIdCounter; } catch(_) {}
         let isResizing = false;
         let currentResizeColumn = null;
         let startX = 0;
@@ -1816,7 +1810,6 @@
             addBtn.onclick = addNewColumn;
             addBtn.innerHTML = '<span>+</span>';
             container.appendChild(addBtn);
-            try { window.columnIdCounter = Math.max(window.columnIdCounter||0, columnIdCounter); } catch(_) {}
         }
         
         function createColumnElement(title, id) {
@@ -1947,7 +1940,6 @@
             const parent = orig.parentElement;
             const clone = orig.cloneNode(true);
             clone.setAttribute('data-column-id', ++columnIdCounter);
-            try { window.columnIdCounter = Math.max(window.columnIdCounter||0, columnIdCounter); } catch(_) {}
             // remove any open pickers within clone
             clone.querySelectorAll('.column-color-picker, .section-color-picker').forEach(el => el.remove());
             // keep split parts attribute/state
@@ -2584,23 +2576,7 @@
             const addButton = container.querySelector('.add-column');
             const t = translations[currentLanguage];
             const newColumn = createColumnElement(t.newColumn, columnIdCounter++);
-            try { window.columnIdCounter = Math.max(window.columnIdCounter||0, columnIdCounter); } catch(_) {}
             container.insertBefore(newColumn, addButton);
-            try {
-                const mc = document.getElementById('mainContainer');
-                if (mc && mc.classList.contains('canvas-mode')){
-                    const mcr = mc.getBoundingClientRect();
-                    const cr = newColumn.getBoundingClientRect();
-                    const lx = Math.max(0, Math.round(cr.left - mcr.left));
-                    const ty = Math.max(0, Math.round(cr.top - mcr.top));
-                    newColumn.style.left = lx + 'px';
-                    newColumn.style.top  = ty + 'px';
-                    newColumn.setAttribute('data-canvas-x', String(lx));
-                    newColumn.setAttribute('data-canvas-y', String(ty));
-                    try { clampColumnsIntoCanvas(); } catch(_) {}
-                    try { updateAllConnectors(); } catch(_) {}
-                }
-            } catch(_) {}
             requestAnimationFrame(equalizeHeaderHeights);
         }
         
@@ -4472,7 +4448,6 @@ function insertSplitBlock(btn) {
       if (x + c.offsetWidth + gap > state.width){ x = 10; y += (maxH + gap); maxH = 0; }
     });
     installColumnDrag();
-    try{ updateAllConnectors(); }catch(_){ }
   }
 
   function disableCanvas(){
@@ -4482,9 +4457,10 @@ function insertSplitBlock(btn) {
     mc.style.height = '';
     // hide connector layer
     var svg = document.getElementById('canvasConnectors'); if (svg) svg.style.display='none';
-    // reset absolute positioning but keep saved attributes for later re-enable
+    // remove absolute positioning
     mc.querySelectorAll(':scope > .column').forEach(function(c){
       c.style.left = ''; c.style.top = ''; c.style.position='';
+      c.removeAttribute('data-canvas-x'); c.removeAttribute('data-canvas-y');
     });
     uninstallColumnDrag();
   }
@@ -4578,46 +4554,32 @@ function insertSplitBlock(btn) {
     } else { svg.style.display='block'; }
   }
   function getColCenterEdge(col){
-    // legacy helper (not used anymore)
     var mc = document.getElementById('mainContainer'); var mcr = mc.getBoundingClientRect(); var r = col.getBoundingClientRect();
     var cxLeft = r.left - mcr.left; var cxRight = r.right - mcr.left; var cy = r.top - mcr.top + r.height/2;
     return {left:{x:cxLeft, y:cy}, right:{x:cxRight, y:cy}};
-  }
-  // Compute anchor points (relative to main container) between two columns
-  function chooseBestAnchors(fromEl, toEl){
-    try{
-      var mc = document.getElementById('mainContainer'); if(!mc) return null;
-      var mcr = mc.getBoundingClientRect();
-      var ar = fromEl.getBoundingClientRect();
-      var br = toEl.getBoundingClientRect();
-      var aLeft = ar.left - mcr.left, aRight = ar.right - mcr.left;
-      var bLeft = br.left - mcr.left, bRight = br.right - mcr.left;
-      var aCY = ar.top - mcr.top + ar.height/2;
-      var bCY = br.top - mcr.top + br.height/2;
-
-      // If clearly left-to-right
-      if (aRight <= bLeft) return { a: { x: aRight, y: aCY }, b: { x: bLeft, y: bCY } };
-      // If clearly right-to-left
-      if (bRight <= aLeft) return { a: { x: aLeft, y: aCY }, b: { x: bRight, y: bCY } };
-      // Horizontal overlap: choose sides based on relative centers
-      if (ar.left < br.left) return { a: { x: aRight, y: aCY }, b: { x: bLeft, y: bCY } };
-      return { a: { x: aLeft, y: aCY }, b: { x: bRight, y: bCY } };
-    }catch(_){ return null; }
   }
   function pathFor(a,b){ // smooth cubic connecting a->b
     var dx = Math.abs(b.x - a.x);
     var c1x = a.x + dx*0.5; var c2x = b.x - dx*0.5;
     return `M ${a.x},${a.y} C ${c1x},${a.y} ${c2x},${b.y} ${b.x},${b.y}`;
   }
-function updateAllConnectors(){
+  function updateAllConnectors(){
     var svg = document.getElementById('canvasConnectors'); if(!svg) return;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
     connectors.forEach(function(c, idx){
       var from = document.querySelector(`.column[data-column-id="${c.from}"]`);
       var to = document.querySelector(`.column[data-column-id="${c.to}"]`);
       if (!from || !to) return;
-      var pair = chooseBestAnchors(from,to); if (!pair) return;
-      var start = pair.a, end = pair.b;
+      var fa = getColCenterEdge(from); var ta = getColCenterEdge(to);
+      var start,end;
+      if (fa.right.x <= ta.left.x){ start = fa.right; end = ta.left; }
+      else if (ta.right.x <= fa.left.x){ start = fa.left; end = ta.right; }
+      else {
+        var dLeft = Math.abs(fa.left.x - ta.left.x);
+        var dRight= Math.abs(fa.right.x - ta.right.x);
+        if (dRight <= dLeft){ start = fa.right; end = ta.right; }
+        else { start = fa.left; end = ta.left; }
+      }
       var p = document.createElementNS('http://www.w3.org/2000/svg','path');
       p.setAttribute('d', pathFor(start, end));
       p.setAttribute('data-conn-index', String(idx));
@@ -4642,8 +4604,7 @@ function updateAllConnectors(){
   }, true);
   window.toggleConnectorMode = function(){
     connectorMode = !connectorMode; pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
-    var btn = document.querySelector('[data-role="connector-toggle-btn"]'); 
-    if (btn) { btn.classList.toggle('is-active', connectorMode); btn.setAttribute('aria-pressed', connectorMode? 'true':'false'); }
+    var btn = document.querySelector('[data-role="connector-toggle-btn"]'); if (btn) btn.classList.toggle('btn-primary', connectorMode);
   };
   // capture clicks on column headers to build connections in connector mode
   document.addEventListener('click', function(e){
@@ -4651,10 +4612,8 @@ function updateAllConnectors(){
     var hdr = e.target && e.target.closest && e.target.closest('.column-header'); if (!hdr) return;
     var col = hdr.parentElement; var id = col && col.getAttribute('data-column-id'); if (!id) return;
     e.preventDefault(); e.stopPropagation();
-    if (!pendingFrom){ pendingFrom = String(id); }
-    else if (pendingFrom && pendingFrom !== id){
-      connectors.push({from: String(pendingFrom), to: String(id)});
-      pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
+    if (!pendingFrom){ pendingFrom = id; } else if (pendingFrom && pendingFrom !== id){
+      connectors.push({from: pendingFrom, to: id}); pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
     }
   }, true);
   // expose connectors for template persistence
