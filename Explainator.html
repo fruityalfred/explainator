@@ -3513,12 +3513,7 @@ function insertSplitBlock(btn) {
                     }
                     const styleAttr = `style="${styleString}"`;
 
-                    boxesHtml += `
-                        <div class="app-box ${boxData.type || 'saas'} ${boxData.width || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr}>
-                            ${boxData.text}
-                            <button class="delete-btn" onclick="deleteBox(this)">×</button>
-                            <button class="resize-btn" onclick="toggleBoxWidth(this)">↔</button>
-                        </div>`;
+                    boxesHtml += `<div class="app-box ${boxData.type || 'saas'} ${boxData.width || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr}>${boxData.text}<button class="delete-btn" onclick="deleteBox(this)">×</button><button class="resize-btn" onclick="toggleBoxWidth(this)">↔</button></div>`;
                 });
             }
             const sectionColor = sectionData.color || '#8B4513';
@@ -3539,18 +3534,10 @@ function insertSplitBlock(btn) {
             if (sectionData.boxes && Array.isArray(sectionData.boxes)) {
                 sectionData.boxes.forEach(boxData => {
                     if (boxData && boxData.isImage) {
-                        boxesHtml += `
-                            <div class="app-box image-box ${boxData.width || 'full-width'}" draggable="true">
-                                <img src="${boxData.imageSrc || ''}" alt="image" />
-                                <button class="delete-btn" onclick="deleteBox(this)">x</button>
-                                <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
-                            </div>`;
+                        boxesHtml += `<div class="app-box image-box ${boxData.width || 'full-width'}" draggable="true"><img src="${boxData.imageSrc || ''}" alt="image" /><button class="delete-btn" onclick="deleteBox(this)">x</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button></div>`;
                     } else if (boxData && boxData.isLine) {
                         const lineCls = boxData.lineClass || 'line-solid-1';
-                        boxesHtml += `
-                            <div class="app-box line-box ${boxData.width || 'full-width'} ${lineCls}" draggable="true">
-                                <button class="delete-btn" onclick="deleteBox(this)">x</button>
-                            </div>`;
+                        boxesHtml += `<div class="app-box line-box ${boxData.width || 'full-width'} ${lineCls}" draggable="true"><button class="delete-btn" onclick="deleteBox(this)">x</button></div>`;
                     } else {
                         const lines = parseInt((boxData && (boxData.baseLines || boxData.lines) ) || '1', 10) || 1;
                         const minHeight = (lines * 30);
@@ -3574,16 +3561,11 @@ function insertSplitBlock(btn) {
                             else if (align === 'center') justify = 'center';
                             else if (align === 'justify') justify = 'flex-start';
                         }
-                        if (justify) styleString += ` justify-content: ${justify};`;
-                        styleString += ' align-items: center;';
+                        // Always set justify-content to ensure proper alignment on load
+                        styleString += ` justify-content: ${justify};`;
                         const styleAttr = `style="${styleString}"`;
                         const noAuto = (!isDyn && !restoredH && lines===1) ? 'data-noauto="1"' : '';
-                        boxesHtml += `
-                            <div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr} ${(boxData && boxData.resized)? 'data-resized="1"' : ''} ${noAuto}>
-                                ${(boxData && boxData.text) || ''}
-                                <button class="delete-btn" onclick="deleteBox(this)">x</button>
-                                <button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button>
-                            </div>`;
+                        boxesHtml += `<div class="app-box ${(boxData && boxData.type) || 'saas'} ${(boxData && boxData.width) || 'full-width'}" draggable="true" ${dataLinesAttr} ${styleAttr} ${(boxData && boxData.resized)? 'data-resized="1"' : ''} ${noAuto}>${(boxData && boxData.text) || ''}<button class="delete-btn" onclick="deleteBox(this)">x</button><button class="resize-btn" onclick="toggleBoxWidth(this)">\u001d</button></div>`;
                     }
                 });
             }
