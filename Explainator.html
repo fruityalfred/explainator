@@ -767,12 +767,76 @@
         .section-color-picker.show { display: flex; flex-wrap: wrap; gap: 8px; }
         .section-color-picker .swatch { width: 22px; height: 22px; border-radius: 4px; border: 1px solid #bbb; cursor: pointer; }
         .section-color-picker .swatch:hover, .column-color-picker .swatch:hover { outline: 2px solid #888; }
+
+        .column-visibility-menu {
+            position: fixed;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 2000;
+            min-width: 200px;
+            display: none;
+        }
+
+        .column-visibility-menu.show { display: block; }
+
+        .column-visibility-menu-item {
+            padding: 8px 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            user-select: none;
+        }
+
+        .column-visibility-menu-item:hover {
+            background: #f0f0f0;
+        }
+
+        .column-visibility-menu-item .checkbox {
+            width: 16px;
+            height: 16px;
+            border: 2px solid #666;
+            border-radius: 3px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+        }
+
+        .column-visibility-menu-item .checkbox.checked {
+            background: #4CAF50;
+            border-color: #4CAF50;
+            color: white;
+        }
+  </style>
+  <style id="header-modes-css">
+  /* Header visibility modes */
+  .mode-columns-off .column-header{display:none!important}
+  .mode-columns-off .column{border-color:transparent;box-shadow:inset 0 0 0 1px #ddd}
+  .mode-columns-off .column-content{padding-top:8px}
+  .mode-columns-off .section-group{border:1px solid #ddd}
+  .mode-columns-off .app-box{border-color:#ddd}
+  .mode-sections-off .section-title{display:none!important}
+  .mode-sections-off .section-group{border:1px solid #ddd;padding-top:10px}
+  .mode-columns-off.mode-sections-off .section-group{border:none;padding:0}
+  /* Individual column header visibility */
+  .column[data-hide-column-header="true"] > .column-header{display:none!important}
+  .column[data-hide-column-header="true"]{border-color:transparent;box-shadow:inset 0 0 0 1px #ddd}
+  .column[data-hide-column-header="true"] > .column-content{padding-top:8px}
+  .column[data-hide-section-headers="true"] .section-title{display:none!important}
+  .column[data-hide-section-headers="true"] .section-group{border:1px solid #ddd;padding-top:10px}
   </style>
   <style>
   /* Open Canvas Mode */
   .main-container.canvas-mode { display:block !important; position:relative; width:1920px; height:1080px; margin:0 auto; background-image: linear-gradient(transparent 39px, rgba(0,0,0,0.05) 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.05) 40px); background-size: 40px 40px, 40px 40px; border: 2px dashed #bbb; }
-  .main-container.canvas-mode .column { position:absolute !important; cursor:move; }
+  .main-container.canvas-mode .column { position:absolute !important; }
   .main-container.canvas-mode .column .column-header { cursor:grab; }
+  .main-container.canvas-mode .column[data-hide-column-header="true"] { cursor:grab; }
   .main-container.canvas-mode .add-column { display:none !important; }
   /* SVG overlay for connectors */
   .canvas-connectors { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
@@ -3072,7 +3136,117 @@ function insertSplitBlock(btn) {
             sectionTitle.setAttribute('data-color', color);
             optionElement.closest('.section-color-picker').remove();
         }
-        
+
+        // === COLUMN VISIBILITY MENU ===
+        function showColumnVisibilityMenu(e, sectionGroup) {
+            // Remove any existing menu
+            document.querySelectorAll('.column-visibility-menu').forEach(m => m.remove());
+
+            const column = sectionGroup.closest('.column');
+            if (!column) return;
+
+            const hideColumnHeader = column.getAttribute('data-hide-column-header') === 'true';
+            const hideSectionHeaders = column.getAttribute('data-hide-section-headers') === 'true';
+
+            const menu = document.createElement('div');
+            menu.className = 'column-visibility-menu show';
+            menu.style.left = e.clientX + 'px';
+            menu.style.top = e.clientY + 'px';
+
+            menu.innerHTML = `
+                <div class="column-visibility-menu-item" data-action="toggle-column-header">
+                    <span class="checkbox ${!hideColumnHeader ? 'checked' : ''}">${!hideColumnHeader ? '✓' : ''}</span>
+                    <span>Spalten-Header anzeigen</span>
+                </div>
+                <div class="column-visibility-menu-item" data-action="toggle-section-headers">
+                    <span class="checkbox ${!hideSectionHeaders ? 'checked' : ''}">${!hideSectionHeaders ? '✓' : ''}</span>
+                    <span>Section-Header anzeigen</span>
+                </div>
+            `;
+
+            document.body.appendChild(menu);
+
+            // Prevent menu from going off-screen
+            requestAnimationFrame(() => {
+                const rect = menu.getBoundingClientRect();
+                const vw = window.innerWidth || document.documentElement.clientWidth;
+                const vh = window.innerHeight || document.documentElement.clientHeight;
+
+                if (rect.right > vw) {
+                    menu.style.left = (vw - rect.width - 10) + 'px';
+                }
+                if (rect.bottom > vh) {
+                    menu.style.top = (vh - rect.height - 10) + 'px';
+                }
+            });
+
+            // Event handlers
+            menu.addEventListener('click', (ev) => {
+                const item = ev.target.closest('.column-visibility-menu-item');
+                if (!item) return;
+
+                const action = item.getAttribute('data-action');
+                if (action === 'toggle-column-header') {
+                    toggleColumnHeaderVisibility(column);
+                } else if (action === 'toggle-section-headers') {
+                    toggleSectionHeadersVisibility(column);
+                }
+
+                // Recreate menu to update checkboxes
+                menu.remove();
+                showColumnVisibilityMenu(e, sectionGroup);
+            });
+
+            // Close menu when clicking outside
+            function onDocClick(ev) {
+                if (!menu.contains(ev.target)) {
+                    menu.remove();
+                    document.removeEventListener('mousedown', onDocClick, true);
+                }
+            }
+            setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 0);
+        }
+
+        function toggleColumnHeaderVisibility(column) {
+            const current = column.getAttribute('data-hide-column-header') === 'true';
+            if (current) {
+                column.removeAttribute('data-hide-column-header');
+            } else {
+                column.setAttribute('data-hide-column-header', 'true');
+            }
+            try { if (typeof updateAllConnectors === 'function') updateAllConnectors(); } catch(_) {}
+        }
+
+        function toggleSectionHeadersVisibility(column) {
+            const current = column.getAttribute('data-hide-section-headers') === 'true';
+            if (current) {
+                column.removeAttribute('data-hide-section-headers');
+            } else {
+                column.setAttribute('data-hide-section-headers', 'true');
+            }
+        }
+
+        // Context menu handler for section-groups
+        document.addEventListener('contextmenu', function(e) {
+            // Check if we're on a section-group but not on specific child elements
+            const sectionGroup = e.target.closest('.section-group');
+            if (!sectionGroup) return;
+
+            // Ignore if clicking on section-title, app-box, or their buttons
+            if (e.target.closest('.section-title')) return;
+            if (e.target.closest('.app-box')) return;
+
+            // Only trigger if clicking on section-group background or box-container
+            const isBoxContainer = e.target.classList.contains('box-container');
+            const isSectionGroup = e.target.classList.contains('section-group');
+
+            if (isBoxContainer || isSectionGroup) {
+                e.preventDefault();
+                e.stopPropagation();
+                showColumnVisibilityMenu(e, sectionGroup);
+            }
+        }, true);
+
         // === TEMPLATE MANAGEMENT FUNCTIONS ===
         // Track the currently loaded template name for sane save behavior
         window.currentTemplateName = window.currentTemplateName || '';
@@ -3149,6 +3323,8 @@ function insertSplitBlock(btn) {
                     })(),
                     splitState: column.getAttribute('data-split-state') || 'normal',
                     splitParts: parseInt(column.getAttribute('data-split-parts') || (function(ss){ if(ss==='split-2') return 2; if(ss==='split-3') return 3; return 1; })(column.getAttribute('data-split-state')||'normal'), 10),
+                    hideColumnHeader: column.getAttribute('data-hide-column-header') === 'true',
+                    hideSectionHeaders: column.getAttribute('data-hide-section-headers') === 'true',
                     contentAreas: []
                 };
                 // Save canvas positions when in canvas mode
@@ -3406,6 +3582,10 @@ function insertSplitBlock(btn) {
                     if (typeof columnData.canvasX !== 'undefined') column.setAttribute('data-canvas-x', String(columnData.canvasX));
                     if (typeof columnData.canvasY !== 'undefined') column.setAttribute('data-canvas-y', String(columnData.canvasY));
                     if(columnData.width) column.style.width = columnData.width;
+
+                    // Restore visibility settings
+                    if (columnData.hideColumnHeader) column.setAttribute('data-hide-column-header', 'true');
+                    if (columnData.hideSectionHeaders) column.setAttribute('data-hide-section-headers', 'true');
 
                     const splitState = columnData.splitState || 'normal';
                     column.setAttribute('data-split-state', splitState);
@@ -4516,23 +4696,11 @@ function insertSplitBlock(btn) {
     }catch(_){ }
   } */
 
+  // CSS rules are now statically defined in <head>, so this function is no longer needed
+  // Kept for backward compatibility (does nothing if style tag already exists)
   window.ensureHeaderModeCss = function(){
-    if (document.getElementById('header-modes-css')) return;
-    var css = [
-      '/* Header visibility modes */',
-      '.mode-columns-off .column-header{display:none!important}',
-      '.mode-columns-off .column{border-color:transparent;box-shadow:inset 0 0 0 1px #ddd}',
-      '.mode-columns-off .column-content{padding-top:8px}',
-      '.mode-columns-off .section-group{border:1px solid #ddd}',
-      '.mode-columns-off .app-box{border-color:#ddd}',
-      '.mode-sections-off .section-title{display:none!important}',
-      '.mode-sections-off .section-group{border:1px solid #ddd;padding-top:10px}',
-      '.mode-columns-off.mode-sections-off .section-group{border:none;padding:0}'
-    ].join('\n');
-    var st = document.createElement('style');
-    st.id = 'header-modes-css';
-    st.textContent = css;
-    document.head.appendChild(st);
+    // Style tag with id="header-modes-css" is now always present in <head>
+    // This function is a no-op but kept for compatibility with existing code
   }
 
   // Provide simple togglers for static buttons
@@ -4567,11 +4735,35 @@ function insertSplitBlock(btn) {
   var dragging = null, dx=0, dy=0;
   function onHeaderDown(e){
     var mc = document.getElementById('mainContainer'); if(!mc || !mc.classList.contains('canvas-mode')) return;
+
+    // First try to find column-header (preferred drag handle)
     var hdr = e.target.closest && e.target.closest('.column-header');
-    if (!hdr) return;
-    var col = hdr.parentElement; if(!col) return;
+    var col = null;
+
+    if (hdr) {
+      col = hdr.parentElement;
+    } else {
+      // If no header found (or header is hidden), allow dragging from column itself
+      col = e.target.closest && e.target.closest('.column');
+      if (!col) return;
+
+      // Check if column has hidden header
+      var hasHiddenHeader = col.getAttribute('data-hide-column-header') === 'true';
+      if (!hasHiddenHeader) return; // Only allow direct column drag if header is hidden
+
+      // Ignore if clicking on interactive elements
+      if (e.target.closest('.section-title')) return;
+      if (e.target.closest('.app-box')) return;
+      if (e.target.closest('.resize-handle')) return;
+      if (e.target.closest('button')) return;
+      if (e.target.closest('.section-menu')) return;
+      if (e.target.closest('.section-delete')) return;
+    }
+
+    if (!col) return;
     dragging = col;
-    hdr.style.cursor='grabbing';
+    if (hdr) hdr.style.cursor='grabbing';
+    else col.style.cursor='grabbing';
     var r = col.getBoundingClientRect();
     dx = e.clientX - r.left; dy = e.clientY - r.top;
     document.addEventListener('mousemove', onMove, true);
@@ -4606,7 +4798,13 @@ function insertSplitBlock(btn) {
   }
   function onUp(){
     if (dragging){
-      var hdr = dragging.querySelector('.column-header'); if (hdr) hdr.style.cursor='grab';
+      var hdr = dragging.querySelector('.column-header');
+      if (hdr && hdr.style.display !== 'none') {
+        hdr.style.cursor='grab';
+      } else {
+        // Column was dragged without header, reset column cursor
+        dragging.style.cursor='grab';
+      }
       document.removeEventListener('mousemove', onMove, true);
       document.removeEventListener('mouseup', onUp, true);
       // persist current positions in attributes for saving

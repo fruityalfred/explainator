@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(start \"\" \"F:\\2025 Coding\\local_explainator\\explainator\\Explainator.html\")"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
