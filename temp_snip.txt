@@ -1,1 +1,1 @@
-                <div class="column-header" draggable="true">
+            <button class="btn btn-success" onclick="showAddBoxModal()" data-translate="addBox">📦 Neue Box</button>
