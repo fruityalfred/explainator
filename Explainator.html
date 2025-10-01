@@ -3908,17 +3908,17 @@ function insertSplitBlock(btn) {
                     }
                 }catch(_){ }
                 if (right <= left || bottom <= top) return null;
-                const pad = typeof padding==='number' ? padding : 5;
+                const pad = typeof padding==='number' ? padding : 10;  // Increased from 5 to 10 for safety
                 // Coordinates are viewport‑relative for html2canvas(target=document.body)
                 const x = Math.max(0, Math.floor(left) - pad);
                 const y = Math.max(0, Math.floor(top) - pad);
-                const width = Math.ceil((right - left) + pad * 2 + 2);   // +2 to avoid right edge truncation
-                const height = Math.ceil((bottom - top) + pad * 2);
+                const width = Math.ceil((right - left) + pad * 2 + 5);   // +5 extra buffer for right edge
+                const height = Math.ceil((bottom - top) + pad * 2 + 5);  // +5 extra buffer for bottom edge
                 return { x, y, width, height };
             }
 
             setTimeout(() => {
-                const bbox = getVisibleColumnsBBox(5);
+                const bbox = getVisibleColumnsBBox(10);  // Increased padding from 5 to 10
                 const target = document.body; // crop from full page to avoid scroll issues
                 const opts = bbox ? {
                     x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height,
