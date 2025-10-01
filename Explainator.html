@@ -15,8 +15,9 @@
         
         body {
             font-family: 'Segoe UI', Arial, sans-serif;
-            padding: 10px;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 0;
+            margin: 0;
+            background: #f5f7fa;
             min-height: 100vh;
         }
         
@@ -38,14 +39,7 @@
         }
         
         .controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 8px;
-            align-items: center;
+            display: none; /* Hidden - replaced by sidebar */
         }
         /* Hide legacy first controls bar if a second one is present */
         .container > .controls:first-of-type { display: none !important; }
@@ -1007,55 +1001,471 @@
 .image-preview img { max-width: 100%; height: auto; max-height: 200px; display: block; border-radius: 4px; }
 </style>
 
+<style>
+/* ===== MODERN SIDEBAR DESIGN ===== */
+
+/* App Wrapper - Flexbox Layout */
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+/* Sidebar - Fixed Position */
+.sidebar {
+    position: fixed;
+    left: 0;
+    top: 0;
+    height: 100vh;
+    width: 250px;
+    background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+    box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 1000;
+    overflow-x: hidden;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Collapsed State */
+.sidebar.collapsed {
+    width: 60px;
+}
+
+/* Sidebar Header */
+.sidebar-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 12px;
+    background: rgba(0,0,0,0.2);
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    min-height: 60px;
+}
+
+.sidebar-toggle {
+    background: transparent;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 6px;
+    transition: background 0.2s, transform 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+}
+
+.sidebar-toggle:hover {
+    background: rgba(255,255,255,0.1);
+    transform: scale(1.1);
+}
+
+.sidebar-brand {
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    white-space: nowrap;
+    opacity: 1;
+    transition: opacity 0.2s;
+}
+
+.sidebar.collapsed .sidebar-brand {
+    opacity: 0;
+    width: 0;
+}
+
+/* Sidebar Navigation */
+.sidebar-nav {
+    flex: 1;
+    padding: 8px 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+
+/* Nav Sections */
+.nav-section {
+    margin-bottom: 8px;
+    padding: 0 8px;
+}
+
+.nav-section-title {
+    color: rgba(255,255,255,0.5);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 8px 6px 8px;
+    white-space: nowrap;
+    transition: opacity 0.2s;
+}
+
+.sidebar.collapsed .nav-section-title {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+/* Nav Items */
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    margin: 2px 0;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: rgba(255,255,255,0.85);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-item:hover {
+    background: rgba(255,255,255,0.1);
+    color: white;
+    transform: translateX(4px);
+}
+
+.nav-item:active {
+    transform: translateX(4px) scale(0.98);
+}
+
+.nav-item .icon {
+    font-size: 20px;
+    min-width: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.nav-item:hover .icon {
+    transform: scale(1.1);
+}
+
+.nav-item .label {
+    white-space: nowrap;
+    flex: 1;
+    transition: opacity 0.2s;
+}
+
+.sidebar.collapsed .nav-item .label {
+    opacity: 0;
+    width: 0;
+}
+
+.sidebar.collapsed .nav-item {
+    justify-content: center;
+    padding: 10px;
+}
+
+/* Active State für Canvas/Connector Buttons */
+.nav-item.is-active,
+.nav-item[data-role="canvas-toggle-btn"].is-active,
+.nav-item[data-role="connector-toggle-btn"].is-active {
+    background: linear-gradient(90deg, rgba(33,150,243,0.3), rgba(33,150,243,0.15));
+    color: #64B5F6;
+    border-left: 3px solid #2196F3;
+}
+
+/* Nav Item Select (für Canvas Resolution) */
+.nav-item-select {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    margin: 2px 0;
+}
+
+.nav-item-select .icon {
+    font-size: 20px;
+    min-width: 24px;
+    color: rgba(255,255,255,0.85);
+}
+
+.nav-item-select select {
+    flex: 1;
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    color: white;
+    padding: 6px 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.nav-item-select select:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+.nav-item-select select option {
+    background: #2c3e50;
+    color: white;
+}
+
+.sidebar.collapsed .nav-item-select {
+    justify-content: center;
+}
+
+.sidebar.collapsed .nav-item-select select {
+    display: none;
+}
+
+/* Scrollbar Styling */
+.sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: rgba(0,0,0,0.1);
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: rgba(255,255,255,0.3);
+}
+
+/* Main Content Area */
+.main-content {
+    flex: 1;
+    margin-left: 250px;
+    transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.sidebar.collapsed + .main-content {
+    margin-left: 60px;
+}
+
+/* Top Header */
+.top-header {
+    background: white;
+    padding: 16px 24px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    position: sticky;
+    top: 0;
+    z-index: 999;
+}
+
+.top-header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #2c3e50;
+    font-weight: 600;
+}
+
+/* Container Adjustments */
+.main-content .container {
+    background: transparent;
+    padding: 20px;
+    box-shadow: none;
+    max-width: none;
+    margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .sidebar {
+        width: 60px;
+    }
+
+    .sidebar.collapsed {
+        width: 60px;
+    }
+
+    .sidebar-brand {
+        opacity: 0;
+    }
+
+    .nav-section-title {
+        opacity: 0;
+        height: 0;
+        padding: 0;
+    }
+
+    .nav-item .label {
+        opacity: 0;
+        width: 0;
+    }
+
+    .main-content {
+        margin-left: 60px;
+    }
+}
+
+/* Tooltip for Collapsed State */
+.sidebar.collapsed .nav-item::after {
+    content: attr(title);
+    position: absolute;
+    left: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    margin-left: 8px;
+    padding: 6px 12px;
+    background: rgba(0,0,0,0.9);
+    color: white;
+    font-size: 12px;
+    white-space: nowrap;
+    border-radius: 6px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+    z-index: 1001;
+}
+
+.sidebar.collapsed .nav-item:hover::after {
+    opacity: 1;
+}
+</style>
+
 </head>
 <body>
-    <div class="container">
-        <h2 data-translate="mainTitle">🏢 Explainator - Ultimate Edition</h2>
-        
-        <div class="controls">
-            <button class="btn btn-success" onclick="showAddBoxModal()" data-translate="addBox">Neue Box</button>
-            <button class="btn btn-info" onclick="showCategoryModal()" data-translate="manageCategories">Kategorien verwalten</button>
-            <button class="btn btn-secondary" onclick="showFormattingModal()" data-translate="formatting">Formatierung</button>
-            <button class="btn btn-warning" onclick="exportToPNG()" data-translate="exportPNG">Als PNG exportieren</button>
-            <button class="btn btn-info" onclick="saveTemplate()" data-translate="saveTemplate">Template speichern</button>
-            <button class="btn btn-success" onclick="showLoadTemplateModal()" data-translate="loadTemplate">Template laden</button>
-            <button class="btn btn-warning" onclick="resetLayout()" data-translate="resetLayout">Layout zurücksetzen</button>
-            <button class="btn btn-danger" onclick="clearAll()" data-translate="clearAll">Alles löschen</button>
-            <button class="btn btn-secondary" onclick="showHelpModal()" data-translate="help">Hilfe</button>
-            <button id="langSwitchBtn" class="btn btn-info" onclick="toggleLanguage()">EN</button>
-        </div>
+    <div class="app-wrapper">
+        <!-- Modern Collapsible Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle Sidebar">
+                    <span class="hamburger">☰</span>
+                </button>
+                <span class="sidebar-brand">Explainator</span>
+            </div>
 
-        <!-- Unified static controls bar -->
-        <div class="controls">
-            <button class="btn btn-success" onclick="showAddBoxModal()" data-translate="addBox">Neue Box</button>
-            <button class="btn btn-secondary" onclick="showAddLineModal()" data-translate="addLine">Linien</button>
-            <button class="btn btn-secondary" onclick="showFormattingModal()" data-translate="formatting">Formatierung</button>
-            <button class="btn btn-info" onclick="showCategoryModal()" data-translate="manageCategories">Kategorien verwalten</button>
-            <button class="btn btn-secondary" onclick="showBatchImportModal()" data-translate="batchImport">Batch Import</button>
-            <button class="btn btn-info" onclick="exportToExcel()">Excel</button>
-            <button class="btn btn-warning" onclick="exportToPNG()" data-translate="exportPNG">Als PNG exportieren</button>
-            <button class="btn btn-info" onclick="saveTemplate()" data-translate="saveTemplate">Template speichern</button>
-            <button class="btn btn-success" onclick="showLoadTemplateModal()" data-translate="loadTemplate">Template laden</button>
-            <button class="btn btn-secondary" data-role="canvas-toggle-btn" onclick="toggleCanvasMode()" title="Open Canvas Mode ein/aus">Canvas</button>
-            <select class="btn" data-role="canvas-res-select" style="padding:6px 8px" title="Canvas Auflösung" onchange="(function(s){var v=s.value.split('x'); setCanvasSize(parseInt(v[0],10), parseInt(v[1],10));})(this)">
-                <option value="1280x720">HD 1280×720</option>
-                <option value="1920x1080" selected>Full HD 1920×1080</option>
-            </select>
-            <button class="btn btn-info" data-role="connector-toggle-btn" onclick="toggleConnectorMode()" title="Connector-Modus ein/aus" aria-pressed="false">Verbindungen</button>
-            <button class="btn btn-secondary" id="columnsModeBtn" onclick="toggleColumnsMode(this)" title="Spalten-Header ein/aus">Spalten: An</button>
-            <button class="btn btn-secondary" id="sectionsModeBtn" onclick="toggleSectionsMode(this)" title="Section-Header ein/aus">Sections: An</button>
-            <button class="btn btn-warning" onclick="resetLayout()" data-translate="resetLayout">Layout zurücksetzen</button>
-            <button class="btn btn-danger" onclick="clearAll()" data-translate="clearAll"> Alles löschen</button>
-            <button class="btn btn-secondary" onclick="showHelpModal()" data-translate="help">Hilfe</button>
-            <button id="langSwitchBtn" class="btn btn-info" onclick="toggleLanguage()">EN</button>
-        </div>
+            <nav class="sidebar-nav">
+                <!-- Content Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Content</div>
+                    <button class="nav-item" onclick="showAddBoxModal()" data-translate="addBox" title="Neue Box">
+                        <span class="icon">📦</span>
+                        <span class="label">Neue Box</span>
+                    </button>
+                    <button class="nav-item" onclick="showAddLineModal()" data-translate="addLine" title="Linien">
+                        <span class="icon">📏</span>
+                        <span class="label">Linien</span>
+                    </button>
+                    <button class="nav-item" onclick="showBatchImportModal()" data-translate="batchImport" title="Batch Import">
+                        <span class="icon">📋</span>
+                        <span class="label">Batch Import</span>
+                    </button>
+                </div>
+
+                <!-- Styling Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Styling</div>
+                    <button class="nav-item" onclick="showFormattingModal()" data-translate="formatting" title="Formatierung">
+                        <span class="icon">🎨</span>
+                        <span class="label">Formatierung</span>
+                    </button>
+                    <button class="nav-item" onclick="showCategoryModal()" data-translate="manageCategories" title="Kategorien">
+                        <span class="icon">🏷️</span>
+                        <span class="label">Kategorien</span>
+                    </button>
+                </div>
+
+                <!-- Canvas Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Canvas</div>
+                    <button class="nav-item" data-role="canvas-toggle-btn" onclick="toggleCanvasMode()" title="Canvas Mode">
+                        <span class="icon">🖼️</span>
+                        <span class="label">Canvas Mode</span>
+                    </button>
+                    <div class="nav-item-select">
+                        <span class="icon">📐</span>
+                        <select data-role="canvas-res-select" title="Canvas Auflösung" onchange="(function(s){var v=s.value.split('x'); setCanvasSize(parseInt(v[0],10), parseInt(v[1],10));})(this)">
+                            <option value="1280x720">HD 720p</option>
+                            <option value="1920x1080" selected>Full HD</option>
+                        </select>
+                    </div>
+                    <button class="nav-item" data-role="connector-toggle-btn" onclick="toggleConnectorMode()" title="Verbindungen">
+                        <span class="icon">🔗</span>
+                        <span class="label">Verbindungen</span>
+                    </button>
+                    <button class="nav-item" id="columnsModeBtn" onclick="toggleColumnsMode(this)" title="Spalten-Header">
+                        <span class="icon">📊</span>
+                        <span class="label">Spalten: An</span>
+                    </button>
+                    <button class="nav-item" id="sectionsModeBtn" onclick="toggleSectionsMode(this)" title="Section-Header">
+                        <span class="icon">📑</span>
+                        <span class="label">Sections: An</span>
+                    </button>
+                </div>
+
+                <!-- Data Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Data</div>
+                    <button class="nav-item" onclick="saveTemplate()" data-translate="saveTemplate" title="Template speichern">
+                        <span class="icon">💾</span>
+                        <span class="label">Speichern</span>
+                    </button>
+                    <button class="nav-item" onclick="showLoadTemplateModal()" data-translate="loadTemplate" title="Template laden">
+                        <span class="icon">📂</span>
+                        <span class="label">Laden</span>
+                    </button>
+                    <button class="nav-item" onclick="exportToExcel()" title="Excel Export">
+                        <span class="icon">📊</span>
+                        <span class="label">Excel</span>
+                    </button>
+                    <button class="nav-item" onclick="exportToPNG()" data-translate="exportPNG" title="PNG Export">
+                        <span class="icon">🖼️</span>
+                        <span class="label">PNG Export</span>
+                    </button>
+                </div>
+
+                <!-- System Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">System</div>
+                    <button class="nav-item" onclick="resetLayout()" data-translate="resetLayout" title="Layout zurücksetzen">
+                        <span class="icon">🔄</span>
+                        <span class="label">Reset Layout</span>
+                    </button>
+                    <button class="nav-item" onclick="clearAll()" data-translate="clearAll" title="Alles löschen">
+                        <span class="icon">🗑️</span>
+                        <span class="label">Alles löschen</span>
+                    </button>
+                    <button class="nav-item" onclick="showHelpModal()" data-translate="help" title="Hilfe">
+                        <span class="icon">❓</span>
+                        <span class="label">Hilfe</span>
+                    </button>
+                    <button class="nav-item" id="langSwitchBtn" onclick="toggleLanguage()" title="Sprache wechseln">
+                        <span class="icon">🌐</span>
+                        <span class="label">EN</span>
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <header class="top-header">
+                <h2 data-translate="mainTitle">🏢 Explainator - Ultimate Edition</h2>
+            </header>
+
+            <div class="container">
         
-        <div class="main-container" id="mainContainer">
+                <div class="main-container" id="mainContainer">
+                </div>
+
+                <div class="legend" id="legend">
+                </div>
             </div>
-        
-        <div class="legend" id="legend">
-            </div>
-    </div>
+        </main>
+    </div><!-- app-wrapper -->
         
     <div class="modal" id="addBoxModal">
         <div class="modal-content">
@@ -5580,6 +5990,53 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 })();
 </script>
 
+<script>
+// ===== SIDEBAR TOGGLE & PERSISTENCE =====
+(function(){
+  const sidebar = document.getElementById('sidebar');
+  const STORAGE_KEY = 'explainator_sidebar_collapsed';
+
+  // Restore saved state from localStorage
+  function restoreSidebarState() {
+    try {
+      const collapsed = localStorage.getItem(STORAGE_KEY) === 'true';
+      if (collapsed) {
+        sidebar.classList.add('collapsed');
+      }
+    } catch(_) {}
+  }
+
+  // Toggle sidebar collapsed state
+  window.toggleSidebar = function() {
+    sidebar.classList.toggle('collapsed');
+    const isCollapsed = sidebar.classList.contains('collapsed');
+
+    // Save state to localStorage
+    try {
+      localStorage.setItem(STORAGE_KEY, isCollapsed);
+    } catch(_) {}
+  };
+
+  // Initialize on page load
+  restoreSidebarState();
+
+  // Update label text when language switches
+  const originalToggleLanguage = window.toggleLanguage;
+  if (originalToggleLanguage) {
+    window.toggleLanguage = function() {
+      originalToggleLanguage();
+      // Update sidebar button labels after language switch
+      setTimeout(function() {
+        const langBtn = document.getElementById('langSwitchBtn');
+        if (langBtn) {
+          const label = langBtn.querySelector('.label');
+          if (label) label.textContent = langBtn.textContent.trim();
+        }
+      }, 100);
+    };
+  }
+})();
+</script>
 
 </body>
 </html>
