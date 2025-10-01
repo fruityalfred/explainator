@@ -839,13 +839,42 @@
   .main-container.canvas-mode .column[data-hide-column-header="true"] { cursor:grab; }
   .main-container.canvas-mode .add-column { display:none !important; }
   /* SVG overlay for connectors */
-  .canvas-connectors { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; }
-  .canvas-connectors path { stroke:#1E88E5; stroke-width:2; fill:none; pointer-events:stroke; }
-  .canvas-connectors path.conn-highlight { stroke:#EF6C00; }
+  .canvas-connectors { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; shape-rendering: geometricPrecision; }
+  .canvas-connectors path { stroke:#1E88E5; stroke-width:2; fill:none; pointer-events:stroke; vector-effect: non-scaling-stroke; }
+  .canvas-connectors path.conn-highlight { stroke:#EF6C00; stroke-width:3; }
   /* Visual feedback for active connector mode button */
-  .controls [data-role="connector-toggle-btn"].is-active { 
-    outline: 2px solid #1E88E5; 
+  .controls [data-role="connector-toggle-btn"].is-active {
+    outline: 2px solid #1E88E5;
     box-shadow: 0 0 0 2px rgba(30,136,229,0.15);
+  }
+  /* Anchor point selection overlay */
+  .connector-anchor-overlay {
+    position: absolute;
+    pointer-events: none;
+    z-index: 10000;
+  }
+  .connector-anchor-overlay.active {
+    pointer-events: auto;
+  }
+  .anchor-point {
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background: #1E88E5;
+    border: 3px solid white;
+    border-radius: 50%;
+    cursor: pointer;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    transition: transform 0.15s, background 0.15s;
+  }
+  .anchor-point:hover {
+    transform: translate(-50%, -50%) scale(1.3);
+    background: #EF6C00;
+  }
+  .anchor-point.selected {
+    background: #4CAF50;
+    transform: translate(-50%, -50%) scale(1.2);
   }
   </style>
 
@@ -3945,6 +3974,12 @@ function insertSplitBlock(btn) {
             document.querySelectorAll('.delete-btn, .resize-btn, .height-resizer').forEach(el => el.style.visibility = 'hidden');
             document.querySelectorAll('.column-color-picker, .section-color-picker').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = 'none'; section.style.background = 'transparent'; });
+
+            // Fix: Replace box-shadow with thin border for columns without header (better for html2canvas)
+            document.querySelectorAll('.column[data-hide-column-header="true"]').forEach(col => {
+                col.style.boxShadow = 'none';
+                col.style.border = '1px solid #ddd';
+            });
         }
         
         function showExportUIElements() {
@@ -3958,6 +3993,12 @@ function insertSplitBlock(btn) {
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.delete-btn, .resize-btn, .height-resizer').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-group').forEach(section => { section.style.border = '2px dashed #999'; section.style.background = ''; });
+
+            // Restore original styling for columns without header
+            document.querySelectorAll('.column[data-hide-column-header="true"]').forEach(col => {
+                col.style.boxShadow = '';
+                col.style.border = '';
+            });
         }
     </script>
 
@@ -4850,6 +4891,37 @@ function insertSplitBlock(btn) {
       mc.appendChild(svg);
     } else { svg.style.display='block'; }
   }
+  // Get anchor point for column in specified direction
+  // Supports 8 directions: top, top-right, right, bottom-right, bottom, bottom-left, left, top-left
+  // Returns pixel-perfect coordinates rounded to whole pixels
+  function getAnchorPoint(col, direction){
+    var mc = document.getElementById('mainContainer'); if(!mc) return null;
+    var mcr = mc.getBoundingClientRect();
+    var r = col.getBoundingClientRect();
+
+    // Round all values to whole pixels for crisp rendering
+    var relX = Math.round(r.left - mcr.left);
+    var relY = Math.round(r.top - mcr.top);
+    var width = Math.round(r.width);
+    var height = Math.round(r.height);
+    var cx = Math.round(relX + width / 2);
+    var cy = Math.round(relY + height / 2);
+
+    switch(direction){
+      // Cardinal directions (centered on edges)
+      case 'top': return { x: cx, y: relY };
+      case 'right': return { x: relX + width, y: cy };
+      case 'bottom': return { x: cx, y: relY + height };
+      case 'left': return { x: relX, y: cy };
+      // Corner directions
+      case 'top-right': return { x: relX + width, y: relY };
+      case 'bottom-right': return { x: relX + width, y: relY + height };
+      case 'bottom-left': return { x: relX, y: relY + height };
+      case 'top-left': return { x: relX, y: relY };
+      default: return { x: cx, y: cy }; // center fallback
+    }
+  }
+
   function getColCenterEdge(col){
     // legacy helper (not used anymore)
     var mc = document.getElementById('mainContainer'); var mcr = mc.getBoundingClientRect(); var r = col.getBoundingClientRect();
@@ -4857,30 +4929,98 @@ function insertSplitBlock(btn) {
     return {left:{x:cxLeft, y:cy}, right:{x:cxRight, y:cy}};
   }
   // Compute anchor points (relative to main container) between two columns
-  function chooseBestAnchors(fromEl, toEl){
+  // Now supports 360° (top, right, bottom, left)
+  function chooseBestAnchors(fromEl, toEl, fromAnchor, toAnchor){
     try{
+      // If manual anchors specified, use them
+      if (fromAnchor && toAnchor) {
+        var a = getAnchorPoint(fromEl, fromAnchor);
+        var b = getAnchorPoint(toEl, toAnchor);
+        if (a && b) return { a: a, b: b, fromDir: fromAnchor, toDir: toAnchor };
+      }
+
       var mc = document.getElementById('mainContainer'); if(!mc) return null;
       var mcr = mc.getBoundingClientRect();
       var ar = fromEl.getBoundingClientRect();
       var br = toEl.getBoundingClientRect();
-      var aLeft = ar.left - mcr.left, aRight = ar.right - mcr.left;
-      var bLeft = br.left - mcr.left, bRight = br.right - mcr.left;
-      var aCY = ar.top - mcr.top + ar.height/2;
-      var bCY = br.top - mcr.top + br.height/2;
 
-      // If clearly left-to-right
-      if (aRight <= bLeft) return { a: { x: aRight, y: aCY }, b: { x: bLeft, y: bCY } };
-      // If clearly right-to-left
-      if (bRight <= aLeft) return { a: { x: aLeft, y: aCY }, b: { x: bRight, y: bCY } };
-      // Horizontal overlap: choose sides based on relative centers
-      if (ar.left < br.left) return { a: { x: aRight, y: aCY }, b: { x: bLeft, y: bCY } };
-      return { a: { x: aLeft, y: aCY }, b: { x: bRight, y: bCY } };
+      var aRelLeft = ar.left - mcr.left, aRelRight = ar.right - mcr.left;
+      var bRelLeft = br.left - mcr.left, bRelRight = br.right - mcr.left;
+      var aRelTop = ar.top - mcr.top, aRelBottom = ar.bottom - mcr.top;
+      var bRelTop = br.top - mcr.top, bRelBottom = br.bottom - mcr.top;
+
+      var aCX = aRelLeft + ar.width/2, aCY = aRelTop + ar.height/2;
+      var bCX = bRelLeft + br.width/2, bCY = bRelTop + br.height/2;
+
+      var dx = Math.abs(bCX - aCX);
+      var dy = Math.abs(bCY - aCY);
+
+      // Prefer horizontal connections if columns are more horizontally separated
+      if (dx > dy) {
+        // Check if clearly left-to-right
+        if (aRelRight <= bRelLeft) {
+          return { a: getAnchorPoint(fromEl, 'right'), b: getAnchorPoint(toEl, 'left'), fromDir: 'right', toDir: 'left' };
+        }
+        // Check if clearly right-to-left
+        if (bRelRight <= aRelLeft) {
+          return { a: getAnchorPoint(fromEl, 'left'), b: getAnchorPoint(toEl, 'right'), fromDir: 'left', toDir: 'right' };
+        }
+        // Horizontal overlap: choose based on relative centers
+        if (aCX < bCX) {
+          return { a: getAnchorPoint(fromEl, 'right'), b: getAnchorPoint(toEl, 'left'), fromDir: 'right', toDir: 'left' };
+        }
+        return { a: getAnchorPoint(fromEl, 'left'), b: getAnchorPoint(toEl, 'right'), fromDir: 'left', toDir: 'right' };
+      } else {
+        // Prefer vertical connections if columns are more vertically separated
+        // Check if clearly top-to-bottom
+        if (aRelBottom <= bRelTop) {
+          return { a: getAnchorPoint(fromEl, 'bottom'), b: getAnchorPoint(toEl, 'top'), fromDir: 'bottom', toDir: 'top' };
+        }
+        // Check if clearly bottom-to-top
+        if (bRelBottom <= aRelTop) {
+          return { a: getAnchorPoint(fromEl, 'top'), b: getAnchorPoint(toEl, 'bottom'), fromDir: 'top', toDir: 'bottom' };
+        }
+        // Vertical overlap: choose based on relative centers
+        if (aCY < bCY) {
+          return { a: getAnchorPoint(fromEl, 'bottom'), b: getAnchorPoint(toEl, 'top'), fromDir: 'bottom', toDir: 'top' };
+        }
+        return { a: getAnchorPoint(fromEl, 'top'), b: getAnchorPoint(toEl, 'bottom'), fromDir: 'top', toDir: 'bottom' };
+      }
     }catch(_){ return null; }
   }
-  function pathFor(a,b){ // smooth cubic connecting a->b
-    var dx = Math.abs(b.x - a.x);
-    var c1x = a.x + dx*0.5; var c2x = b.x - dx*0.5;
-    return `M ${a.x},${a.y} C ${c1x},${a.y} ${c2x},${b.y} ${b.x},${b.y}`;
+  // Smooth path with direction awareness
+  // All coordinates rounded to whole pixels for crisp rendering
+  function pathFor(a, b, fromDir, toDir){
+    // Ensure input coordinates are rounded
+    var ax = Math.round(a.x), ay = Math.round(a.y);
+    var bx = Math.round(b.x), by = Math.round(b.y);
+    var dx = bx - ax;
+    var dy = by - ay;
+    var adx = Math.abs(dx);
+    var ady = Math.abs(dy);
+
+    // Determine if connection is primarily horizontal or vertical
+    var isHorizontal = (fromDir === 'left' || fromDir === 'right') && (toDir === 'left' || toDir === 'right');
+    var isVertical = (fromDir === 'top' || fromDir === 'bottom') && (toDir === 'top' || toDir === 'bottom');
+
+    if (isHorizontal || (!isVertical && adx > ady)) {
+      // Horizontal-oriented curve
+      var c1x = Math.round(ax + dx*0.5);
+      var c2x = Math.round(bx - dx*0.5);
+      return `M ${ax},${ay} C ${c1x},${ay} ${c2x},${by} ${bx},${by}`;
+    } else if (isVertical || ady > adx) {
+      // Vertical-oriented curve
+      var c1y = Math.round(ay + dy*0.5);
+      var c2y = Math.round(by - dy*0.5);
+      return `M ${ax},${ay} C ${ax},${c1y} ${bx},${c2y} ${bx},${by}`;
+    } else {
+      // Diagonal/mixed - use smooth S-curve
+      var c1x = Math.round(ax + dx*0.5);
+      var c1y = Math.round(ay + dy*0.25);
+      var c2x = Math.round(bx - dx*0.5);
+      var c2y = Math.round(by - dy*0.25);
+      return `M ${ax},${ay} C ${c1x},${c1y} ${c2x},${c2y} ${bx},${by}`;
+    }
   }
 function updateAllConnectors(){
     var svg = document.getElementById('canvasConnectors'); if(!svg) return;
@@ -4889,10 +5029,17 @@ function updateAllConnectors(){
       var from = document.querySelector(`.column[data-column-id="${c.from}"]`);
       var to = document.querySelector(`.column[data-column-id="${c.to}"]`);
       if (!from || !to) return;
-      var pair = chooseBestAnchors(from,to); if (!pair) return;
+
+      // Use manual anchors if specified, otherwise auto-choose
+      var pair = chooseBestAnchors(from, to, c.fromAnchor, c.toAnchor);
+      if (!pair) return;
+
       var start = pair.a, end = pair.b;
+      var fromDir = pair.fromDir || 'right';
+      var toDir = pair.toDir || 'left';
+
       var p = document.createElementNS('http://www.w3.org/2000/svg','path');
-      p.setAttribute('d', pathFor(start, end));
+      p.setAttribute('d', pathFor(start, end, fromDir, toDir));
       p.setAttribute('data-conn-index', String(idx));
       svg.appendChild(p);
     });
@@ -4913,23 +5060,105 @@ function updateAllConnectors(){
       connectors.splice(selectedConn,1); selectedConn=-1; updateAllConnectors();
     }
   }, true);
+  // Anchor selection state
+  var pendingFromAnchor = null;
+
+  function showAnchorSelector(col, callback){
+    // Remove existing overlay
+    var existing = document.querySelector('.connector-anchor-overlay');
+    if (existing) existing.remove();
+
+    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    var mcr = mc.getBoundingClientRect();
+    var r = col.getBoundingClientRect();
+
+    var overlay = document.createElement('div');
+    overlay.className = 'connector-anchor-overlay active';
+    overlay.style.left = (r.left - mcr.left) + 'px';
+    overlay.style.top = (r.top - mcr.top) + 'px';
+    overlay.style.width = r.width + 'px';
+    overlay.style.height = r.height + 'px';
+
+    // 8 anchor points: 4 cardinal + 4 corners
+    var directions = ['top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left', 'top-left'];
+    directions.forEach(function(dir){
+      var anchor = getAnchorPoint(col, dir);
+      if (!anchor) return;
+
+      var dot = document.createElement('div');
+      dot.className = 'anchor-point';
+      dot.style.left = anchor.x - (r.left - mcr.left) + 'px';
+      dot.style.top = anchor.y - (r.top - mcr.top) + 'px';
+      dot.setAttribute('data-direction', dir);
+      dot.title = dir;
+
+      dot.addEventListener('click', function(ev){
+        ev.preventDefault(); ev.stopPropagation();
+        overlay.remove();
+        callback(dir);
+      }, true);
+
+      overlay.appendChild(dot);
+    });
+
+    mc.appendChild(overlay);
+
+    // Auto-close after 5 seconds or click outside
+    setTimeout(function(){
+      function closeOverlay(ev){
+        if (!overlay.contains(ev.target)){
+          overlay.remove();
+          document.removeEventListener('mousedown', closeOverlay, true);
+        }
+      }
+      document.addEventListener('mousedown', closeOverlay, true);
+    }, 100);
+  }
+
   window.toggleConnectorMode = function(){
-    connectorMode = !connectorMode; pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
-    var btn = document.querySelector('[data-role="connector-toggle-btn"]'); 
+    connectorMode = !connectorMode;
+    pendingFrom = null;
+    pendingFromAnchor = null;
+    // Remove any open anchor overlays
+    document.querySelectorAll('.connector-anchor-overlay').forEach(function(el){ el.remove(); });
+    ensureConnectorLayer();
+    updateAllConnectors();
+    var btn = document.querySelector('[data-role="connector-toggle-btn"]');
     if (btn) { btn.classList.toggle('is-active', connectorMode); btn.setAttribute('aria-pressed', connectorMode? 'true':'false'); }
   };
+
   // capture clicks on columns to build connections in connector mode
   document.addEventListener('click', function(e){
     if (!connectorMode) return;
+    // ignore anchor point clicks (handled by their own listeners)
+    if (e.target.closest('.anchor-point')) return;
     // ignore UI chrome clicks
-    if (e.target && e.target.closest && (e.target.closest('.controls') || e.target.closest('.modal') || e.target.closest('.column-color-picker') || e.target.closest('.section-color-picker'))) return;
+    if (e.target && e.target.closest && (e.target.closest('.controls') || e.target.closest('.modal') || e.target.closest('.column-color-picker') || e.target.closest('.section-color-picker') || e.target.closest('.column-visibility-menu'))) return;
     var col = e.target && e.target.closest && e.target.closest('.column'); if (!col) return;
     var id = col.getAttribute('data-column-id'); if (!id) return;
     e.preventDefault(); e.stopPropagation();
-    if (!pendingFrom){ pendingFrom = String(id); }
+
+    if (!pendingFrom){
+      // First column clicked - show anchor selector
+      showAnchorSelector(col, function(anchorDir){
+        pendingFrom = String(id);
+        pendingFromAnchor = anchorDir;
+      });
+    }
     else if (pendingFrom && pendingFrom !== id){
-      connectors.push({from: String(pendingFrom), to: String(id)});
-      pendingFrom = null; ensureConnectorLayer(); updateAllConnectors();
+      // Second column clicked - show anchor selector and create connection
+      showAnchorSelector(col, function(anchorDir){
+        connectors.push({
+          from: String(pendingFrom),
+          to: String(id),
+          fromAnchor: pendingFromAnchor,
+          toAnchor: anchorDir
+        });
+        pendingFrom = null;
+        pendingFromAnchor = null;
+        ensureConnectorLayer();
+        updateAllConnectors();
+      });
     }
   }, true);
   // expose connectors for template persistence
