@@ -956,6 +956,15 @@
         outline: 2px solid #007bff;
         box-shadow: 0 0 5px rgba(0,123,255,0.5);
     }
+    /* Links in contenteditable rich-text editor */
+    .rich-text-editor a {
+        color: #1a73e8;
+        text-decoration: underline;
+        cursor: pointer;
+    }
+    .rich-text-editor a:hover {
+        color: #0c5bb0;
+    }
 </style>
 
 <style>
@@ -2655,6 +2664,59 @@
         }
         function setDynamic(box, dyn){ box.setAttribute('data-dynamic', dyn ? '1' : '0'); }
         function isDynamic(box){ return (box.getAttribute('data-dynamic') || '0') === '1'; }
+        function linkifyBox(box){
+            try{
+                if (!box || !box.classList || box.classList.contains('image-box') || box.classList.contains('line-box')) return;
+                // Collect control buttons to re-append later
+                const del = box.querySelector('.delete-btn');
+                const res = box.querySelector('.resize-btn');
+                const controls = [];
+                if (del) controls.push(del);
+                if (res) controls.push(res);
+                controls.forEach(c => c.remove());
+
+                // Process each text node to linkify plain URLs, but keep existing <a> tags unchanged
+                const frag = document.createDocumentFragment();
+                const urlRe = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+
+                box.childNodes.forEach(function(n){
+                    if (n.nodeType === 3) {
+                        // Text node - linkify plain URLs
+                        const text = n.nodeValue;
+                        let lastIndex = 0;
+                        urlRe.lastIndex = 0; // reset regex
+                        let m;
+                        let hasMatch = false;
+                        while ((m = urlRe.exec(text))){
+                            hasMatch = true;
+                            const start = m.index; const end = urlRe.lastIndex;
+                            if (start > lastIndex) frag.appendChild(document.createTextNode(text.slice(lastIndex, start)));
+                            let href = m[0]; if (href.startsWith('www.')) href = 'http://' + href;
+                            const a = document.createElement('a'); a.href = href; a.textContent = m[0]; a.target = '_blank'; a.rel = 'noopener noreferrer';
+                            a.style.color = '#1a73e8'; a.style.textDecoration = 'underline';
+                            frag.appendChild(a);
+                            lastIndex = end;
+                        }
+                        if (hasMatch) {
+                            if (lastIndex < text.length) frag.appendChild(document.createTextNode(text.slice(lastIndex)));
+                        } else {
+                            // No URLs found, keep text as-is
+                            frag.appendChild(document.createTextNode(text));
+                        }
+                    }
+                    else if (n.nodeType === 1 && n.tagName === 'A') {
+                        // Existing anchor - keep unchanged
+                        frag.appendChild(n.cloneNode(true));
+                    }
+                    // Ignore other node types (should not happen in normal box content)
+                });
+
+                // Replace content with fragment and re-append controls
+                Array.from(box.childNodes).forEach(function(n){ if (!(n.classList && (n.classList.contains('delete-btn')||n.classList.contains('resize-btn')))) n.remove(); });
+                box.appendChild(frag);
+                controls.forEach(c=>box.appendChild(c));
+            }catch(_){ }
+        }
         function applyBoxLayout(box){
             const ln = getBaseLines(box);
             const base = (ln * ROW_HEIGHT) + 'px';
@@ -2687,7 +2749,10 @@
         function applyBoxLayoutAll(root){
             const scope = root || document;
             enforceBoxHeights(scope);
-            scope.querySelectorAll('.app-box').forEach(checkOverflowAndToggle);
+            scope.querySelectorAll('.app-box').forEach(function(box){
+                try { checkOverflowAndToggle(box); } catch(_){ }
+                try { linkifyBox(box); } catch(_){ }
+            });
         }
         function checkOverflowAndToggle(box){
             // Never auto-toggle for special/resized boxes
@@ -3371,6 +3436,7 @@ function insertSplitBlock(btn) {
             const target = getTargetBoxContainer();
             if (target) target.appendChild(newBox);
             try { applyBoxLayout(newBox); } catch(_){}
+            try { linkifyBox(newBox); } catch(_){}
             closeModal('addBoxModal');
             window.__boxTextColorDirty = false;
         }
@@ -3400,6 +3466,7 @@ function insertSplitBlock(btn) {
             try { const db = newBox.querySelector('.delete-btn'); if (db) db.textContent = 'x'; } catch(e) {}
             const target2 = getTargetBoxContainer();
             if (target2) target2.appendChild(newBox);
+            try { linkifyBox(newBox); } catch(_){}
             closeModal('addBoxModal');
         }       
         
@@ -3886,8 +3953,23 @@ function insertSplitBlock(btn) {
                                     } else {
                                             return {
                                                 isImage: false,
-                                                // extract only direct text nodes, ignore button labels
-                                                text: (function(b){ var s=''; b.childNodes.forEach(function(n){ if(n.nodeType===3) s+=n.nodeValue; }); return s.trim(); })(box),
+                                                // Save as HTML to preserve links (sanitized: only <a> tags allowed)
+                                                text: (function(b){
+                                                    var html = '';
+                                                    b.childNodes.forEach(function(n){
+                                                        if (n.nodeType === 3) {
+                                                            // Text node - escape HTML entities
+                                                            var txt = n.nodeValue;
+                                                            html += txt.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                                                        }
+                                                        else if (n.nodeType === 1 && n.tagName === 'A') {
+                                                            // Anchor - keep as-is (already sanitized by browser)
+                                                            html += n.outerHTML;
+                                                        }
+                                                        // ignore buttons and other elements
+                                                    });
+                                                    return html.trim();
+                                                })(box),
                                                 type: Object.keys(categories).find(type => box.classList.contains(type)) || 'saas',
                                                 width: ['full-width', 'half-width'].find(cls => box.classList.contains(cls)) || 'full-width',
                                                 baseLines: (box.getAttribute('data-base-lines') || box.getAttribute('data-lines') || box.dataset.lines || '1'),
@@ -5063,7 +5145,7 @@ function insertSplitBlock(btn) {
         box.dataset.lines = '1'; box.setAttribute('data-base-lines','1'); box.setAttribute('data-dynamic','0'); box.setAttribute('data-noauto','1');
         box.style.minHeight = (1*30)+'px'; box.style.height = (1*30)+'px'; box.style.overflowY = 'hidden';
         ((idx%2===0)? bc1 : bc2).appendChild(box);
-        try { applyBoxLayout(box); } catch(_){ }
+        try { applyBoxLayout(box); } catch(_){ } try { linkifyBox(box); } catch(_){ }
       });
 
       closeModal('batchImportModal');
@@ -5992,28 +6074,46 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     document.getElementById('mainContainer').addEventListener('dblclick', function(e) {
         const box = e.target.closest('.app-box');
         if (!box) return;
-        // Do not edit line boxes
-        if (box.classList && box.classList.contains('line-box')) return;
+        // Do not edit line boxes or image boxes
+        if (box.classList && (box.classList.contains('line-box') || box.classList.contains('image-box'))) return;
 
         // Verhindern, dass ein Input-Feld in sich selbst erstellt wird
         if (e.target.tagName === 'INPUT') return;
 
-        const currentText = box.childNodes[0].nodeValue.trim();
-        
+        // Klick auf Link soll Link öffnen, nicht editieren
+        if (e.target.tagName === 'A') return;
+
+        // Sammle kompletten Text aus allen Textknoten und Links
+        let currentText = '';
+        box.childNodes.forEach(function(n) {
+            if (n.nodeType === 3) currentText += n.nodeValue; // Textknoten
+            else if (n.nodeType === 1 && n.tagName === 'A') currentText += n.textContent; // Link
+        });
+        currentText = currentText.trim();
+
         // Temporär die Buttons ausblenden für mehr Platz
         const deleteBtn = box.querySelector('.delete-btn');
         const resizeBtn = box.querySelector('.resize-btn');
+        const heightResizer = box.querySelector('.height-resizer');
         if(deleteBtn) deleteBtn.style.display = 'none';
         if(resizeBtn) resizeBtn.style.display = 'none';
+        if(heightResizer) heightResizer.style.display = 'none';
+
+        // Entferne alle nicht-Button-Knoten (keep buttons and height-resizer)
+        Array.from(box.childNodes).forEach(function(n) {
+            if (!(n.classList && (n.classList.contains('delete-btn') || n.classList.contains('resize-btn') || n.classList.contains('height-resizer')))) {
+                n.remove();
+            }
+        });
 
         // Erstelle das Input-Feld
         const input = document.createElement('input');
         input.type = 'text';
         input.className = 'app-box-editor';
         input.value = currentText;
-        
-        // Ersetze den Textknoten durch das Input-Feld
-        box.childNodes[0].replaceWith(input);
+
+        // Füge Input am Anfang ein
+        box.insertBefore(input, box.firstChild);
         input.focus();
         input.select();
 
@@ -6026,12 +6126,16 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
             // Buttons wieder einblenden
             if(deleteBtn) deleteBtn.style.display = '';
             if(resizeBtn) resizeBtn.style.display = '';
+            if(heightResizer) heightResizer.style.display = '';
+
+            // Linkifizierung anwenden
+            try { linkifyBox(box); } catch(_) {}
 
             // Event Listener wieder entfernen, um Speicherlecks zu vermeiden
             input.removeEventListener('blur', finishEditing);
             input.removeEventListener('keypress', handleKeyPress);
         };
-        
+
         const handleKeyPress = (e) => {
             if (e.key === 'Enter') {
                 finishEditing();
@@ -6133,16 +6237,20 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     if(!box || box.classList.contains('image-box')) return;
     if (box.classList && box.classList.contains('line-box')) return;
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    // Allow clicking links - don't open editor
+    if (e.target.tagName === 'A') return;
     e.preventDefault(); e.stopPropagation();
 
-    // Helper: extract only plain text from direct text nodes (ignore button labels)
+    // Helper: extract only plain text from direct text nodes and links (ignore button labels)
     function getBoxTextOnly(el){
       let t = '';
-      el.childNodes.forEach(n => { if(n.nodeType===3) t += n.nodeValue; });
+      el.childNodes.forEach(n => {
+        if(n.nodeType===3) t += n.nodeValue;
+        else if(n.nodeType===1 && n.tagName==='A') t += n.textContent;
+      });
       return t;
     }
-    const firstNode = box.childNodes[0];
-    const currentText = (firstNode && firstNode.nodeType===3 ? firstNode.nodeValue : getBoxTextOnly(box)).trim();
+    const currentText = getBoxTextOnly(box).trim();
 
     // Path A: Alt + DblClick => dynamic editor (textarea)
     if (e.altKey) {
@@ -6154,11 +6262,19 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
       const resizeBtn = box.querySelector('.resize-btn');
       if(deleteBtn) deleteBtn.style.display='none';
       if(resizeBtn) resizeBtn.style.display='none';
+
+      // Remove all non-button nodes
+      Array.from(box.childNodes).forEach(function(n) {
+        if (!(n.classList && (n.classList.contains('delete-btn') || n.classList.contains('resize-btn')))) {
+          n.remove();
+        }
+      });
+
       const input = document.createElement('input');
       input.type = 'text';
       input.className = 'app-box-editor';
       input.value = currentText;
-      if (firstNode && firstNode.nodeType===3) firstNode.replaceWith(input); else box.insertBefore(input, box.firstChild);
+      box.insertBefore(input, box.firstChild);
       input.focus(); input.select();
       const finishQuick = (apply=true)=>{
         const txt = apply ? (input.value || currentText) : currentText;
@@ -6166,6 +6282,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
         input.replaceWith(tn);
         box.setAttribute('data-dynamic','0');
         try { applyBoxLayout(box); } catch(_){}
+        try { linkifyBox(box); } catch(_){}
         if(deleteBtn) deleteBtn.style.display='';
         if(resizeBtn) resizeBtn.style.display='';
         input.removeEventListener('keydown', onKey, true);
@@ -6179,8 +6296,29 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     }
     const deleteBtn = box.querySelector('.delete-btn');
     const resizeBtn = box.querySelector('.resize-btn');
+    const heightResizer = box.querySelector('.height-resizer');
     if(deleteBtn) deleteBtn.style.display='none';
     if(resizeBtn) resizeBtn.style.display='none';
+    if(heightResizer) heightResizer.style.display='none';
+
+    // Collect current HTML content (preserve links)
+    let currentHTML = '';
+    Array.from(box.childNodes).forEach(function(n) {
+      if (n.nodeType === 3) {
+        // Text node - escape and wrap
+        currentHTML += n.nodeValue;
+      } else if (n.nodeType === 1 && n.tagName === 'A') {
+        // Anchor - keep as-is
+        currentHTML += n.outerHTML;
+      }
+    });
+
+    // Remove all non-control nodes (keep buttons and height-resizer)
+    Array.from(box.childNodes).forEach(function(n) {
+      if (!(n.classList && (n.classList.contains('delete-btn') || n.classList.contains('resize-btn') || n.classList.contains('height-resizer')))) {
+        n.remove();
+      }
+    });
 
     const editorWrap = document.createElement('div');
     editorWrap.style.cssText='width:100%; display:flex; flex-direction:column; gap:6px;';
@@ -6198,33 +6336,56 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
       return base[kind] || '';
     }
     let align = (box.style.textAlign || window.getComputedStyle(box).textAlign || 'center');
-    const ta = document.createElement('textarea');
-        ta.className='app-box-editor';
-        // ensure editor is comfortably visible (min 160px) and resizable
-        const MIN_EDIT_H = 160;
-        // make box overflow visible while editing so editor isn't clipped
-        const prevOverflow = box.style.overflow;
-        box.style.overflow = 'visible';
-        // if box had fixed height, relax to allow growth during edit
-        const prevHeight = box.style.height; const prevMinHeight = box.style.minHeight;
-        box.style.height = ''; box.style.minHeight = Math.max(MIN_EDIT_H, box.clientHeight)+'px';
-        ta.style.minHeight = MIN_EDIT_H+'px';
-        ta.style.height = Math.max(MIN_EDIT_H,(box.clientHeight-12))+'px';
-        ta.style.resize='vertical'; ta.value=currentText; ta.style.textAlign=align;
+
+    // Use contenteditable div instead of textarea for rich HTML support
+    const editor = document.createElement('div');
+    editor.contentEditable = 'true';
+    editor.className='app-box-editor rich-text-editor';
+    editor.style.cssText = 'overflow-y:auto; resize:vertical; border:2px solid #007bff; border-radius:4px; padding:8px; background:#fff; font-family:inherit; font-size:inherit; color:#000; cursor:text; box-shadow: 0 0 5px rgba(0,123,255,0.5);';
+    // ensure editor is comfortably visible (min 160px) and resizable
+    const MIN_EDIT_H = 160;
+    // make box overflow visible while editing so editor isn't clipped
+    const prevOverflow = box.style.overflow;
+    box.style.overflow = 'visible';
+    // if box had fixed height, relax to allow growth during edit
+    const prevHeight = box.style.height; const prevMinHeight = box.style.minHeight;
+    box.style.height = ''; box.style.minHeight = Math.max(MIN_EDIT_H, box.clientHeight)+'px';
+    editor.style.minHeight = MIN_EDIT_H+'px';
+    editor.style.height = Math.max(MIN_EDIT_H,(box.clientHeight-12))+'px';
+    editor.style.textAlign = align;
+    editor.innerHTML = currentHTML;
+
     options.forEach(o=>{ const b=document.createElement('button'); b.type='button'; b.innerHTML=alignIcon(o.k); b.title=o.t; b.className='btn small-btn'; b.style.padding='2px 8px'; if(align===o.k) b.style.outline='2px solid #2196F3';
-      // prevent textarea blur on toolbar interaction
+      // prevent editor blur on toolbar interaction
       b.addEventListener('mousedown', ev => { ev.preventDefault(); });
-      b.addEventListener('click',()=>{ align=o.k; ta.style.textAlign=align; Array.from(toolbar.children).forEach(c=>c.style.outline=''); b.style.outline='2px solid #2196F3'; ta.focus(); });
+      b.addEventListener('click',()=>{ align=o.k; editor.style.textAlign=align; Array.from(toolbar.children).forEach(c=>c.style.outline=''); b.style.outline='2px solid #2196F3'; editor.focus(); });
       toolbar.appendChild(b);
     });
-    editorWrap.appendChild(toolbar); editorWrap.appendChild(ta);
-    if(firstNode && firstNode.nodeType===3) firstNode.replaceWith(editorWrap); else box.insertBefore(editorWrap, box.firstChild);
-    ta.focus(); ta.select();
-    const cleanup=()=>{ if(deleteBtn) deleteBtn.style.display=''; if(resizeBtn) resizeBtn.style.display=''; };
+    editorWrap.appendChild(toolbar); editorWrap.appendChild(editor);
+    box.insertBefore(editorWrap, box.firstChild);
+    editor.focus();
+    // Select all content
+    try { const range = document.createRange(); range.selectNodeContents(editor); const sel = window.getSelection(); sel.removeAllRanges(); sel.addRange(range); } catch(_){}
+
+    const cleanup=()=>{
+      if(deleteBtn) deleteBtn.style.display='';
+      if(resizeBtn) resizeBtn.style.display='';
+      if(heightResizer) heightResizer.style.display='';
+    };
     const finish=(apply=true)=>{
-      const txt = apply ? (ta.value||currentText) : currentText;
-      const tn = document.createTextNode(txt);
-      editorWrap.replaceWith(tn);
+      // Remove editor wrapper
+      editorWrap.remove();
+
+      if (!apply) {
+        // Cancel - restore original HTML
+        const temp = document.createElement('div');
+        temp.innerHTML = currentHTML;
+        Array.from(temp.childNodes).forEach(n => box.insertBefore(n, deleteBtn || resizeBtn || null));
+      } else {
+        // Apply - use editor's HTML content
+        Array.from(editor.childNodes).forEach(n => box.insertBefore(n.cloneNode(true), deleteBtn || resizeBtn || null));
+      }
+
       box.style.textAlign = align;
       // Keep flex centering in sync so alignment is visible
       try{
@@ -6240,13 +6401,15 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
         box.style.minHeight = prevMinHeight || '';
         applyBaseMinHeight(box); checkOverflowAndToggle(box);
       } catch(_){ }
+      // NOTE: Do NOT call linkifyBox here! Rich editor already handles HTML/links.
+      // linkifyBox would destroy all formatted content and only keep plain text.
       cleanup();
-      ta.removeEventListener('keydown',onKey,true);
-      ta.removeEventListener('blur',onBlur,true);
+      editor.removeEventListener('keydown',onKey,true);
+      editor.removeEventListener('blur',onBlur,true);
     };
     const onKey=(ev)=>{ if(ev.key==='Escape'){ ev.preventDefault(); finish(false);} if(ev.key==='Enter' && (ev.ctrlKey||ev.metaKey)){ ev.preventDefault(); finish(true);} };
-    ta.addEventListener('keydown', onKey, true);
-    ta.addEventListener('blur', function(){
+    editor.addEventListener('keydown', onKey, true);
+    editor.addEventListener('blur', function(){
       // defer to see where focus went; close only if focus leaves editorWrap
       setTimeout(function(){ if (!editorWrap.contains(document.activeElement)) finish(true); }, 0);
     }, true);
