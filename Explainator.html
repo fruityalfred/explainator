@@ -1413,6 +1413,12 @@
                         <span class="icon">📑</span>
                         <span class="label">Sections: An</span>
                     </button>
+                    <div style="display: flex; align-items: center; gap: 4px; padding: 8px 12px;">
+                        <button class="btn small-btn" onclick="zoomOut()" title="Zoom Out (Ctrl -)">-</button>
+                        <span id="zoomDisplay" style="min-width: 50px; text-align: center; font-size: 12px; color: #666;">100%</span>
+                        <button class="btn small-btn" onclick="zoomIn()" title="Zoom In (Ctrl +)">+</button>
+                        <button class="btn small-btn" onclick="zoomReset()" title="Reset Zoom (Ctrl 0)">⟲</button>
+                    </div>
                 </div>
 
                 <!-- Data Section -->
@@ -4542,6 +4548,7 @@ function insertSplitBlock(btn) {
 
             // Hide interactive UI for clean export
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.add-column').forEach(el => el.style.display = 'none');
             document.querySelectorAll('.header-btn, .split-counter, .resize-handle').forEach(el => el.style.visibility = 'hidden');
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'hidden');
             // Also hide per-box controls and resize grips
@@ -4562,6 +4569,7 @@ function insertSplitBlock(btn) {
 
             // Restore interactive UI
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'block');
+            document.querySelectorAll('.add-column').forEach(el => el.style.display = '');
             document.querySelectorAll('.header-btn').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.split-counter, .resize-handle').forEach(el => el.style.visibility = 'visible');
             document.querySelectorAll('.section-delete, .section-menu').forEach(el => el.style.visibility = 'visible');
@@ -5348,6 +5356,90 @@ function insertSplitBlock(btn) {
   }
 
   var dragging = null, dx=0, dy=0;
+
+  // Alignment guides helpers
+  function findAlignmentGuides(draggedCol, nx, ny) {
+    var SNAP_TOLERANCE = 5;
+    var mc = document.getElementById('mainContainer');
+    var columns = Array.from(mc.querySelectorAll('.column')).filter(c => c !== draggedCol);
+
+    var dragLeft = nx;
+    var dragRight = nx + draggedCol.offsetWidth;
+    var dragCenterX = nx + draggedCol.offsetWidth / 2;
+    var dragTop = ny;
+    var dragBottom = ny + draggedCol.offsetHeight;
+    var dragCenterY = ny + draggedCol.offsetHeight / 2;
+
+    var snapX = null, snapY = null;
+    var guideXs = [], guideYs = [];
+
+    columns.forEach(function(col) {
+      var colLeft = parseInt(col.style.left) || 0;
+      var colRight = colLeft + col.offsetWidth;
+      var colCenterX = colLeft + col.offsetWidth / 2;
+      var colTop = parseInt(col.style.top) || 0;
+      var colBottom = colTop + col.offsetHeight;
+      var colCenterY = colTop + col.offsetHeight / 2;
+
+      // X-axis alignment (left, center, right)
+      if (Math.abs(dragLeft - colLeft) < SNAP_TOLERANCE) {
+        snapX = colLeft;
+        guideXs.push({pos: colLeft, type: 'left'});
+      } else if (Math.abs(dragRight - colRight) < SNAP_TOLERANCE) {
+        snapX = colRight - draggedCol.offsetWidth;
+        guideXs.push({pos: colRight, type: 'right'});
+      } else if (Math.abs(dragCenterX - colCenterX) < SNAP_TOLERANCE) {
+        snapX = colCenterX - draggedCol.offsetWidth / 2;
+        guideXs.push({pos: colCenterX, type: 'center'});
+      }
+
+      // Y-axis alignment (top, center, bottom)
+      if (Math.abs(dragTop - colTop) < SNAP_TOLERANCE) {
+        snapY = colTop;
+        guideYs.push({pos: colTop, type: 'top'});
+      } else if (Math.abs(dragBottom - colBottom) < SNAP_TOLERANCE) {
+        snapY = colBottom - draggedCol.offsetHeight;
+        guideYs.push({pos: colBottom, type: 'bottom'});
+      } else if (Math.abs(dragCenterY - colCenterY) < SNAP_TOLERANCE) {
+        snapY = colCenterY - draggedCol.offsetHeight / 2;
+        guideYs.push({pos: colCenterY, type: 'center'});
+      }
+    });
+
+    return {x: snapX, y: snapY, guidesX: guideXs, guidesY: guideYs};
+  }
+
+  function showAlignmentGuides(guides) {
+    // Remove existing guides
+    document.querySelectorAll('.alignment-guide').forEach(el => el.remove());
+
+    if (!guides || (!guides.guidesX.length && !guides.guidesY.length)) return;
+
+    var mc = document.getElementById('mainContainer');
+    var canvasWidth = parseInt(mc.style.width) || 1920;
+    var canvasHeight = parseInt(mc.style.height) || 1080;
+
+    // Vertical guides (X-axis alignment)
+    guides.guidesX.forEach(function(guide) {
+      var line = document.createElement('div');
+      line.className = 'alignment-guide alignment-guide-vertical';
+      line.style.cssText = `position: absolute; left: ${guide.pos}px; top: 0; width: 1px; height: ${canvasHeight}px; background: #FF4081; pointer-events: none; z-index: 10000;`;
+      mc.appendChild(line);
+    });
+
+    // Horizontal guides (Y-axis alignment)
+    guides.guidesY.forEach(function(guide) {
+      var line = document.createElement('div');
+      line.className = 'alignment-guide alignment-guide-horizontal';
+      line.style.cssText = `position: absolute; left: 0; top: ${guide.pos}px; width: ${canvasWidth}px; height: 1px; background: #FF4081; pointer-events: none; z-index: 10000;`;
+      mc.appendChild(line);
+    });
+  }
+
+  function hideAlignmentGuides() {
+    document.querySelectorAll('.alignment-guide').forEach(el => el.remove());
+  }
+
   function onHeaderDown(e){
     var mc = document.getElementById('mainContainer'); if(!mc || !mc.classList.contains('canvas-mode')) return;
 
@@ -5380,7 +5472,11 @@ function insertSplitBlock(btn) {
     if (hdr) hdr.style.cursor='grabbing';
     else col.style.cursor='grabbing';
     var r = col.getBoundingClientRect();
-    dx = e.clientX - r.left; dy = e.clientY - r.top;
+    var mcr = mc.getBoundingClientRect();
+    // ZOOM FIX: Account for zoom when calculating offset
+    var zoom = (typeof window.getCurrentZoom === 'function') ? window.getCurrentZoom() : 1.0;
+    dx = (e.clientX - r.left) / zoom;
+    dy = (e.clientY - r.top) / zoom;
     document.addEventListener('mousemove', onMove, true);
     document.addEventListener('mouseup', onUp, true);
     e.preventDefault(); e.stopPropagation();
@@ -5389,10 +5485,20 @@ function insertSplitBlock(btn) {
     if (!dragging) return;
     var mc = document.getElementById('mainContainer');
     var mcr = mc.getBoundingClientRect();
-    var nx = e.clientX - mcr.left - dx; var ny = e.clientY - mcr.top - dy;
+    // ZOOM FIX: Divide mouse coordinates by zoom to get actual canvas coordinates
+    var zoom = (typeof window.getCurrentZoom === 'function') ? window.getCurrentZoom() : 1.0;
+    var mouseX = (e.clientX - mcr.left) / zoom;
+    var mouseY = (e.clientY - mcr.top) / zoom;
+    var nx = mouseX - dx;
+    var ny = mouseY - dy;
+
+    // Get actual canvas dimensions (not visual dimensions)
+    var canvasWidth = parseInt(mc.style.width) || mcr.width / zoom;
+    var canvasHeight = parseInt(mc.style.height) || mcr.height / zoom;
+
     // clamp
-    nx = Math.max(0, Math.min(nx, mcr.width - dragging.offsetWidth));
-    ny = Math.max(0, Math.min(ny, mcr.height - dragging.offsetHeight));
+    nx = Math.max(0, Math.min(nx, canvasWidth - dragging.offsetWidth));
+    ny = Math.max(0, Math.min(ny, canvasHeight - dragging.offsetHeight));
     // snap to grid (40px) for edges (left/top and right/bottom)
     var STEP = 40, TOL = 8;
     function snap(val, size, max){
@@ -5404,10 +5510,19 @@ function insertSplitBlock(btn) {
       if (Math.abs(rightQuot - right) <= TOL){ val = rightQuot - size; }
       return Math.max(0, Math.min(val, max - size));
     }
-    nx = snap(nx, dragging.offsetWidth, mcr.width);
-    ny = snap(ny, dragging.offsetHeight, mcr.height);
+    // Alignment guides: snap to other columns
+    var guides = findAlignmentGuides(dragging, nx, ny);
+    if (guides.x !== null) nx = guides.x;
+    if (guides.y !== null) ny = guides.y;
+
+    nx = snap(nx, dragging.offsetWidth, canvasWidth);
+    ny = snap(ny, dragging.offsetHeight, canvasHeight);
     dragging.style.left = Math.round(nx) + 'px';
     dragging.style.top  = Math.round(ny) + 'px';
+
+    // Show alignment guides
+    showAlignmentGuides(guides);
+
     // live update connectors
     try{ updateAllConnectors(); }catch(_){ }
   }
@@ -5422,6 +5537,8 @@ function insertSplitBlock(btn) {
       }
       document.removeEventListener('mousemove', onMove, true);
       document.removeEventListener('mouseup', onUp, true);
+      // Hide alignment guides
+      hideAlignmentGuides();
       // persist current positions in attributes for saving
       try{
         var mc = document.getElementById('mainContainer'); var mcr = mc.getBoundingClientRect();
@@ -5464,6 +5581,21 @@ function insertSplitBlock(btn) {
       svg.style.display='block';
       mc.appendChild(svg);
     } else { svg.style.display='block'; }
+
+    // ZOOM FIX: Set SVG size to match actual canvas dimensions (not zoomed visual size)
+    var isCanvasMode = mc.classList.contains('canvas-mode');
+    if (isCanvasMode) {
+      var canvasWidth = parseInt(mc.style.width) || 1920;
+      var canvasHeight = parseInt(mc.style.height) || 1080;
+      svg.setAttribute('width', canvasWidth);
+      svg.setAttribute('height', canvasHeight);
+      svg.style.position = 'absolute';
+      svg.style.left = '0';
+      svg.style.top = '0';
+      svg.style.pointerEvents = 'none'; // Allow clicking through to columns
+      // Make path elements clickable
+      svg.style.setProperty('pointer-events', 'none');
+    }
   }
   // Get anchor point for column in specified direction
   // Supports 8 directions: top, top-right, right, bottom-right, bottom, bottom-left, left, top-left
@@ -5473,25 +5605,43 @@ function insertSplitBlock(btn) {
     var mcr = mc.getBoundingClientRect();
     var r = col.getBoundingClientRect();
 
+    // ZOOM FIX: Account for zoom when calculating anchor positions
+    var zoom = (typeof window.getCurrentZoom === 'function') ? window.getCurrentZoom() : 1.0;
+
+    // Get computed border width to account for visual border
+    var computedStyle = window.getComputedStyle(col);
+    var borderLeft = parseFloat(computedStyle.borderLeftWidth) || 0;
+    var borderRight = parseFloat(computedStyle.borderRightWidth) || 0;
+    var borderTop = parseFloat(computedStyle.borderTopWidth) || 0;
+    var borderBottom = parseFloat(computedStyle.borderBottomWidth) || 0;
+
     // Round all values to whole pixels for crisp rendering
-    var relX = Math.round(r.left - mcr.left);
-    var relY = Math.round(r.top - mcr.top);
-    var width = Math.round(r.width);
-    var height = Math.round(r.height);
+    // getBoundingClientRect includes border, so we adjust to get the outer edge
+    var relX = Math.round((r.left - mcr.left) / zoom);
+    var relY = Math.round((r.top - mcr.top) / zoom);
+    var width = Math.round(r.width / zoom);
+    var height = Math.round(r.height / zoom);
+
+    // For edges, we want the line to be TIGHT to the border
+    // getBoundingClientRect gives us outer edge including border
     var cx = Math.round(relX + width / 2);
     var cy = Math.round(relY + height / 2);
 
+    // Account for border-radius by slightly offsetting anchors
+    // This ensures visual "tightness" to the frame
+    var OFFSET = 0; // No offset - use exact edge
+
     switch(direction){
-      // Cardinal directions (centered on edges)
-      case 'top': return { x: cx, y: relY };
-      case 'right': return { x: relX + width, y: cy };
-      case 'bottom': return { x: cx, y: relY + height };
-      case 'left': return { x: relX, y: cy };
+      // Cardinal directions (tight to outer edge of border)
+      case 'top': return { x: cx, y: relY + OFFSET };
+      case 'right': return { x: relX + width - OFFSET, y: cy };
+      case 'bottom': return { x: cx, y: relY + height - OFFSET };
+      case 'left': return { x: relX + OFFSET, y: cy };
       // Corner directions
-      case 'top-right': return { x: relX + width, y: relY };
-      case 'bottom-right': return { x: relX + width, y: relY + height };
-      case 'bottom-left': return { x: relX, y: relY + height };
-      case 'top-left': return { x: relX, y: relY };
+      case 'top-right': return { x: relX + width - OFFSET, y: relY + OFFSET };
+      case 'bottom-right': return { x: relX + width - OFFSET, y: relY + height - OFFSET };
+      case 'bottom-left': return { x: relX + OFFSET, y: relY + height - OFFSET };
+      case 'top-left': return { x: relX + OFFSET, y: relY + OFFSET };
       default: return { x: cx, y: cy }; // center fallback
     }
   }
@@ -5518,13 +5668,16 @@ function insertSplitBlock(btn) {
       var ar = fromEl.getBoundingClientRect();
       var br = toEl.getBoundingClientRect();
 
-      var aRelLeft = ar.left - mcr.left, aRelRight = ar.right - mcr.left;
-      var bRelLeft = br.left - mcr.left, bRelRight = br.right - mcr.left;
-      var aRelTop = ar.top - mcr.top, aRelBottom = ar.bottom - mcr.top;
-      var bRelTop = br.top - mcr.top, bRelBottom = br.bottom - mcr.top;
+      // ZOOM FIX: Account for zoom when calculating relative positions
+      var zoom = (typeof window.getCurrentZoom === 'function') ? window.getCurrentZoom() : 1.0;
 
-      var aCX = aRelLeft + ar.width/2, aCY = aRelTop + ar.height/2;
-      var bCX = bRelLeft + br.width/2, bCY = bRelTop + br.height/2;
+      var aRelLeft = (ar.left - mcr.left) / zoom, aRelRight = (ar.right - mcr.left) / zoom;
+      var bRelLeft = (br.left - mcr.left) / zoom, bRelRight = (br.right - mcr.left) / zoom;
+      var aRelTop = (ar.top - mcr.top) / zoom, aRelBottom = (ar.bottom - mcr.top) / zoom;
+      var bRelTop = (br.top - mcr.top) / zoom, bRelBottom = (br.bottom - mcr.top) / zoom;
+
+      var aCX = aRelLeft + (ar.width / zoom) / 2, aCY = aRelTop + (ar.height / zoom) / 2;
+      var bCX = bRelLeft + (br.width / zoom) / 2, bCY = bRelTop + (br.height / zoom) / 2;
 
       var dx = Math.abs(bCX - aCX);
       var dy = Math.abs(bCY - aCY);
@@ -5615,6 +5768,7 @@ function updateAllConnectors(){
       var p = document.createElementNS('http://www.w3.org/2000/svg','path');
       p.setAttribute('d', pathFor(start, end, fromDir, toDir));
       p.setAttribute('data-conn-index', String(idx));
+      p.style.pointerEvents = 'stroke'; // Make path clickable
       svg.appendChild(p);
     });
     // enable selection/deletion
@@ -5646,12 +5800,15 @@ function updateAllConnectors(){
     var mcr = mc.getBoundingClientRect();
     var r = col.getBoundingClientRect();
 
+    // ZOOM FIX: Account for zoom in overlay positioning
+    var zoom = (typeof window.getCurrentZoom === 'function') ? window.getCurrentZoom() : 1.0;
+
     var overlay = document.createElement('div');
     overlay.className = 'connector-anchor-overlay active';
-    overlay.style.left = (r.left - mcr.left) + 'px';
-    overlay.style.top = (r.top - mcr.top) + 'px';
-    overlay.style.width = r.width + 'px';
-    overlay.style.height = r.height + 'px';
+    overlay.style.left = ((r.left - mcr.left) / zoom) + 'px';
+    overlay.style.top = ((r.top - mcr.top) / zoom) + 'px';
+    overlay.style.width = (r.width / zoom) + 'px';
+    overlay.style.height = (r.height / zoom) + 'px';
 
     // 8 anchor points: 4 cardinal + 4 corners
     var directions = ['top', 'top-right', 'right', 'bottom-right', 'bottom', 'bottom-left', 'left', 'top-left'];
@@ -5661,8 +5818,8 @@ function updateAllConnectors(){
 
       var dot = document.createElement('div');
       dot.className = 'anchor-point';
-      dot.style.left = anchor.x - (r.left - mcr.left) + 'px';
-      dot.style.top = anchor.y - (r.top - mcr.top) + 'px';
+      dot.style.left = (anchor.x - ((r.left - mcr.left) / zoom)) + 'px';
+      dot.style.top = (anchor.y - ((r.top - mcr.top) / zoom)) + 'px';
       dot.setAttribute('data-direction', dir);
       dot.title = dir;
 
@@ -6463,4 +6620,96 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 })();
 </script>
 
+<script>
+// Zoom functionality for mainContainer
+(function(){
+  let currentZoom = 1.0;
+  const ZOOM_STEP = 0.1;
+  const MIN_ZOOM = 0.25;
+  const MAX_ZOOM = 2.0;
+  const STORAGE_KEY = 'ea_zoom_level';
+
+  // Expose zoom level globally for canvas drag handlers
+  window.getCurrentZoom = function() {
+    return currentZoom;
+  };
+
+  function applyZoom(zoom) {
+    const container = document.getElementById('mainContainer');
+    if (!container) return;
+
+    currentZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom));
+
+    // Apply zoom via transform
+    container.style.transform = `scale(${currentZoom})`;
+    container.style.transformOrigin = 'top left';
+
+    // Check if we're in canvas mode
+    const isCanvasMode = container.classList.contains('canvas-mode');
+
+    if (isCanvasMode) {
+      // Canvas mode: preserve fixed width/height, don't override
+      // Just apply transform - canvas already has fixed dimensions
+    } else {
+      // Normal mode: Adjust width to compensate for scale
+      // This ensures the container takes up the correct visual space
+      // so mouse coordinates align and scrolling works properly
+      container.style.width = `${100 / currentZoom}%`;
+      container.style.height = 'auto';
+    }
+
+    // Ensure parent allows overflow scrolling
+    const parent = container.parentElement;
+    if (parent) {
+      parent.style.overflow = 'auto';
+    }
+
+    // Update display
+    const display = document.getElementById('zoomDisplay');
+    if (display) display.textContent = Math.round(currentZoom * 100) + '%';
+
+    // Save to localStorage
+    try {
+      localStorage.setItem(STORAGE_KEY, currentZoom.toString());
+    } catch(_) {}
+  }
+
+  window.zoomIn = function() {
+    applyZoom(currentZoom + ZOOM_STEP);
+  };
+
+  window.zoomOut = function() {
+    applyZoom(currentZoom - ZOOM_STEP);
+  };
+
+  window.zoomReset = function() {
+    applyZoom(1.0);
+  };
+
+  // Keyboard shortcuts: Ctrl + Plus/Minus/0
+  document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        window.zoomIn();
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        window.zoomOut();
+      } else if (e.key === '0') {
+        e.preventDefault();
+        window.zoomReset();
+      }
+    }
+  });
+
+  // Restore zoom level on load
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const zoom = parseFloat(saved);
+      if (!isNaN(zoom)) applyZoom(zoom);
+    }
+  } catch(_) {}
+})();
+</script>
 
