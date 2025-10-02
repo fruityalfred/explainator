@@ -1000,6 +1000,7 @@
 .project-file-box-actions button:hover {
     background: #d0d0d0;
 }
+
 </style>
 
 <style>.column-header{position:relative}</style>
@@ -1592,6 +1593,10 @@ body.presentation-mode .section-pipette {
                         <span class="icon">📦</span>
                         <span class="label">Neue Box</span>
                     </button>
+                    <button class="nav-item" onclick="showAddNotesBoxModal()" data-translate="addNotesBox" title="Notizbox hinzufügen">
+                        <span class="icon">📝</span>
+                        <span class="label">Notizbox</span>
+                    </button>
                     <button class="nav-item" onclick="showAddLineModal()" data-translate="addLine" title="Lines">
                         <span class="icon">📏</span>
                         <span class="label" data-translate="addLine">Lines</span>
@@ -1762,6 +1767,23 @@ body.presentation-mode .section-pipette {
             <div class="modal-footer">
                 <button class="btn btn-primary" onclick="addBoxNew()" data-translate="add">Hinzufügen</button>
                 <button class="btn btn-danger" onclick="closeModal('addBoxModal')" data-translate="cancel" data-translate="cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notes Box Modal -->
+    <div class="modal" id="notesBoxModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header" data-translate="notesBoxModalTitle">📝 Notizbox hinzufügen</div>
+            <div class="modal-body">
+                <textarea id="notesBoxText"
+                          placeholder="Mehrzeilige Notizen hier eingeben..."
+                          data-translate-placeholder="notesBoxPlaceholder"
+                          style="width: 100%; min-height: 200px; padding: 12px; font-family: inherit; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; resize: vertical;"></textarea>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-primary" onclick="addNotesBoxFromModal()" data-translate="add">Hinzufügen</button>
+                <button class="btn btn-danger" onclick="closeModal('notesBoxModal')" data-translate="cancel">Abbrechen</button>
             </div>
         </div>
     </div>
@@ -2310,6 +2332,10 @@ body.presentation-mode .section-pipette {
                 canvasResolutionTitle: "Canvas Auflösung",
                 connectionsLabel: "Verbindungen",
                 connectionsTitle: "Verbindungen",
+                notesBox: "Notizbox",
+                addNotesBox: "Notizbox hinzufügen",
+                notesBoxModalTitle: "Notizbox hinzufügen",
+                notesBoxPlaceholder: "Mehrzeilige Notizen hier eingeben...\n\nUnterstützt Zeilenumbrüche und Formatierung.",
                 projects: "Projekte",
                 projectManager: "Projektverwaltung",
                 newProject: "Neues Projekt",
@@ -2457,6 +2483,10 @@ body.presentation-mode .section-pipette {
                 addInfobox: "Add Infobox",
                 infoboxTitle: "Add Infobox",
                 infoboxPlaceholder: "Enter multiline text for the infobox...",
+                notesBox: "Notes Box",
+                addNotesBox: "Add Notes Box",
+                notesBoxModalTitle: "Add Notes Box",
+                notesBoxPlaceholder: "Enter multiline notes here...\n\nSupports line breaks and formatting.",
                 data: "Data",
                 projects: "Projects",
                 projectManager: "Project Manager",
@@ -3706,7 +3736,62 @@ function insertSplitBlock(btn) {
                 if (typeSel) typeSel.addEventListener('change', setFromCategory);
             } catch(_) {}
         }
-        
+
+        function showAddNotesBoxModal() {
+            const modal = document.getElementById('notesBoxModal');
+            modal.classList.add('show');
+            const textarea = document.getElementById('notesBoxText');
+            if (textarea) {
+                textarea.value = '';
+                // Focus textarea for immediate typing
+                setTimeout(() => textarea.focus(), 100);
+            }
+        }
+
+        function addNotesBoxFromModal() {
+            const text = document.getElementById('notesBoxText').value.trim();
+            if (!text) {
+                const t = translations[currentLanguage];
+                alert(t.alertChooseFile || 'Bitte Text eingeben!');
+                return;
+            }
+
+            // Create exactly like addBoxNew() does - a normal box with delete and resize buttons
+            const newBox = document.createElement('div');
+            newBox.draggable = true;
+            newBox.className = 'app-box full-width'; // Use default category, full width
+
+            // Add text with delete and resize buttons - EXACTLY like normal boxes
+            newBox.innerHTML = `${text}<button class="delete-btn" onclick="deleteBox(this)">×</button><button class="resize-btn" onclick="toggleBoxWidth(this)">↔</button>`;
+
+            // Set data attributes like normal boxes
+            newBox.dataset.lines = '5'; // Multiline
+            newBox.setAttribute('data-base-lines', '5');
+            newBox.setAttribute('data-dynamic', '0');
+
+            // Style for multiline text display
+            newBox.style.minHeight = '150px';
+            newBox.style.whiteSpace = 'pre-wrap';
+            newBox.style.textAlign = 'left';
+            newBox.style.lineHeight = '1.5';
+
+            // Add to target section - use same logic as addBoxNew()
+            const target = getTargetBoxContainer();
+            if (target) {
+                target.appendChild(newBox);
+            } else {
+                alert('Keine Section gefunden! Bitte erst eine Spalte/Section erstellen.');
+                return;
+            }
+
+            // Apply same post-processing as normal boxes
+            try { applyBoxLayout(newBox); } catch(_){}
+            try { linkifyBox(newBox); } catch(_){}
+
+            // Close modal
+            closeModal('notesBoxModal');
+        }
+
         function closeModal(modalId) { document.getElementById(modalId).classList.remove('show'); }
 
         function showHelpModal(){
