@@ -1084,6 +1084,41 @@ body.presentation-mode .main-container {
     height: calc(100vh - 60px);
 }
 
+/* Floating Notes Box Button */
+.floating-notes-btn {
+    position: fixed;
+    bottom: 110px;  /* Higher than presentation mode button */
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    cursor: pointer;
+    font-size: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 1001;  /* Higher than other floating buttons */
+}
+
+.floating-notes-btn:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+}
+
+.floating-notes-btn:active {
+    transform: translateY(0);
+}
+
+/* Hide in presentation mode */
+body.presentation-mode .floating-notes-btn {
+    display: none !important;
+}
+
 /* Floating Add Box Button in Presentation Mode */
 .presentation-add-box-btn {
     display: none;
@@ -3062,8 +3097,12 @@ body.presentation-mode .section-pipette {
                     // Ignore other node types (should not happen in normal box content)
                 });
 
-                // Replace content with fragment and re-append controls
-                Array.from(box.childNodes).forEach(function(n){ if (!(n.classList && (n.classList.contains('delete-btn')||n.classList.contains('resize-btn')))) n.remove(); });
+                // Replace content with fragment and re-append controls (preserve height-resizer as well)
+                Array.from(box.childNodes).forEach(function(n){
+                    if (!(n.classList && (n.classList.contains('delete-btn') || n.classList.contains('resize-btn') || n.classList.contains('height-resizer')))) {
+                        n.remove();
+                    }
+                });
                 box.appendChild(frag);
                 controls.forEach(c=>box.appendChild(c));
             }catch(_){ }
@@ -7359,6 +7398,9 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 })();
 </script>
 
+<!-- Floating Notes Box Button (always visible) -->
+<button class="floating-notes-btn" onclick="showAddNotesBoxModal()" title="Notizbox hinzufügen">📝</button>
+
 <!-- Floating Buttons for Presentation Mode -->
 <button class="presentation-add-box-btn" onclick="showAddBoxModal()" title="Neue Box hinzufügen">➕</button>
 <button class="presentation-export-btn" onclick="exportToPNG()" title="Als PNG exportieren">
@@ -7511,12 +7553,14 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
       // Path B: plain DblClick => single-line quick edit (fixed height)
       const deleteBtn = box.querySelector('.delete-btn');
       const resizeBtn = box.querySelector('.resize-btn');
+      const heightResizer = box.querySelector('.height-resizer');
       if(deleteBtn) deleteBtn.style.display='none';
       if(resizeBtn) resizeBtn.style.display='none';
+      if(heightResizer) heightResizer.style.display='none';
 
-      // Remove all non-button nodes
+      // Remove all non-control nodes (keep buttons and height-resizer)
       Array.from(box.childNodes).forEach(function(n) {
-        if (!(n.classList && (n.classList.contains('delete-btn') || n.classList.contains('resize-btn')))) {
+        if (!(n.classList && (n.classList.contains('delete-btn') || n.classList.contains('resize-btn') || n.classList.contains('height-resizer')))) {
           n.remove();
         }
       });
@@ -7529,13 +7573,36 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
       input.focus(); input.select();
       const finishQuick = (apply=true)=>{
         const txt = apply ? (input.value || currentText) : currentText;
-        const tn = document.createTextNode(txt);
-        input.replaceWith(tn);
+
+        // Remove input
+        input.remove();
+
+        // Rebuild box content: text first, then buttons
+        const textNode = document.createTextNode(txt);
+
+        // Clear all content
+        box.innerHTML = '';
+
+        // Add text
+        box.appendChild(textNode);
+
+        // Re-add controls
+        if(deleteBtn) {
+          deleteBtn.style.display = '';
+          box.appendChild(deleteBtn);
+        }
+        if(resizeBtn) {
+          resizeBtn.style.display = '';
+          box.appendChild(resizeBtn);
+        }
+        if(heightResizer) {
+          heightResizer.style.display = '';
+          box.appendChild(heightResizer);
+        }
+
         box.setAttribute('data-dynamic','0');
         try { applyBoxLayout(box); } catch(_){}
         try { linkifyBox(box); } catch(_){}
-        if(deleteBtn) deleteBtn.style.display='';
-        if(resizeBtn) resizeBtn.style.display='';
         input.removeEventListener('keydown', onKey, true);
         input.removeEventListener('blur', onBlur, true);
       };
