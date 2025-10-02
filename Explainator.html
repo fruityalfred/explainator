@@ -8450,6 +8450,14 @@ function getDragAfterElementInModal(container, y) {
 }
 
 function linkCurrentTemplateToModal() {
+    // IMPORTANT: If mainContainer is hidden (e.g., in Project view), temporarily show it to extract layout data
+    const mainContainer = document.getElementById('mainContainer');
+    const wasHidden = mainContainer && mainContainer.style.display === 'none';
+
+    if (wasHidden) {
+        mainContainer.style.display = 'flex'; // Temporarily show for data extraction
+    }
+
     // Extract current state (same as exportStandaloneHTML does)
     const templateData = {
         name: window.currentTemplateName || 'Explainator Standalone',
@@ -8461,6 +8469,11 @@ function linkCurrentTemplateToModal() {
 
     // Build standalone HTML with embedded runtime (same as HTML Export button)
     const htmlContent = buildStandaloneHTML(templateData);
+
+    // Restore hidden state if it was hidden
+    if (wasHidden) {
+        mainContainer.style.display = 'none';
+    }
 
     const file = {
         id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
