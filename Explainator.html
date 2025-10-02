@@ -940,6 +940,119 @@
 </style>
 
 <style>
+/* Presentation Mode */
+body.presentation-mode {
+    overflow: hidden;
+}
+
+body.presentation-mode .sidebar,
+body.presentation-mode .top-header {
+    display: none !important;
+}
+
+body.presentation-mode .main-content {
+    margin-left: 0 !important;
+    padding: 0;
+    background: #f5f7fa;
+}
+
+body.presentation-mode .container {
+    max-width: 100%;
+    height: 100vh;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 30px;
+}
+
+body.presentation-mode .main-container {
+    height: calc(100vh - 60px);
+}
+
+/* Floating Add Box Button in Presentation Mode */
+.presentation-add-box-btn {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    font-size: 32px;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    transition: all 0.3s;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+body.presentation-mode .presentation-add-box-btn {
+    display: flex;
+}
+
+.presentation-add-box-btn:hover {
+    transform: scale(1.1) rotate(90deg);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.6);
+}
+
+.presentation-add-box-btn:active {
+    transform: scale(1.05) rotate(90deg);
+}
+
+/* PNG Export Button in Presentation Mode */
+.presentation-export-btn {
+    display: none;
+    position: fixed;
+    bottom: 30px;
+    left: 30px;
+    padding: 12px 24px;
+    background: linear-gradient(135deg, #84fab0 0%, #8fd3f4 100%);
+    color: #1a1a1a;
+    border: none;
+    border-radius: 30px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(132, 250, 176, 0.4);
+    transition: all 0.3s;
+    z-index: 10000;
+}
+
+body.presentation-mode .presentation-export-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.presentation-export-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 32px rgba(132, 250, 176, 0.6);
+}
+
+.presentation-export-btn:active {
+    transform: translateY(0);
+}
+
+/* Hide all edit controls in presentation mode */
+body.presentation-mode .add-section-btn,
+body.presentation-mode .add-column,
+body.presentation-mode .delete-column,
+body.presentation-mode .section-delete,
+body.presentation-mode .color-column-btn,
+body.presentation-mode .pipette-column-btn,
+body.presentation-mode .insert-split-btn,
+body.presentation-mode .split-counter,
+body.presentation-mode .section-menu,
+body.presentation-mode .section-pipette {
+    display: none !important;
+}
+</style>
+
+<style>
     /* Styling für das Bearbeitungs-Eingabefeld in einer App-Box */
     .app-box-editor {
         width: 100%;
@@ -1440,6 +1553,14 @@
                         <span class="icon">🖼️</span>
                         <span class="label">PNG Export</span>
                     </button>
+                    <button class="nav-item" data-role="presentation-toggle-btn" onclick="togglePresentationMode()" title="Präsentationsmodus">
+                        <span class="icon">🎭</span>
+                        <span class="label">Präsentation</span>
+                    </button>
+                    <button class="nav-item" onclick="exportStandaloneHTML()" title="Standalone HTML Export">
+                        <span class="icon">📦</span>
+                        <span class="label">HTML Export</span>
+                    </button>
                 </div>
 
                 <!-- System Section -->
@@ -1610,7 +1731,7 @@
                 
                 <div style="border-top: 2px solid #eee; padding-top: 20px;">
                     <h4 style="margin-bottom: 10px;" data-translate="loadTemplateFromFileTitle">Template aus Datei laden:</h4>
-                    <input type="file" id="templateFileInput" accept=".json" style="margin-bottom: 10px;">
+                    <input type="file" id="templateFileInput" accept=".exp,.json" style="margin-bottom: 10px;">
                     <button class="btn btn-primary" onclick="loadTemplateFromFile()" data-translate="loadFile">📂 Datei laden</button>
                 </div>
             </div>
@@ -4029,7 +4150,7 @@ function insertSplitBlock(btn) {
             const blob = new Blob([JSON.stringify(templateData, null, 2)], { type: 'application/json' });
             const a = document.createElement('a');
             a.href = URL.createObjectURL(blob);
-            a.download = `${templateData.name.replace(/[^a-z0-9]/gi, '_')}.json`;
+            a.download = `${templateData.name.replace(/[^a-z0-9]/gi, '_')}.exp`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -4581,6 +4702,316 @@ function insertSplitBlock(btn) {
                 col.style.boxShadow = '';
                 col.style.border = '';
             });
+        }
+
+        // === STANDALONE HTML EXPORT ===
+        function exportStandaloneHTML() {
+            const t = translations[currentLanguage];
+
+            // Extract current state
+            const templateData = {
+                name: window.currentTemplateName || 'Explainator Standalone',
+                date: new Date().toISOString(),
+                categories,
+                layout: extractLayoutData(),
+                fontSettings: window.fontSettings
+            };
+
+            // Build standalone HTML with embedded runtime
+            const standaloneHTML = buildStandaloneHTML(templateData);
+
+            // Download
+            const blob = new Blob([standaloneHTML], { type: 'text/html;charset=utf-8' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `explainator-standalone-${new Date().toISOString().split('T')[0]}.html`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            alert('Standalone HTML wurde exportiert! Der Empfänger kann Boxen verschieben, umbenennen und PNG exportieren.');
+        }
+
+        function buildStandaloneHTML(data) {
+            // Get all CSS (extract from current document)
+            const allStyles = Array.from(document.querySelectorAll('style'))
+                .map(s => s.textContent)
+                .join('\n');
+
+            // Build the HTML content from layout
+            const mainContainerHTML = document.getElementById('mainContainer').outerHTML;
+
+            const categoriesJSON = JSON.stringify(data.categories).replace(/`/g, '\\`');
+
+            const html = '<!DOCTYPE html>\n' +
+'<html lang="de">\n' +
+'<head>\n' +
+'    <meta charset="UTF-8">\n' +
+'    <meta name="viewport" content="width=device-width, initial-scale=1.0">\n' +
+'    <title>' + escapeHtml(data.name) + ' - Explainator Standalone</title>\n' +
+'    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"><\/script>\n' +
+'    <style>\n' +
+allStyles + '\n' +
+'        /* Standalone-specific overrides */\n' +
+'        .sidebar, .top-header { display: none !important; }\n' +
+'        .main-content { margin-left: 0 !important; }\n' +
+'        body { margin: 0; padding: 20px; background: #f5f7fa; overflow: auto !important; }\n' +
+'        body.presentation-mode { overflow: auto !important; }\n' +
+'        body.presentation-mode .container { height: auto !important; max-width: 100%; }\n' +
+'        body.presentation-mode .main-container { height: auto !important; min-height: calc(100vh - 60px); }\n' +
+'        .presentation-add-box-btn, .presentation-export-btn { display: flex !important; position: fixed !important; }\n' +
+'    </style>\n' +
+'</head>\n' +
+'<body class="presentation-mode">\n' +
+'    <div class="app-wrapper">\n' +
+'        <div class="main-content">\n' +
+'            <div class="container">\n' +
+mainContainerHTML + '\n' +
+'            </div>\n' +
+'        </div>\n' +
+'    </div>\n' +
+'    <button class="presentation-add-box-btn" onclick="showAddBoxModal()" title="Neue Box hinzufügen">➕</button>\n' +
+'    <button class="presentation-export-btn" onclick="exportToPNG()" title="Als PNG exportieren" style="left: 30px;"><span>🖼️</span><span>PNG</span></button>\n' +
+'    <button class="presentation-export-btn" onclick="saveStandalone()" title="Änderungen speichern" style="left: 140px;"><span>💾</span><span>Speichern</span></button>\n' +
+'    <button class="presentation-export-btn" onclick="loadStandalone()" title="HTML Datei laden" style="left: 270px;"><span>📂</span><span>Laden</span></button>\n' +
+'    <div class="modal" id="addBoxModal"><div class="modal-content"><div class="modal-header">📦 Neue Box</div>\n' +
+'    <div class="modal-body"><input type="text" id="boxName" placeholder="Box Name" style="width:100%; padding:8px; margin-bottom:10px;">\n' +
+'    <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="addBoxFromModal()">Hinzufügen</button>\n' +
+'    <button class="btn btn-danger" onclick="closeModal(\'addBoxModal\')">Abbrechen</button></div></div></div></div>\n' +
+'    <script>\n' +
+'        const categories = ' + categoriesJSON + ';\n' +
+'        function showAddBoxModal() { document.getElementById("addBoxModal").classList.add("show"); setTimeout(() => document.getElementById("boxName").focus(), 100); }\n' +
+'        function closeModal(id) { document.getElementById(id).classList.remove("show"); }\n' +
+'        function addBoxFromModal() {\n' +
+'            const name = document.getElementById("boxName").value.trim();\n' +
+'            if (!name) return;\n' +
+'            const firstSection = document.querySelector(".section-group .box-container");\n' +
+'            if (firstSection) {\n' +
+'                const box = createBox(name);\n' +
+'                firstSection.appendChild(box);\n' +
+'                setupDragAndDrop();\n' +
+'            }\n' +
+'            document.getElementById("boxName").value = "";\n' +
+'            closeModal("addBoxModal");\n' +
+'        }\n' +
+'        function createBox(name) {\n' +
+'            const box = document.createElement("div");\n' +
+'            box.className = "app-box full-width";\n' +
+'            box.setAttribute("draggable", "true");\n' +
+'            box.textContent = name;\n' +
+'            box.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";\n' +
+'            box.style.color = "white";\n' +
+'            const deleteBtn = document.createElement("button");\n' +
+'            deleteBtn.className = "delete-btn";\n' +
+'            deleteBtn.textContent = "×";\n' +
+'            deleteBtn.onclick = function(e) { e.stopPropagation(); box.remove(); };\n' +
+'            box.appendChild(deleteBtn);\n' +
+'            const leftBtn = document.createElement("button");\n' +
+'            leftBtn.className = "delete-btn";\n' +
+'            leftBtn.textContent = "◀";\n' +
+'            leftBtn.style.right = "76px";\n' +
+'            leftBtn.style.background = "#9C27B0";\n' +
+'            leftBtn.onclick = function(e) { e.stopPropagation(); const prev = box.previousElementSibling; if (prev && prev.classList.contains("app-box")) { box.parentNode.insertBefore(box, prev); } };\n' +
+'            box.appendChild(leftBtn);\n' +
+'            const rightBtn = document.createElement("button");\n' +
+'            rightBtn.className = "delete-btn";\n' +
+'            rightBtn.textContent = "▶";\n' +
+'            rightBtn.style.right = "100px";\n' +
+'            rightBtn.style.background = "#00BCD4";\n' +
+'            rightBtn.onclick = function(e) { e.stopPropagation(); const next = box.nextElementSibling; if (next && next.classList.contains("app-box")) { const parent = box.parentNode; parent.insertBefore(next, box); } };\n' +
+'            box.appendChild(rightBtn);\n' +
+'            const upBtn = document.createElement("button");\n' +
+'            upBtn.className = "delete-btn";\n' +
+'            upBtn.textContent = "▲";\n' +
+'            upBtn.style.right = "28px";\n' +
+'            upBtn.style.background = "#2196F3";\n' +
+'            upBtn.onclick = function(e) { e.stopPropagation(); const prev = box.previousElementSibling; if (prev && prev.classList.contains("app-box")) { box.parentNode.insertBefore(box, prev); } };\n' +
+'            box.appendChild(upBtn);\n' +
+'            const downBtn = document.createElement("button");\n' +
+'            downBtn.className = "delete-btn";\n' +
+'            downBtn.textContent = "▼";\n' +
+'            downBtn.style.right = "52px";\n' +
+'            downBtn.style.background = "#FF9800";\n' +
+'            downBtn.onclick = function(e) { e.stopPropagation(); const next = box.nextElementSibling; if (next && next.classList.contains("app-box")) { const parent = box.parentNode; parent.insertBefore(next, box); } };\n' +
+'            box.appendChild(downBtn);\n' +
+'            return box;\n' +
+'        }\n' +
+'        let draggedElement = null;\n' +
+'        function setupDragAndDrop() {\n' +
+'            document.querySelectorAll(".app-box").forEach(box => {\n' +
+'                if (box.dataset.setupDone) return;\n' +
+'                box.dataset.setupDone = "1";\n' +
+'                box.setAttribute("draggable", "true");\n' +
+'                box.ondragstart = function(e) { draggedElement = this; e.dataTransfer.effectAllowed = "move"; setTimeout(() => this.classList.add("dragging"), 0); };\n' +
+'                box.ondragend = function() { this.classList.remove("dragging"); document.querySelectorAll(".box-container").forEach(c => c.classList.remove("drag-over")); };\n' +
+'                box.ondblclick = function() {\n' +
+'                    const currentText = this.childNodes[0].nodeType === 3 ? this.childNodes[0].textContent : this.textContent;\n' +
+'                    const newText = prompt("Box umbenennen:", currentText);\n' +
+'                    if (newText !== null && newText.trim()) {\n' +
+'                        const buttons = Array.from(this.querySelectorAll(".delete-btn"));\n' +
+'                        this.textContent = newText.trim();\n' +
+'                        buttons.forEach(btn => this.appendChild(btn));\n' +
+'                    }\n' +
+'                };\n' +
+'                if (!box.querySelector(".delete-btn[onclick*=\\"insertBefore\\"]")) {\n' +
+'                    const deleteBtn = box.querySelector(".delete-btn");\n' +
+'                    const leftBtn = document.createElement("button");\n' +
+'                    leftBtn.className = "delete-btn";\n' +
+'                    leftBtn.textContent = "◀";\n' +
+'                    leftBtn.style.right = "76px";\n' +
+'                    leftBtn.style.background = "#9C27B0";\n' +
+'                    leftBtn.onclick = function(e) { e.stopPropagation(); const prev = box.previousElementSibling; if (prev && prev.classList.contains("app-box")) { box.parentNode.insertBefore(box, prev); } };\n' +
+'                    if (deleteBtn) box.insertBefore(leftBtn, deleteBtn);\n' +
+'                    const rightBtn = document.createElement("button");\n' +
+'                    rightBtn.className = "delete-btn";\n' +
+'                    rightBtn.textContent = "▶";\n' +
+'                    rightBtn.style.right = "100px";\n' +
+'                    rightBtn.style.background = "#00BCD4";\n' +
+'                    rightBtn.onclick = function(e) { e.stopPropagation(); const next = box.nextElementSibling; if (next && next.classList.contains("app-box")) { const parent = box.parentNode; parent.insertBefore(next, box); } };\n' +
+'                    if (deleteBtn) box.insertBefore(rightBtn, deleteBtn);\n' +
+'                    const upBtn = document.createElement("button");\n' +
+'                    upBtn.className = "delete-btn";\n' +
+'                    upBtn.textContent = "▲";\n' +
+'                    upBtn.style.right = "28px";\n' +
+'                    upBtn.style.background = "#2196F3";\n' +
+'                    upBtn.onclick = function(e) { e.stopPropagation(); const prev = box.previousElementSibling; if (prev && prev.classList.contains("app-box")) { box.parentNode.insertBefore(box, prev); } };\n' +
+'                    if (deleteBtn) box.insertBefore(upBtn, deleteBtn);\n' +
+'                    const downBtn = document.createElement("button");\n' +
+'                    downBtn.className = "delete-btn";\n' +
+'                    downBtn.textContent = "▼";\n' +
+'                    downBtn.style.right = "52px";\n' +
+'                    downBtn.style.background = "#FF9800";\n' +
+'                    downBtn.onclick = function(e) { e.stopPropagation(); const next = box.nextElementSibling; if (next && next.classList.contains("app-box")) { const parent = box.parentNode; parent.insertBefore(next, box); } };\n' +
+'                    if (deleteBtn) box.insertBefore(downBtn, deleteBtn);\n' +
+'                }\n' +
+'            });\n' +
+'            document.querySelectorAll(".box-container").forEach(container => {\n' +
+'                container.ondragover = function(e) {\n' +
+'                    e.preventDefault();\n' +
+'                    this.classList.add("drag-over");\n' +
+'                    const afterElement = getDragAfterElement(this, e.clientX, e.clientY);\n' +
+'                    if (afterElement == null) {\n' +
+'                        this.appendChild(draggedElement);\n' +
+'                    } else {\n' +
+'                        this.insertBefore(draggedElement, afterElement);\n' +
+'                    }\n' +
+'                };\n' +
+'                container.ondragleave = function(e) {\n' +
+'                    if (!this.contains(e.relatedTarget)) this.classList.remove("drag-over");\n' +
+'                };\n' +
+'                container.ondrop = function(e) {\n' +
+'                    e.preventDefault();\n' +
+'                    this.classList.remove("drag-over");\n' +
+'                };\n' +
+'            });\n' +
+'            function getDragAfterElement(container, x, y) {\n' +
+'                const draggableElements = [...container.querySelectorAll(".app-box:not(.dragging)")];\n' +
+'                return draggableElements.reduce((closest, child) => {\n' +
+'                    const box = child.getBoundingClientRect();\n' +
+'                    const boxCenterY = box.top + box.height / 2;\n' +
+'                    const boxCenterX = box.left + box.width / 2;\n' +
+'                    const offsetY = y - boxCenterY;\n' +
+'                    const offsetX = x - boxCenterX;\n' +
+'                    const distance = Math.sqrt(offsetX * offsetX + offsetY * offsetY);\n' +
+'                    if (offsetY < 0 || (Math.abs(offsetY) < 20 && offsetX < 0)) {\n' +
+'                        if (distance < closest.distance) {\n' +
+'                            return { distance: distance, element: child };\n' +
+'                        }\n' +
+'                    }\n' +
+'                    return closest;\n' +
+'                }, { distance: Number.POSITIVE_INFINITY }).element;\n' +
+'            }\n' +
+'            document.querySelectorAll(".column-header").forEach(header => {\n' +
+'                header.ondblclick = function() {\n' +
+'                    const currentText = this.childNodes[0].textContent.trim();\n' +
+'                    const newText = prompt("Spalte umbenennen:", currentText);\n' +
+'                    if (newText !== null && newText.trim()) this.childNodes[0].textContent = newText.trim();\n' +
+'                };\n' +
+'            });\n' +
+'            document.querySelectorAll(".section-title").forEach(title => {\n' +
+'                title.ondblclick = function() {\n' +
+'                    const currentText = this.childNodes[0].textContent.trim();\n' +
+'                    const newText = prompt("Section umbenennen:", currentText);\n' +
+'                    if (newText !== null && newText.trim()) this.childNodes[0].textContent = newText.trim();\n' +
+'                };\n' +
+'            });\n' +
+'        }\n' +
+'        function exportToPNG() {\n' +
+'            document.querySelectorAll(".presentation-add-box-btn, .presentation-export-btn, .delete-btn").forEach(el => { el.style.visibility = "hidden"; });\n' +
+'            setTimeout(() => {\n' +
+'                html2canvas(document.body, { scale: 2, backgroundColor: "#f5f7fa" }).then(canvas => {\n' +
+'                    document.querySelectorAll(".presentation-add-box-btn, .presentation-export-btn, .delete-btn").forEach(el => { el.style.visibility = ""; });\n' +
+'                    const a = document.createElement("a");\n' +
+'                    a.href = canvas.toDataURL("image/png", 0.95);\n' +
+'                    a.download = "explainator-export-" + new Date().toISOString().split("T")[0] + ".png";\n' +
+'                    document.body.appendChild(a); a.click(); document.body.removeChild(a);\n' +
+'                }).catch(() => {\n' +
+'                    document.querySelectorAll(".presentation-add-box-btn, .presentation-export-btn, .delete-btn").forEach(el => { el.style.visibility = ""; });\n' +
+'                    alert("Export fehlgeschlagen");\n' +
+'                });\n' +
+'            }, 100);\n' +
+'        }\n' +
+'        function saveStandalone() {\n' +
+'            const currentName = document.title.replace(" - Explainator Standalone", "");\n' +
+'            const filename = prompt("Dateiname eingeben:", currentName || "explainator");\n' +
+'            if (!filename) return;\n' +
+'            const cleanName = filename.replace(/\\.html$/i, "").replace(/[^a-z0-9_\\-]/gi, "_");\n' +
+'            document.querySelectorAll(".app-box").forEach(box => delete box.dataset.setupDone);\n' +
+'            const originalTitle = document.title;\n' +
+'            document.title = cleanName + " - Explainator Standalone";\n' +
+'            const doctype = "<!DOCTYPE html>";\n' +
+'            const htmlTag = document.documentElement.outerHTML;\n' +
+'            let fullHtml = doctype + "\\n" + htmlTag;\n' +
+'            fullHtml = fullHtml.replace(/<script([^>]*)>([\\s\\S]*?)<\\/script>/gi, function(match, attrs, content) {\n' +
+'                if (content.indexOf("CDATA") === -1) {\n' +
+'                    return "<script" + attrs + ">//<![CDATA[\\n" + content + "\\n//]]><\\/script>";\n' +
+'                }\n' +
+'                return match;\n' +
+'            });\n' +
+'            document.title = originalTitle;\n' +
+'            const blob = new Blob([fullHtml], { type: "text/html;charset=utf-8" });\n' +
+'            const a = document.createElement("a");\n' +
+'            a.href = URL.createObjectURL(blob);\n' +
+'            a.download = cleanName + ".html";\n' +
+'            document.body.appendChild(a);\n' +
+'            a.click();\n' +
+'            document.body.removeChild(a);\n' +
+'            document.title = cleanName + " - Explainator Standalone";\n' +
+'            setTimeout(() => setupDragAndDrop(), 100);\n' +
+'            alert("Gespeichert als: " + cleanName + ".html");\n' +
+'        }\n' +
+'        function loadStandalone() {\n' +
+'            const input = document.createElement("input");\n' +
+'            input.type = "file";\n' +
+'            input.accept = ".html";\n' +
+'            input.onchange = function(e) {\n' +
+'                const file = e.target.files[0];\n' +
+'                if (!file) return;\n' +
+'                const reader = new FileReader();\n' +
+'                reader.onload = function(evt) {\n' +
+'                    if (confirm("Aktuelle Änderungen werden überschrieben. Fortfahren?")) {\n' +
+'                        document.open();\n' +
+'                        document.write(evt.target.result);\n' +
+'                        document.close();\n' +
+'                    }\n' +
+'                };\n' +
+'                reader.readAsText(file);\n' +
+'            };\n' +
+'            input.click();\n' +
+'        }\n' +
+'        setupDragAndDrop();\n' +
+'        document.addEventListener("keydown", function(e) { if (e.key === "Escape") document.querySelectorAll(".modal.show").forEach(m => m.classList.remove("show")); });\n' +
+'    <\/script>\n' +
+'</body>\n' +
+'</html>';
+
+            return html;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 
@@ -5340,6 +5771,53 @@ function insertSplitBlock(btn) {
     var off = root.classList.toggle('mode-sections-off');
     if (btn) btn.textContent = off ? 'Sections: Aus' : 'Sections: An';
   };
+
+  // Presentation Mode Toggle
+  window.togglePresentationMode = function(){
+    document.body.classList.toggle('presentation-mode');
+    const isPresenting = document.body.classList.contains('presentation-mode');
+
+    // Update button state in sidebar
+    const btn = document.querySelector('[data-role="presentation-toggle-btn"]');
+    if (btn) {
+      if (isPresenting) {
+        btn.classList.add('is-active');
+      } else {
+        btn.classList.remove('is-active');
+      }
+    }
+
+    // Enter fullscreen if supported
+    if (isPresenting) {
+      try {
+        if (document.documentElement.requestFullscreen) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        } else if (document.documentElement.webkitRequestFullscreen) {
+          document.documentElement.webkitRequestFullscreen();
+        } else if (document.documentElement.msRequestFullscreen) {
+          document.documentElement.msRequestFullscreen();
+        }
+      } catch(e) {}
+    } else {
+      // Exit fullscreen
+      try {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen();
+        }
+      } catch(e) {}
+    }
+  };
+
+  // ESC key to exit presentation mode
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && document.body.classList.contains('presentation-mode')) {
+      togglePresentationMode();
+    }
+  });
 
   function disableCanvas(){
     var mc = document.getElementById('mainContainer'); if(!mc) return;
@@ -6380,6 +6858,13 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   }
 })();
 </script>
+
+<!-- Floating Buttons for Presentation Mode -->
+<button class="presentation-add-box-btn" onclick="showAddBoxModal()" title="Neue Box hinzufügen">➕</button>
+<button class="presentation-export-btn" onclick="exportToPNG()" title="Als PNG exportieren">
+    <span>🖼️</span>
+    <span>PNG Export</span>
+</button>
 
 </body>
 </html>
