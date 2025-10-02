@@ -885,6 +885,121 @@
 .column-color-picker .row:last-child{ width:100%; margin-top:8px; }
 .column-color-picker .swatch{ width:22px; height:22px; border-radius:4px; border:1px solid #bbb; cursor:pointer; }
         .column-color-picker .swatch{ width:30px; height:20px; border-radius:4px; border:1px solid #ccc; cursor:pointer; }
+
+/* Project Manager / Kanban Board Styles */
+.kanban-column {
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 15px;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+}
+.kanban-column-header {
+    font-weight: bold;
+    font-size: 16px;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ddd;
+}
+.kanban-column.active .kanban-column-header { border-color: #4CAF50; color: #4CAF50; }
+.kanban-column.onhold .kanban-column-header { border-color: #FF9800; color: #FF9800; }
+.kanban-column.done .kanban-column-header { border-color: #2196F3; color: #2196F3; }
+.kanban-column.canceled .kanban-column-header { border-color: #9E9E9E; color: #9E9E9E; }
+.project-card {
+    background: white;
+    border-radius: 6px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    cursor: move;
+    transition: box-shadow 0.2s;
+}
+.project-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+.project-card-title {
+    font-weight: bold;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+.project-card-meta {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+}
+.project-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+    border-top: 1px solid #eee;
+    padding-top: 8px;
+}
+.project-card-actions button {
+    padding: 4px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    background: #e0e0e0;
+}
+.project-card-actions button:hover {
+    background: #d0d0d0;
+}
+.project-files-container {
+    margin: 10px 0;
+    padding: 8px;
+    background: #fafafa;
+    border-radius: 4px;
+    min-height: 40px;
+}
+.project-file-box {
+    background: #ffffff;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px 10px;
+    margin: 6px 0;
+    cursor: move;
+    transition: all 0.2s;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.project-file-box:hover {
+    background: #e3f2fd;
+    border-color: #2196F3;
+    transform: translateX(4px);
+}
+.project-file-box.dragging {
+    opacity: 0.5;
+}
+.project-file-box-info {
+    flex: 1;
+}
+.project-file-box-name {
+    font-size: 13px;
+    font-weight: 500;
+}
+.project-file-box-date {
+    font-size: 10px;
+    color: #999;
+    margin-top: 2px;
+}
+.project-file-box-actions {
+    display: flex;
+    gap: 4px;
+}
+.project-file-box-actions button {
+    padding: 3px 8px;
+    font-size: 11px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    background: #e0e0e0;
+}
+.project-file-box-actions button:hover {
+    background: #d0d0d0;
+}
 </style>
 
 <style>.column-header{position:relative}</style>
@@ -1561,6 +1676,10 @@ body.presentation-mode .section-pipette {
                         <span class="icon">📦</span>
                         <span class="label">HTML Export</span>
                     </button>
+                    <button class="nav-item" onclick="showProjectManager()" data-translate="projects" title="Projektverwaltung">
+                        <span class="icon">📁</span>
+                        <span class="label">Projekte</span>
+                    </button>
                 </div>
 
                 <!-- System Section -->
@@ -2190,7 +2309,41 @@ body.presentation-mode .section-pipette {
                 columnsHeaderToggleTitle: "Spalten-Header ein/aus",
                 canvasResolutionTitle: "Canvas Auflösung",
                 connectionsLabel: "Verbindungen",
-                connectionsTitle: "Verbindungen"
+                connectionsTitle: "Verbindungen",
+                projects: "Projekte",
+                projectManager: "Projektverwaltung",
+                newProject: "Neues Projekt",
+                projectName: "Projektname",
+                active: "Aktiv",
+                onHold: "On Hold",
+                done: "Erledigt",
+                canceled: "Abgebrochen",
+                outgoing: "Ausgang",
+                incoming: "Eingang",
+                recipient: "An",
+                sender: "Von",
+                sentDate: "Versanddatum",
+                receivedDate: "Eingangsdatum",
+                deadline: "Deadline",
+                reminder: "Reminder",
+                notes: "Notizen",
+                createProject: "Erstellen",
+                editProject: "Bearbeiten",
+                deleteProject: "Löschen",
+                openHTML: "HTML öffnen",
+                htmlFile: "HTML-Datei",
+                browseFile: "Durchsuchen...",
+                useCurrentTemplate: "Aktuelles Template",
+                confirmDeleteProject: "Projekt \"{name}\" wirklich löschen?",
+                exportProjects: "Projekte exportieren",
+                importProjects: "Projekte importieren",
+                addHTMLFile: "HTML-Datei hinzufügen",
+                htmlFiles: "HTML-Dateien",
+                noHTMLFiles: "Keine HTML-Dateien",
+                previewFile: "Vorschau",
+                removeFile: "Entfernen",
+                fileCount: "{count} Dateien",
+                confirmRemoveFile: "Datei \"{name}\" wirklich entfernen?"
             },
             en: {
                 mainTitle: "🏢 Explainator - Ultimate Edition",
@@ -2297,7 +2450,48 @@ body.presentation-mode .section-pipette {
                 columnsHeaderToggleTitle: "Toggle column headers",
                 canvasResolutionTitle: "Canvas Resolution",
                 connectionsLabel: "Connections",
-                connectionsTitle: "Connections"
+                connectionsTitle: "Connections",
+                presentationMode: "Presentation Mode",
+                exitPresentationMode: "Exit Presentation Mode",
+                addStandardBox: "Add Standard Box",
+                addInfobox: "Add Infobox",
+                infoboxTitle: "Add Infobox",
+                infoboxPlaceholder: "Enter multiline text for the infobox...",
+                data: "Data",
+                projects: "Projects",
+                projectManager: "Project Manager",
+                newProject: "New Project",
+                projectName: "Project Name",
+                active: "Active",
+                onHold: "On Hold",
+                done: "Done",
+                canceled: "Canceled",
+                outgoing: "Outgoing",
+                incoming: "Incoming",
+                recipient: "To",
+                sender: "From",
+                sentDate: "Sent Date",
+                receivedDate: "Received Date",
+                deadline: "Deadline",
+                reminder: "Reminder",
+                notes: "Notes",
+                createProject: "Create",
+                editProject: "Edit",
+                deleteProject: "Delete",
+                openHTML: "Open HTML",
+                htmlFile: "HTML File",
+                browseFile: "Browse...",
+                useCurrentTemplate: "Use Current Template",
+                confirmDeleteProject: "Really delete project \"{name}\"?",
+                exportProjects: "Export Projects",
+                importProjects: "Import Projects",
+                addHTMLFile: "Add HTML File",
+                htmlFiles: "HTML Files",
+                noHTMLFiles: "No HTML Files",
+                previewFile: "Preview",
+                removeFile: "Remove",
+                fileCount: "{count} Files",
+                confirmRemoveFile: "Really remove file \"{name}\"?"
             }
         };
 
@@ -7087,6 +7281,115 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     <span>PNG Export</span>
 </button>
 
+<!-- Project Manager Modal -->
+<div class="modal" id="projectManagerModal">
+    <div class="modal-content" style="max-width: 95%; max-height: 95vh; display: flex; flex-direction: column;">
+        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <span data-translate="projectManager">📁 Projektverwaltung</span>
+            <div style="display: flex; gap: 10px;">
+                <button onclick="exportProjects()" class="btn" data-translate="exportProjects">Projekte exportieren</button>
+                <button onclick="importProjects()" class="btn" data-translate="importProjects">Projekte importieren</button>
+                <button onclick="showNewProjectModal()" class="btn" data-translate="newProject">Neues Projekt</button>
+            </div>
+        </div>
+        <div class="modal-body" style="flex: 1; overflow: auto; padding: 20px;">
+            <div id="projectKanbanBoard" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; height: 100%;">
+                <!-- Kanban columns will be generated here -->
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="closeProjectManager()" class="btn" data-translate="cancel">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal" id="newProjectModal">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header" data-translate="newProject">Neues Projekt</div>
+        <div class="modal-body">
+            <div style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                    <label data-translate="projectName">Projektname:</label>
+                    <input type="text" id="newProjectName" style="width: 100%; padding: 8px; margin-top: 5px;">
+                </div>
+
+                <div style="display: flex; gap: 15px;">
+                    <label>
+                        <input type="radio" name="projectDirection" value="outgoing" checked>
+                        <span data-translate="outgoing">Ausgang</span>
+                    </label>
+                    <label>
+                        <input type="radio" name="projectDirection" value="incoming">
+                        <span data-translate="incoming">Eingang</span>
+                    </label>
+                </div>
+
+                <div id="outgoingFields">
+                    <div style="margin-bottom: 10px;">
+                        <label data-translate="recipient">An:</label>
+                        <input type="text" id="projectRecipient" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label data-translate="sentDate">Versanddatum:</label>
+                        <input type="date" id="projectSentDate" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    </div>
+                </div>
+
+                <div id="incomingFields" style="display: none;">
+                    <div style="margin-bottom: 10px;">
+                        <label data-translate="sender">Von:</label>
+                        <input type="text" id="projectSender" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    </div>
+                    <div style="margin-bottom: 10px;">
+                        <label data-translate="receivedDate">Eingangsdatum:</label>
+                        <input type="date" id="projectReceivedDate" style="width: 100%; padding: 8px; margin-top: 5px;">
+                    </div>
+                </div>
+
+                <div>
+                    <label data-translate="deadline">Deadline:</label>
+                    <input type="date" id="projectDeadline" style="width: 100%; padding: 8px; margin-top: 5px;">
+                </div>
+
+                <div>
+                    <label data-translate="reminder">Reminder:</label>
+                    <input type="date" id="projectReminder" style="width: 100%; padding: 8px; margin-top: 5px;">
+                </div>
+
+                <div>
+                    <label data-translate="notes">Notizen:</label>
+                    <textarea id="projectNotes" style="width: 100%; padding: 8px; margin-top: 5px; min-height: 80px;"></textarea>
+                </div>
+
+                <div style="border: 2px dashed #ddd; padding: 15px; border-radius: 6px;">
+                    <div style="font-weight: bold; margin-bottom: 10px;" data-translate="htmlFiles">HTML-Dateien:</div>
+
+                    <!-- List of files -->
+                    <div id="modalFilesList" style="min-height: 60px; margin-bottom: 10px; background: #fafafa; padding: 8px; border-radius: 4px;">
+                        <div style="text-align: center; color: #999; padding: 20px;" data-translate="noHTMLFiles">Keine HTML-Dateien</div>
+                    </div>
+
+                    <!-- Add buttons -->
+                    <div style="display: flex; gap: 10px;">
+                        <button onclick="linkCurrentTemplateToModal()" class="btn" style="font-size: 13px;">
+                            ➕ <span data-translate="useCurrentTemplate">Aktuelles Template</span>
+                        </button>
+                        <button onclick="document.getElementById('projectHTMLFile').click()" class="btn" style="font-size: 13px;">
+                            ➕ <span data-translate="browseFile">Durchsuchen...</span>
+                        </button>
+                    </div>
+                    <input type="file" id="projectHTMLFile" accept=".html" multiple style="display: none;">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button onclick="createProject()" class="btn" data-translate="createProject">Erstellen</button>
+            <button onclick="closeNewProjectModal()" class="btn" data-translate="cancel">Abbrechen</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>
 
@@ -7417,5 +7720,702 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     }
   } catch(_) {}
 })();
+
+// ============================================
+// PROJECT MANAGER
+// ============================================
+let projects = [];
+
+function loadProjects() {
+    try {
+        const saved = localStorage.getItem('ea_projects');
+        if (saved) {
+            projects = JSON.parse(saved);
+
+            // Migration: Convert old single file format to array format
+            projects = projects.map(p => {
+                if (p.htmlFile && !p.htmlFiles) {
+                    p.htmlFiles = [{
+                        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                        name: p.htmlFileName || 'Legacy File.html',
+                        content: p.htmlFile,
+                        addedDate: new Date().toISOString().split('T')[0],
+                        order: 0
+                    }];
+                    delete p.htmlFile;
+                    delete p.htmlFileName;
+                }
+                // Ensure htmlFiles exists
+                if (!p.htmlFiles) {
+                    p.htmlFiles = [];
+                }
+                return p;
+            });
+
+            // Save migrated data
+            saveProjectsToStorage();
+        }
+    } catch(e) {
+        console.error('Error loading projects:', e);
+        projects = [];
+    }
+}
+
+function saveProjectsToStorage() {
+    try {
+        localStorage.setItem('ea_projects', JSON.stringify(projects));
+    } catch(e) {
+        console.error('Error saving projects:', e);
+    }
+}
+
+function showProjectManager() {
+    loadProjects();
+    const modal = document.getElementById('projectManagerModal');
+    if (modal) {
+        modal.classList.add('show');
+        renderKanbanBoard();
+    }
+}
+
+function closeProjectManager() {
+    const modal = document.getElementById('projectManagerModal');
+    if (modal) modal.classList.remove('show');
+}
+
+function renderKanbanBoard() {
+    const board = document.getElementById('projectKanbanBoard');
+    if (!board) return;
+
+    const t = translations[currentLanguage];
+    const statuses = ['active', 'onhold', 'done', 'canceled'];
+    const statusLabels = {
+        active: t.active || 'Aktiv',
+        onhold: t.onHold || 'On Hold',
+        done: t.done || 'Erledigt',
+        canceled: t.canceled || 'Abgebrochen'
+    };
+
+    board.innerHTML = '';
+
+    statuses.forEach(status => {
+        const col = document.createElement('div');
+        col.className = `kanban-column ${status}`;
+        col.dataset.status = status;
+
+        const header = document.createElement('div');
+        header.className = 'kanban-column-header';
+        header.textContent = statusLabels[status];
+        col.appendChild(header);
+
+        const projectsInStatus = projects.filter(p => p.status === status);
+        projectsInStatus.forEach(project => {
+            col.appendChild(createProjectCard(project));
+        });
+
+        // Add drag & drop handlers
+        col.addEventListener('dragover', e => {
+            e.preventDefault();
+            e.currentTarget.style.background = '#e8e8e8';
+        });
+        col.addEventListener('dragleave', e => {
+            e.currentTarget.style.background = '#f5f5f5';
+        });
+        col.addEventListener('drop', e => {
+            e.preventDefault();
+            e.currentTarget.style.background = '#f5f5f5';
+            const projectId = e.dataTransfer.getData('text/plain');
+            const project = projects.find(p => p.id === projectId);
+            if (project) {
+                project.status = status;
+                saveProjectsToStorage();
+                renderKanbanBoard();
+            }
+        });
+
+        board.appendChild(col);
+    });
+}
+
+function createFileBox(file, projectId) {
+    const fileBox = document.createElement('div');
+    fileBox.className = 'project-file-box';
+    fileBox.draggable = true;
+    fileBox.dataset.fileId = file.id;
+    fileBox.dataset.projectId = projectId;
+
+    const t = translations[currentLanguage];
+
+    fileBox.innerHTML = `
+        <div class="project-file-box-info">
+            <div class="project-file-box-name">📄 ${file.name}</div>
+            <div class="project-file-box-date">${file.addedDate}</div>
+        </div>
+        <div class="project-file-box-actions">
+            <button onclick="event.stopPropagation(); openFileInProject('${projectId}', '${file.id}')" title="${t.previewFile || 'Vorschau'}">🔍</button>
+            <button onclick="event.stopPropagation(); removeFileFromProject('${projectId}', '${file.id}')" title="${t.removeFile || 'Entfernen'}">❌</button>
+        </div>
+    `;
+
+    // Drag handlers for reordering within project
+    fileBox.addEventListener('dragstart', e => {
+        e.stopPropagation(); // Don't drag the project card
+        e.dataTransfer.setData('fileId', file.id);
+        e.dataTransfer.setData('projectId', projectId);
+        e.currentTarget.classList.add('dragging');
+    });
+
+    fileBox.addEventListener('dragend', e => {
+        e.currentTarget.classList.remove('dragging');
+    });
+
+    return fileBox;
+}
+
+function createProjectCard(project) {
+    const card = document.createElement('div');
+    card.className = 'project-card';
+    card.draggable = true;
+    card.dataset.projectId = project.id;
+
+    card.addEventListener('dragstart', e => {
+        // Only drag if not dragging a file box
+        if (e.target.classList.contains('project-file-box')) {
+            e.stopPropagation();
+            return;
+        }
+        e.dataTransfer.setData('text/plain', project.id);
+        e.currentTarget.style.opacity = '0.5';
+    });
+    card.addEventListener('dragend', e => {
+        e.currentTarget.style.opacity = '1';
+    });
+
+    const t = translations[currentLanguage];
+
+    const title = document.createElement('div');
+    title.className = 'project-card-title';
+    title.textContent = project.name;
+    card.appendChild(title);
+
+    if (project.direction === 'outgoing') {
+        if (project.recipient) {
+            const meta = document.createElement('div');
+            meta.className = 'project-card-meta';
+            meta.textContent = `${t.recipient || 'An'}: ${project.recipient}`;
+            card.appendChild(meta);
+        }
+        if (project.sentDate) {
+            const meta = document.createElement('div');
+            meta.className = 'project-card-meta';
+            meta.textContent = `${t.sentDate || 'Versandt'}: ${project.sentDate}`;
+            card.appendChild(meta);
+        }
+    } else {
+        if (project.sender) {
+            const meta = document.createElement('div');
+            meta.className = 'project-card-meta';
+            meta.textContent = `${t.sender || 'Von'}: ${project.sender}`;
+            card.appendChild(meta);
+        }
+        if (project.receivedDate) {
+            const meta = document.createElement('div');
+            meta.className = 'project-card-meta';
+            meta.textContent = `${t.receivedDate || 'Eingegangen'}: ${project.receivedDate}`;
+            card.appendChild(meta);
+        }
+    }
+
+    if (project.deadline) {
+        const meta = document.createElement('div');
+        meta.className = 'project-card-meta';
+        meta.textContent = `${t.deadline || 'Deadline'}: ${project.deadline}`;
+        card.appendChild(meta);
+    }
+
+    if (project.reminder) {
+        const today = new Date().toISOString().split('T')[0];
+        if (project.reminder <= today) {
+            const meta = document.createElement('div');
+            meta.className = 'project-card-meta';
+            meta.style.color = 'red';
+            meta.style.fontWeight = 'bold';
+            meta.textContent = `⚠️ ${t.reminder || 'Reminder'}: ${project.reminder}`;
+            card.appendChild(meta);
+        }
+    }
+
+    // HTML Files Container
+    if (project.htmlFiles && project.htmlFiles.length > 0) {
+        const filesContainer = document.createElement('div');
+        filesContainer.className = 'project-files-container';
+        filesContainer.dataset.projectId = project.id;
+
+        const sortedFiles = [...project.htmlFiles].sort((a, b) => a.order - b.order);
+        sortedFiles.forEach(file => {
+            filesContainer.appendChild(createFileBox(file, project.id));
+        });
+
+        // Drop zone for reordering files
+        filesContainer.addEventListener('dragover', e => {
+            e.preventDefault();
+            const dragging = filesContainer.querySelector('.dragging');
+            if (!dragging) return;
+
+            const afterElement = getDragAfterFileBox(filesContainer, e.clientY);
+            if (afterElement == null) {
+                filesContainer.appendChild(dragging);
+            } else {
+                filesContainer.insertBefore(dragging, afterElement);
+            }
+        });
+
+        filesContainer.addEventListener('drop', e => {
+            e.preventDefault();
+            const fileId = e.dataTransfer.getData('fileId');
+            const fromProjectId = e.dataTransfer.getData('projectId');
+
+            if (fromProjectId === project.id) {
+                // Reorder within same project
+                const fileBoxes = [...filesContainer.querySelectorAll('.project-file-box')];
+                fileBoxes.forEach((box, index) => {
+                    const fId = box.dataset.fileId;
+                    const file = project.htmlFiles.find(f => f.id === fId);
+                    if (file) file.order = index;
+                });
+                saveProjectsToStorage();
+            }
+        });
+
+        card.appendChild(filesContainer);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'project-card-actions';
+
+    const editBtn = document.createElement('button');
+    editBtn.textContent = t.editProject || 'Bearbeiten';
+    editBtn.onclick = (e) => {
+        e.stopPropagation();
+        editProject(project);
+    };
+    actions.appendChild(editBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = t.deleteProject || 'Löschen';
+    deleteBtn.style.background = '#ffcdd2';
+    deleteBtn.onclick = (e) => {
+        e.stopPropagation();
+        deleteProject(project.id);
+    };
+    actions.appendChild(deleteBtn);
+
+    card.appendChild(actions);
+
+    return card;
+}
+
+function showNewProjectModal() {
+    const modal = document.getElementById('newProjectModal');
+    if (modal) {
+        // Reset form
+        document.getElementById('newProjectName').value = '';
+        document.querySelector('input[name="projectDirection"][value="outgoing"]').checked = true;
+        document.getElementById('projectRecipient').value = '';
+        document.getElementById('projectSentDate').value = '';
+        document.getElementById('projectSender').value = '';
+        document.getElementById('projectReceivedDate').value = '';
+        document.getElementById('projectDeadline').value = '';
+        document.getElementById('projectReminder').value = '';
+        document.getElementById('projectNotes').value = '';
+        modal.dataset.editMode = 'false';
+        modal.dataset.editId = '';
+
+        // Reset file list
+        modalTempFiles = [];
+        renderModalFilesList();
+
+        updateProjectDirectionFields();
+        modal.classList.add('show');
+    }
+}
+
+function closeNewProjectModal() {
+    const modal = document.getElementById('newProjectModal');
+    if (modal) modal.classList.remove('show');
+}
+
+function updateProjectDirectionFields() {
+    const direction = document.querySelector('input[name="projectDirection"]:checked').value;
+    const outgoingFields = document.getElementById('outgoingFields');
+    const incomingFields = document.getElementById('incomingFields');
+
+    if (direction === 'outgoing') {
+        outgoingFields.style.display = 'block';
+        incomingFields.style.display = 'none';
+    } else {
+        outgoingFields.style.display = 'none';
+        incomingFields.style.display = 'block';
+    }
+}
+
+// Add event listeners for radio buttons
+document.addEventListener('DOMContentLoaded', () => {
+    const radios = document.querySelectorAll('input[name="projectDirection"]');
+    radios.forEach(radio => {
+        radio.addEventListener('change', updateProjectDirectionFields);
+    });
+});
+
+// ============================================
+// MODAL FILE MANAGEMENT
+// ============================================
+let modalTempFiles = [];
+
+function renderModalFilesList() {
+    const container = document.getElementById('modalFilesList');
+    if (!container) return;
+
+    const t = translations[currentLanguage];
+
+    if (modalTempFiles.length === 0) {
+        container.innerHTML = `<div style="text-align: center; color: #999; padding: 20px;" data-translate="noHTMLFiles">${t.noHTMLFiles || 'Keine HTML-Dateien'}</div>`;
+        return;
+    }
+
+    container.innerHTML = '';
+    modalTempFiles.sort((a, b) => a.order - b.order);
+
+    modalTempFiles.forEach(file => {
+        const fileBox = document.createElement('div');
+        fileBox.className = 'project-file-box';
+        fileBox.draggable = true;
+        fileBox.dataset.fileId = file.id;
+
+        fileBox.innerHTML = `
+            <div class="project-file-box-info">
+                <div class="project-file-box-name">📄 ${file.name}</div>
+                <div class="project-file-box-date">${file.addedDate}</div>
+            </div>
+            <div class="project-file-box-actions">
+                <button onclick="previewModalFile('${file.id}')" title="${t.previewFile || 'Vorschau'}">🔍</button>
+                <button onclick="removeModalFile('${file.id}')" title="${t.removeFile || 'Entfernen'}">❌</button>
+            </div>
+        `;
+
+        // Drag handlers for reordering
+        fileBox.addEventListener('dragstart', e => {
+            e.dataTransfer.setData('modalFileId', file.id);
+            e.currentTarget.classList.add('dragging');
+        });
+
+        fileBox.addEventListener('dragend', e => {
+            e.currentTarget.classList.remove('dragging');
+        });
+
+        container.appendChild(fileBox);
+    });
+
+    // Drop zone for reordering
+    container.addEventListener('dragover', e => {
+        e.preventDefault();
+        const dragging = container.querySelector('.dragging');
+        if (!dragging) return;
+
+        const afterElement = getDragAfterElementInModal(container, e.clientY);
+        if (afterElement == null) {
+            container.appendChild(dragging);
+        } else {
+            container.insertBefore(dragging, afterElement);
+        }
+    });
+
+    container.addEventListener('drop', e => {
+        e.preventDefault();
+        // Update order based on DOM position
+        const fileBoxes = [...container.querySelectorAll('.project-file-box')];
+        fileBoxes.forEach((box, index) => {
+            const fileId = box.dataset.fileId;
+            const file = modalTempFiles.find(f => f.id === fileId);
+            if (file) file.order = index;
+        });
+    });
+}
+
+function getDragAfterElementInModal(container, y) {
+    const draggableElements = [...container.querySelectorAll('.project-file-box:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function linkCurrentTemplateToModal() {
+    const templateData = getTemplateData();
+    const htmlContent = buildStandaloneHTML(templateData);
+
+    const file = {
+        id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        name: `Template_${new Date().toISOString().split('T')[0]}.html`,
+        content: htmlContent,
+        addedDate: new Date().toISOString().split('T')[0],
+        order: modalTempFiles.length
+    };
+
+    modalTempFiles.push(file);
+    renderModalFilesList();
+}
+
+function previewModalFile(fileId) {
+    const file = modalTempFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    const win = window.open('', '_blank');
+    win.document.write(file.content);
+    win.document.close();
+}
+
+function removeModalFile(fileId) {
+    const file = modalTempFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    const t = translations[currentLanguage];
+    const msg = (t.confirmRemoveFile || 'Datei "{name}" wirklich entfernen?').replace('{name}', file.name);
+
+    if (confirm(msg)) {
+        modalTempFiles = modalTempFiles.filter(f => f.id !== fileId);
+        renderModalFilesList();
+    }
+}
+
+// ============================================
+// PROJECT CARD FILE OPERATIONS
+// ============================================
+
+function getDragAfterFileBox(container, y) {
+    const draggableElements = [...container.querySelectorAll('.project-file-box:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+function openFileInProject(projectId, fileId) {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.htmlFiles) return;
+
+    const file = project.htmlFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    const win = window.open('', '_blank');
+    win.document.write(file.content);
+    win.document.close();
+}
+
+function removeFileFromProject(projectId, fileId) {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.htmlFiles) return;
+
+    const file = project.htmlFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    const t = translations[currentLanguage];
+    const msg = (t.confirmRemoveFile || 'Datei "{name}" wirklich entfernen?').replace('{name}', file.name);
+
+    if (confirm(msg)) {
+        project.htmlFiles = project.htmlFiles.filter(f => f.id !== fileId);
+        saveProjectsToStorage();
+        renderKanbanBoard();
+    }
+}
+
+function createProject() {
+    const modal = document.getElementById('newProjectModal');
+    const editMode = modal.dataset.editMode === 'true';
+    const editId = modal.dataset.editId;
+
+    const name = document.getElementById('newProjectName').value.trim();
+    if (!name) {
+        alert('Bitte Projektname eingeben!');
+        return;
+    }
+
+    const direction = document.querySelector('input[name="projectDirection"]:checked').value;
+
+    const project = {
+        id: editMode ? editId : 'proj_' + Date.now(),
+        name: name,
+        direction: direction,
+        status: editMode ? projects.find(p => p.id === editId).status : 'active',
+        recipient: direction === 'outgoing' ? document.getElementById('projectRecipient').value : '',
+        sender: direction === 'incoming' ? document.getElementById('projectSender').value : '',
+        sentDate: direction === 'outgoing' ? document.getElementById('projectSentDate').value : '',
+        receivedDate: direction === 'incoming' ? document.getElementById('projectReceivedDate').value : '',
+        deadline: document.getElementById('projectDeadline').value,
+        reminder: document.getElementById('projectReminder').value,
+        notes: document.getElementById('projectNotes').value,
+        htmlFiles: [...modalTempFiles]
+    };
+
+    if (editMode) {
+        const index = projects.findIndex(p => p.id === editId);
+        if (index !== -1) {
+            projects[index] = project;
+        }
+    } else {
+        projects.push(project);
+    }
+
+    saveProjectsToStorage();
+    closeNewProjectModal();
+    renderKanbanBoard();
+}
+
+function editProject(project) {
+    const modal = document.getElementById('newProjectModal');
+    if (!modal) return;
+
+    modal.dataset.editMode = 'true';
+    modal.dataset.editId = project.id;
+
+    document.getElementById('newProjectName').value = project.name;
+    document.querySelector(`input[name="projectDirection"][value="${project.direction}"]`).checked = true;
+    document.getElementById('projectRecipient').value = project.recipient || '';
+    document.getElementById('projectSender').value = project.sender || '';
+    document.getElementById('projectSentDate').value = project.sentDate || '';
+    document.getElementById('projectReceivedDate').value = project.receivedDate || '';
+    document.getElementById('projectDeadline').value = project.deadline || '';
+    document.getElementById('projectReminder').value = project.reminder || '';
+    document.getElementById('projectNotes').value = project.notes || '';
+
+    // Load HTML files
+    modalTempFiles = project.htmlFiles ? JSON.parse(JSON.stringify(project.htmlFiles)) : [];
+    renderModalFilesList();
+
+    updateProjectDirectionFields();
+    modal.classList.add('show');
+}
+
+function deleteProject(projectId) {
+    const project = projects.find(p => p.id === projectId);
+    if (!project) return;
+
+    const t = translations[currentLanguage];
+    const msg = (t.confirmDeleteProject || 'Projekt "{name}" wirklich löschen?').replace('{name}', project.name);
+
+    if (confirm(msg)) {
+        projects = projects.filter(p => p.id !== projectId);
+        saveProjectsToStorage();
+        renderKanbanBoard();
+    }
+}
+
+function linkCurrentTemplate() {
+    const modal = document.getElementById('newProjectModal');
+    const templateData = getTemplateData();
+    const htmlContent = buildStandaloneHTML(templateData);
+
+    modal.dataset.htmlFile = htmlContent;
+    document.getElementById('projectHTMLFileName').textContent = '✓ Aktuelles Template verknüpft';
+}
+
+document.getElementById('projectHTMLFile').addEventListener('change', function(e) {
+    const files = Array.from(e.target.files);
+    if (files.length === 0) return;
+
+    let loadedCount = 0;
+
+    files.forEach(file => {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            const fileObj = {
+                id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+                name: file.name,
+                content: event.target.result,
+                addedDate: new Date().toISOString().split('T')[0],
+                order: modalTempFiles.length
+            };
+
+            modalTempFiles.push(fileObj);
+            loadedCount++;
+
+            // Render once all files are loaded
+            if (loadedCount === files.length) {
+                renderModalFilesList();
+            }
+        };
+        reader.readAsText(file);
+    });
+
+    // Reset input
+    e.target.value = '';
+});
+
+function openProjectHTML(project) {
+    if (!project.htmlFile) return;
+
+    // Open HTML in new window
+    const win = window.open('', '_blank');
+    win.document.write(project.htmlFile);
+    win.document.close();
+}
+
+function exportProjects() {
+    const dataStr = JSON.stringify(projects, null, 2);
+    const blob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Explainator_Projects_${new Date().toISOString().split('T')[0]}.projects.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importProjects() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,.projects.json';
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const imported = JSON.parse(event.target.result);
+                if (Array.isArray(imported)) {
+                    projects = imported;
+                    saveProjectsToStorage();
+                    renderKanbanBoard();
+                    alert('Projekte erfolgreich importiert!');
+                } else {
+                    alert('Ungültiges Dateiformat!');
+                }
+            } catch(e) {
+                alert('Fehler beim Importieren: ' + e.message);
+            }
+        };
+        reader.readAsText(file);
+    };
+    input.click();
+}
+
+// Load projects on startup
+loadProjects();
+
 </script>
 
