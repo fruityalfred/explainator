@@ -4899,6 +4899,7 @@ mainContainerHTML + '\n' +
 '    </div>\n' +
 '    <div class="category-legend"><h3>Kategorien</h3><div id="legendContent"></div></div>\n' +
 '    <button class="presentation-add-box-btn" onclick="showAddBoxModal()" title="Neue Box hinzufügen">➕</button>\n' +
+'    <button class="presentation-add-box-btn" onclick="showInfoboxModal()" title="Neue Infobox hinzufügen" style="bottom: 100px;">📝</button>\n' +
 '    <button class="presentation-export-btn" onclick="exportToPNG()" title="Als PNG exportieren" style="left: 30px;"><span>🖼️</span><span>PNG</span></button>\n' +
 '    <button class="presentation-export-btn" onclick="saveStandalone()" title="Änderungen speichern" style="left: 140px;"><span>💾</span><span>Speichern</span></button>\n' +
 '    <button class="presentation-export-btn" onclick="loadStandalone()" title="HTML Datei laden" style="left: 270px;"><span>📂</span><span>Laden</span></button>\n' +
@@ -4906,29 +4907,101 @@ mainContainerHTML + '\n' +
 '    <div class="modal-body"><input type="text" id="boxName" placeholder="Box Name" style="width:100%; padding:8px; margin-bottom:10px;">\n' +
 '    <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="addBoxFromModal()">Hinzufügen</button>\n' +
 '    <button class="btn btn-danger" onclick="closeModal(\'addBoxModal\')">Abbrechen</button></div></div></div></div>\n' +
+'    <div class="modal" id="infoboxModal"><div class="modal-content"><div class="modal-header">📝 Neue Infobox</div>\n' +
+'    <div class="modal-body"><textarea id="infoboxText" placeholder="Text eingeben..." style="width:100%; min-height:150px; padding:8px; margin-bottom:10px; font-family:inherit; resize:vertical;"></textarea>\n' +
+'    <div style="display:flex; gap:10px;"><button class="btn btn-primary" onclick="addInfoboxFromModal()">Hinzufügen</button>\n' +
+'    <button class="btn btn-danger" onclick="closeModal(\'infoboxModal\')">Abbrechen</button></div></div></div></div>\n' +
 '    <script>\n' +
 '        const categories = ' + categoriesJSON + ';\n' +
 '        function showAddBoxModal() { document.getElementById("addBoxModal").classList.add("show"); setTimeout(() => document.getElementById("boxName").focus(), 100); }\n' +
+'        function showInfoboxModal() { document.getElementById("infoboxModal").classList.add("show"); setTimeout(() => document.getElementById("infoboxText").focus(), 100); }\n' +
 '        function closeModal(id) { document.getElementById(id).classList.remove("show"); }\n' +
 '        function addBoxFromModal() {\n' +
 '            const name = document.getElementById("boxName").value.trim();\n' +
 '            if (!name) return;\n' +
 '            const firstSection = document.querySelector(".section-group .box-container");\n' +
 '            if (firstSection) {\n' +
-'                const box = createBox(name);\n' +
+'                const box = createBox(name, true);\n' +
 '                firstSection.appendChild(box);\n' +
 '                setupDragAndDrop();\n' +
 '            }\n' +
 '            document.getElementById("boxName").value = "";\n' +
 '            closeModal("addBoxModal");\n' +
 '        }\n' +
-'        function createBox(name) {\n' +
+'        function addInfoboxFromModal() {\n' +
+'            const text = document.getElementById("infoboxText").value.trim();\n' +
+'            if (!text) return;\n' +
+'            const firstSection = document.querySelector(".section-group .box-container");\n' +
+'            if (firstSection) {\n' +
+'                const box = createInfobox(text);\n' +
+'                firstSection.appendChild(box);\n' +
+'                setupDragAndDrop();\n' +
+'            }\n' +
+'            document.getElementById("infoboxText").value = "";\n' +
+'            closeModal("infoboxModal");\n' +
+'        }\n' +
+'        function createInfobox(text) {\n' +
+'            const box = document.createElement("div");\n' +
+'            box.className = "app-box full-width";\n' +
+'            box.setAttribute("draggable", "true");\n' +
+'            box.setAttribute("data-lines", "5");\n' +
+'            box.style.background = "#f5f5f5";\n' +
+'            box.style.color = "#333";\n' +
+'            box.style.minHeight = "150px";\n' +
+'            box.style.padding = "12px";\n' +
+'            box.style.whiteSpace = "pre-wrap";\n' +
+'            box.style.textAlign = "left";\n' +
+'            box.style.lineHeight = "1.5";\n' +
+'            box.style.fontSize = "14px";\n' +
+'            box.style.display = "block";\n' +
+'            box.textContent = text;\n' +
+'            const deleteBtn = document.createElement("button");\n' +
+'            deleteBtn.className = "delete-btn";\n' +
+'            deleteBtn.textContent = "×";\n' +
+'            deleteBtn.onclick = function(e) { e.stopPropagation(); box.remove(); };\n' +
+'            box.appendChild(deleteBtn);\n' +
+'            const leftBtn = document.createElement("button");\n' +
+'            leftBtn.className = "delete-btn";\n' +
+'            leftBtn.textContent = "◀";\n' +
+'            leftBtn.style.right = "76px";\n' +
+'            leftBtn.style.background = "#9C27B0";\n' +
+'            leftBtn.onclick = function(e) { e.stopPropagation(); const prev = box.previousElementSibling; if (prev && prev.classList.contains("app-box")) { box.parentNode.insertBefore(box, prev); } };\n' +
+'            box.appendChild(leftBtn);\n' +
+'            const rightBtn = document.createElement("button");\n' +
+'            rightBtn.className = "delete-btn";\n' +
+'            rightBtn.textContent = "▶";\n' +
+'            rightBtn.style.right = "100px";\n' +
+'            rightBtn.style.background = "#00BCD4";\n' +
+'            rightBtn.onclick = function(e) { e.stopPropagation(); const next = box.nextElementSibling; if (next && next.classList.contains("app-box")) { const parent = box.parentNode; parent.insertBefore(next, box); } };\n' +
+'            box.appendChild(rightBtn);\n' +
+'            const upBtn = document.createElement("button");\n' +
+'            upBtn.className = "delete-btn";\n' +
+'            upBtn.textContent = "▲";\n' +
+'            upBtn.style.right = "28px";\n' +
+'            upBtn.style.background = "#2196F3";\n' +
+'            upBtn.onclick = function(e) { e.stopPropagation(); const prev = box.previousElementSibling; if (prev && prev.classList.contains("app-box")) { box.parentNode.insertBefore(box, prev); } };\n' +
+'            box.appendChild(upBtn);\n' +
+'            const downBtn = document.createElement("button");\n' +
+'            downBtn.className = "delete-btn";\n' +
+'            downBtn.textContent = "▼";\n' +
+'            downBtn.style.right = "52px";\n' +
+'            downBtn.style.background = "#FF9800";\n' +
+'            downBtn.onclick = function(e) { e.stopPropagation(); const next = box.nextElementSibling; if (next && next.classList.contains("app-box")) { const parent = box.parentNode; parent.insertBefore(next, box); } };\n' +
+'            box.appendChild(downBtn);\n' +
+'            return box;\n' +
+'        }\n' +
+'        function createBox(name, isPlain) {\n' +
 '            const box = document.createElement("div");\n' +
 '            box.className = "app-box full-width";\n' +
 '            box.setAttribute("draggable", "true");\n' +
 '            box.textContent = name;\n' +
-'            box.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";\n' +
-'            box.style.color = "white";\n' +
+'            if (isPlain) {\n' +
+'                box.style.background = "#f5f5f5";\n' +
+'                box.style.color = "#333";\n' +
+'            } else {\n' +
+'                box.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";\n' +
+'                box.style.color = "white";\n' +
+'            }\n' +
 '            const deleteBtn = document.createElement("button");\n' +
 '            deleteBtn.className = "delete-btn";\n' +
 '            deleteBtn.textContent = "×";\n' +
