@@ -887,20 +887,25 @@
         .column-color-picker .swatch{ width:30px; height:20px; border-radius:4px; border:1px solid #ccc; cursor:pointer; }
 
 /* Project Manager / Kanban Board Styles */
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 15px;
+    height: 100%;
+}
 .kanban-column {
     background: #f5f5f5;
     border-radius: 8px;
     padding: 15px;
-    min-height: 500px;
     display: flex;
     flex-direction: column;
 }
 .kanban-column-header {
     font-weight: bold;
     font-size: 16px;
-    margin-bottom: 15px;
     padding-bottom: 10px;
-    border-bottom: 2px solid #ddd;
+    border-bottom: 3px solid #ddd;
+    margin-bottom: 10px;
 }
 .kanban-column.active .kanban-column-header { border-color: #4CAF50; color: #4CAF50; }
 .kanban-column.onhold .kanban-column-header { border-color: #FF9800; color: #FF9800; }
@@ -925,8 +930,9 @@
 }
 .project-card-meta {
     font-size: 12px;
-    color: #666;
+    color: inherit; /* Inherit color from parent card */
     margin-bottom: 4px;
+    opacity: 0.85; /* Slightly transparent for subtle effect */
 }
 .project-card-actions {
     display: flex;
@@ -942,6 +948,7 @@
     border-radius: 4px;
     cursor: pointer;
     background: #e0e0e0;
+    color: #1a1a1a !important; /* Always dark text */
 }
 .project-card-actions button:hover {
     background: #d0d0d0;
@@ -979,10 +986,11 @@
 .project-file-box-name {
     font-size: 13px;
     font-weight: 500;
+    color: #1a1a1a !important; /* Always dark text in file boxes */
 }
 .project-file-box-date {
     font-size: 10px;
-    color: #999;
+    color: #666 !important; /* Always gray text in file boxes */
     margin-top: 2px;
 }
 .project-file-box-actions {
@@ -996,9 +1004,48 @@
     border-radius: 3px;
     cursor: pointer;
     background: #e0e0e0;
+    color: #1a1a1a !important; /* Always dark text in buttons */
 }
 .project-file-box-actions button:hover {
     background: #d0d0d0;
+}
+
+/* Project Manager Container (replaces modal) */
+.project-manager-container {
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: #f5f7fa;
+    padding: 20px;
+}
+.project-manager-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #ddd;
+}
+.project-manager-header h2 {
+    margin: 0;
+    color: #333;
+}
+.project-manager-actions {
+    display: flex;
+    gap: 10px;
+}
+.project-manager-actions .btn {
+    padding: 8px 16px;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+}
+.project-manager-actions .btn:hover {
+    background: #5568d3;
 }
 
 </style>
@@ -1374,6 +1421,25 @@ body.presentation-mode .section-pipette {
     padding: 12px 8px 6px 8px;
     white-space: nowrap;
     transition: opacity 0.2s;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.nav-section-title:hover {
+    color: rgba(255,255,255,0.8);
+}
+.nav-section-title::after {
+    content: '▼';
+    font-size: 10px;
+    transition: transform 0.2s;
+}
+.nav-section.collapsed .nav-section-title::after {
+    transform: rotate(-90deg);
+}
+.nav-section.collapsed .nav-item,
+.nav-section.collapsed .nav-item-select {
+    display: none;
 }
 
 .sidebar.collapsed .nav-section-title {
@@ -1752,8 +1818,22 @@ body.presentation-mode .section-pipette {
             </header>
 
             <div class="container">
-        
+
                 <div class="main-container" id="mainContainer">
+                </div>
+
+                <!-- Project Manager Board (hidden by default) -->
+                <div class="project-manager-container" id="projectManagerContainer" style="display: none;">
+                    <div class="project-manager-header">
+                        <h2 data-translate="projects">Projekte</h2>
+                        <div class="project-manager-actions">
+                            <button onclick="showNewProjectModal()" class="btn" data-translate="newProject">Neues Projekt</button>
+                            <button onclick="exportProjects()" class="btn" data-translate="exportProjects">Export</button>
+                            <button onclick="importProjects()" class="btn" data-translate="importProjects">Import</button>
+                            <button onclick="closeProjectManager()" class="btn" data-translate="close">Schließen</button>
+                        </div>
+                    </div>
+                    <div class="kanban-board" id="kanbanBoard"></div>
                 </div>
 
                 <div class="legend" id="legend">
@@ -2318,6 +2398,7 @@ body.presentation-mode .section-pipette {
                 existingCategories: "Vorhandene Kategorien:",
                 delete: "Löschen",
                 done: "Fertig",
+                close: "Schließen",
                 savedTemplates: "Gespeicherte Templates:",
                 noSavedTemplates: "Keine gespeicherten Templates gefunden",
                 loadTemplateFromFileTitle: "Template aus Datei laden:",
@@ -2389,6 +2470,7 @@ body.presentation-mode .section-pipette {
                 reminder: "Reminder",
                 notes: "Notizen",
                 createProject: "Erstellen",
+                updateProject: "Aktualisieren",
                 editProject: "Bearbeiten",
                 deleteProject: "Löschen",
                 openHTML: "HTML öffnen",
@@ -2403,8 +2485,12 @@ body.presentation-mode .section-pipette {
                 noHTMLFiles: "Keine HTML-Dateien",
                 previewFile: "Vorschau",
                 removeFile: "Entfernen",
+                renameFile: "Umbenennen",
                 fileCount: "{count} Dateien",
-                confirmRemoveFile: "Datei \"{name}\" wirklich entfernen?"
+                confirmRemoveFile: "Datei \"{name}\" wirklich entfernen?",
+                setFileOutgoing: "Als ausgehend markieren",
+                setFileIncoming: "Als eingehend markieren",
+                setFileNeutral: "Richtung entfernen"
             },
             en: {
                 mainTitle: "🏢 Explainator - Ultimate Edition",
@@ -2541,6 +2627,7 @@ body.presentation-mode .section-pipette {
                 reminder: "Reminder",
                 notes: "Notes",
                 createProject: "Create",
+                updateProject: "Update",
                 editProject: "Edit",
                 deleteProject: "Delete",
                 openHTML: "Open HTML",
@@ -2555,8 +2642,12 @@ body.presentation-mode .section-pipette {
                 noHTMLFiles: "No HTML Files",
                 previewFile: "Preview",
                 removeFile: "Remove",
+                renameFile: "Rename",
                 fileCount: "{count} Files",
-                confirmRemoveFile: "Really remove file \"{name}\"?"
+                confirmRemoveFile: "Really remove file \"{name}\"?",
+                setFileOutgoing: "Mark as outgoing",
+                setFileIncoming: "Mark as incoming",
+                setFileNeutral: "Remove direction"
             }
         };
 
@@ -6813,7 +6904,8 @@ function updateAllConnectors(){
     var existing = document.querySelector('.connector-anchor-overlay');
     if (existing) existing.remove();
 
-    var mc = document.getElementById('mainContainer'); if(!mc) return;
+    var mc = document.getElementById('mainContainer');
+    if(!mc) return;
     var mcr = mc.getBoundingClientRect();
     var r = col.getBoundingClientRect();
 
@@ -7408,28 +7500,6 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
     <span>PNG Export</span>
 </button>
 
-<!-- Project Manager Modal -->
-<div class="modal" id="projectManagerModal">
-    <div class="modal-content" style="max-width: 95%; max-height: 95vh; display: flex; flex-direction: column;">
-        <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center;">
-            <span data-translate="projectManager">📁 Projektverwaltung</span>
-            <div style="display: flex; gap: 10px;">
-                <button onclick="exportProjects()" class="btn" data-translate="exportProjects">Projekte exportieren</button>
-                <button onclick="importProjects()" class="btn" data-translate="importProjects">Projekte importieren</button>
-                <button onclick="showNewProjectModal()" class="btn" data-translate="newProject">Neues Projekt</button>
-            </div>
-        </div>
-        <div class="modal-body" style="flex: 1; overflow: auto; padding: 20px;">
-            <div id="projectKanbanBoard" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; height: 100%;">
-                <!-- Kanban columns will be generated here -->
-            </div>
-        </div>
-        <div class="modal-footer">
-            <button onclick="closeProjectManager()" class="btn" data-translate="cancel">Schließen</button>
-        </div>
-    </div>
-</div>
-
 <!-- New Project Modal -->
 <div class="modal" id="newProjectModal">
     <div class="modal-content" style="max-width: 600px;">
@@ -7511,7 +7581,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
             </div>
         </div>
         <div class="modal-footer">
-            <button onclick="createProject()" class="btn" data-translate="createProject">Erstellen</button>
+            <button id="projectActionBtn" onclick="createProject()" class="btn" data-translate="createProject">Erstellen</button>
             <button onclick="closeNewProjectModal()" class="btn" data-translate="cancel">Abbrechen</button>
         </div>
     </div>
@@ -7923,20 +7993,44 @@ function saveProjectsToStorage() {
 
 function showProjectManager() {
     loadProjects();
-    const modal = document.getElementById('projectManagerModal');
-    if (modal) {
-        modal.classList.add('show');
+
+    // Hide main container, show project manager
+    const mainContainer = document.getElementById('mainContainer');
+    const projectContainer = document.getElementById('projectManagerContainer');
+    const legend = document.getElementById('legend');
+
+    if (mainContainer) mainContainer.style.display = 'none';
+    if (legend) legend.style.display = 'none';
+    if (projectContainer) {
+        projectContainer.style.display = 'block';
         renderKanbanBoard();
+    }
+
+    // Disable menu items except Presentation, Help, Language
+    disableMenuItemsExcept(['togglePresentationMode', 'showHelp', 'langSwitchBtn']);
+
+    // Turn off connector mode if active in Project view (no columns to connect)
+    if (typeof window.connectorMode !== 'undefined' && window.connectorMode) {
+        toggleConnectorMode(); // Turn it off
     }
 }
 
 function closeProjectManager() {
-    const modal = document.getElementById('projectManagerModal');
-    if (modal) modal.classList.remove('show');
+    // Show main container, hide project manager
+    const mainContainer = document.getElementById('mainContainer');
+    const projectContainer = document.getElementById('projectManagerContainer');
+    const legend = document.getElementById('legend');
+
+    if (mainContainer) mainContainer.style.display = 'flex';
+    if (legend) legend.style.display = 'flex'; // Changed to flex for horizontal display
+    if (projectContainer) projectContainer.style.display = 'none';
+
+    // Re-enable all menu items
+    enableAllMenuItems();
 }
 
 function renderKanbanBoard() {
-    const board = document.getElementById('projectKanbanBoard');
+    const board = document.getElementById('kanbanBoard');
     if (!board) return;
 
     const t = translations[currentLanguage];
@@ -7998,12 +8092,17 @@ function createFileBox(file, projectId) {
 
     const t = translations[currentLanguage];
 
+    // Direction arrow
+    const directionIcon = file.direction === 'outgoing' ? '📤' : file.direction === 'incoming' ? '📥' : '📄';
+
     fileBox.innerHTML = `
         <div class="project-file-box-info">
-            <div class="project-file-box-name">📄 ${file.name}</div>
+            <div class="project-file-box-name">${directionIcon} ${file.name}</div>
             <div class="project-file-box-date">${file.addedDate}</div>
         </div>
         <div class="project-file-box-actions">
+            <button onclick="event.stopPropagation(); toggleFileDirection('${projectId}', '${file.id}')" title="${t.setFileOutgoing || 'Richtung'}" style="font-size: 14px;">⬆️⬇️</button>
+            <button onclick="event.stopPropagation(); renameFileInProject('${projectId}', '${file.id}')" title="${t.renameFile || 'Umbenennen'}">✏️</button>
             <button onclick="event.stopPropagation(); openFileInProject('${projectId}', '${file.id}')" title="${t.previewFile || 'Vorschau'}">🔍</button>
             <button onclick="event.stopPropagation(); removeFileFromProject('${projectId}', '${file.id}')" title="${t.removeFile || 'Entfernen'}">❌</button>
         </div>
@@ -8029,6 +8128,39 @@ function createProjectCard(project) {
     card.className = 'project-card';
     card.draggable = true;
     card.dataset.projectId = project.id;
+
+    // Calculate deadline warning
+    let deadlineWarning = null;
+    if (project.deadline) {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const deadline = new Date(project.deadline);
+        deadline.setHours(0, 0, 0, 0);
+        const daysUntil = Math.floor((deadline - today) / (1000 * 60 * 60 * 24));
+
+        if (daysUntil <= 3 && daysUntil >= 1) {
+            deadlineWarning = daysUntil; // 3, 2, or 1 days
+        } else if (daysUntil <= 0) {
+            deadlineWarning = 0; // Overdue
+        }
+    }
+
+    // Apply deadline warning background
+    if (deadlineWarning !== null) {
+        if (deadlineWarning === 0) {
+            card.style.background = 'linear-gradient(135deg, #ff6b6b 0%, #ee5a6f 100%)'; // Overdue - red
+            card.style.color = 'white';
+        } else if (deadlineWarning === 1) {
+            card.style.background = 'linear-gradient(135deg, #ffa94d 0%, #ff922b 100%)'; // 1 day - orange
+            card.style.color = '#1a1a1a'; // Dark text for better readability
+        } else if (deadlineWarning === 2) {
+            card.style.background = 'linear-gradient(135deg, #ffd43b 0%, #fab005 100%)'; // 2 days - yellow
+            card.style.color = '#1a1a1a'; // Dark text for better readability
+        } else if (deadlineWarning === 3) {
+            card.style.background = 'linear-gradient(135deg, #ffe066 0%, #fcc419 100%)'; // 3 days - light yellow
+            card.style.color = '#1a1a1a'; // Dark text for better readability
+        }
+    }
 
     card.addEventListener('dragstart', e => {
         // Only drag if not dragging a file box
@@ -8187,6 +8319,14 @@ function showNewProjectModal() {
         modalTempFiles = [];
         renderModalFilesList();
 
+        // Reset button to "Create"
+        const actionBtn = document.getElementById('projectActionBtn');
+        if (actionBtn) {
+            actionBtn.setAttribute('data-translate', 'createProject');
+            const t = translations[currentLanguage];
+            actionBtn.textContent = t.createProject || 'Create';
+        }
+
         updateProjectDirectionFields();
         modal.classList.add('show');
     }
@@ -8310,12 +8450,21 @@ function getDragAfterElementInModal(container, y) {
 }
 
 function linkCurrentTemplateToModal() {
-    const templateData = getTemplateData();
+    // Extract current state (same as exportStandaloneHTML does)
+    const templateData = {
+        name: window.currentTemplateName || 'Explainator Standalone',
+        date: new Date().toISOString(),
+        categories,
+        layout: extractLayoutData(),
+        fontSettings: window.fontSettings
+    };
+
+    // Build standalone HTML with embedded runtime (same as HTML Export button)
     const htmlContent = buildStandaloneHTML(templateData);
 
     const file = {
         id: 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
-        name: `Template_${new Date().toISOString().split('T')[0]}.html`,
+        name: `explainator-${new Date().toISOString().split('T')[0]}.html`,
         content: htmlContent,
         addedDate: new Date().toISOString().split('T')[0],
         order: modalTempFiles.length
@@ -8395,6 +8544,42 @@ function removeFileFromProject(projectId, fileId) {
     }
 }
 
+function renameFileInProject(projectId, fileId) {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.htmlFiles) return;
+
+    const file = project.htmlFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    const t = translations[currentLanguage];
+    const newName = prompt(t.renameFile || 'Neuer Name:', file.name);
+    if (newName && newName.trim()) {
+        file.name = newName.trim();
+        saveProjectsToStorage();
+        renderKanbanBoard();
+    }
+}
+
+function toggleFileDirection(projectId, fileId) {
+    const project = projects.find(p => p.id === projectId);
+    if (!project || !project.htmlFiles) return;
+
+    const file = project.htmlFiles.find(f => f.id === fileId);
+    if (!file) return;
+
+    // Cycle through: none -> outgoing -> incoming -> none
+    if (!file.direction) {
+        file.direction = 'outgoing';
+    } else if (file.direction === 'outgoing') {
+        file.direction = 'incoming';
+    } else {
+        delete file.direction;
+    }
+
+    saveProjectsToStorage();
+    renderKanbanBoard();
+}
+
 function createProject() {
     const modal = document.getElementById('newProjectModal');
     const editMode = modal.dataset.editMode === 'true';
@@ -8457,6 +8642,14 @@ function editProject(project) {
     // Load HTML files
     modalTempFiles = project.htmlFiles ? JSON.parse(JSON.stringify(project.htmlFiles)) : [];
     renderModalFilesList();
+
+    // Change button to "Update"
+    const actionBtn = document.getElementById('projectActionBtn');
+    if (actionBtn) {
+        actionBtn.setAttribute('data-translate', 'updateProject');
+        const t = translations[currentLanguage];
+        actionBtn.textContent = t.updateProject || 'Update';
+    }
 
     updateProjectDirectionFields();
     modal.classList.add('show');
@@ -8565,6 +8758,52 @@ function importProjects() {
     };
     input.click();
 }
+
+// Menu item disable/enable functions
+function disableMenuItemsExcept(allowedIds) {
+    const menuItems = document.querySelectorAll('.sidebar .nav-item');
+    menuItems.forEach(item => {
+        const onclickAttr = item.getAttribute('onclick');
+        const itemId = item.id;
+
+        // Check if this item is in the allowed list
+        const isAllowed = allowedIds.some(id => {
+            return itemId === id || (onclickAttr && onclickAttr.includes(id));
+        });
+
+        if (!isAllowed) {
+            item.style.opacity = '0.4';
+            item.style.pointerEvents = 'none';
+            item.style.cursor = 'not-allowed';
+        }
+    });
+}
+
+function enableAllMenuItems() {
+    const menuItems = document.querySelectorAll('.sidebar .nav-item');
+    menuItems.forEach(item => {
+        item.style.opacity = '1';
+        item.style.pointerEvents = 'auto';
+        item.style.cursor = 'pointer';
+    });
+}
+
+// Toggle nav section collapse
+function toggleNavSection(sectionTitle) {
+    const section = sectionTitle.closest('.nav-section');
+    if (section) {
+        section.classList.toggle('collapsed');
+    }
+}
+
+// Add click handlers to all nav-section-titles
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.nav-section-title').forEach(title => {
+        title.addEventListener('click', function() {
+            toggleNavSection(this);
+        });
+    });
+});
 
 // Load projects on startup
 loadProjects();
