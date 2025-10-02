@@ -1731,7 +1731,7 @@ body.presentation-mode .section-pipette {
                 
                 <div style="border-top: 2px solid #eee; padding-top: 20px;">
                     <h4 style="margin-bottom: 10px;" data-translate="loadTemplateFromFileTitle">Template aus Datei laden:</h4>
-                    <input type="file" id="templateFileInput" accept=".exp,.json" style="margin-bottom: 10px;">
+                    <input type="file" id="templateFileInput" accept=".exp,.json,.html" style="margin-bottom: 10px;">
                     <button class="btn btn-primary" onclick="loadTemplateFromFile()" data-translate="loadFile">📂 Datei laden</button>
                 </div>
             </div>
@@ -4538,26 +4538,135 @@ function insertSplitBlock(btn) {
             }
         }
         
+        function parseStandaloneHTML(htmlContent) {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlContent, 'text/html');
+
+            // Extract title
+            const titleEl = doc.querySelector('title');
+            const name = titleEl ? titleEl.textContent.replace(' - Explainator Standalone', '') : 'Imported Template';
+
+            // Extract categories from box classes and styles
+            const extractedCategories = {};
+            const boxes = doc.querySelectorAll('.app-box');
+            boxes.forEach(box => {
+                const classList = Array.from(box.classList);
+                const typeClass = classList.find(cls => cls !== 'app-box' && cls !== 'full-width' && cls !== 'half-width' && cls !== 'dragging' && cls !== 'image-box' && cls !== 'line-box');
+                if (typeClass && !extractedCategories[typeClass]) {
+                    // Get inline styles (now guaranteed to exist after export fix)
+                    const bgStyle = box.getAttribute('style') || '';
+                    const bgMatch = bgStyle.match(/background:\s*([^;]+)/);
+                    const colorMatch = bgStyle.match(/color:\s*([^;]+)/);
+
+                    // Extract all color values from the background
+                    const fullBg = bgMatch ? bgMatch[1] : '';
+                    const colorMatches = fullBg.match(/(#[0-9a-fA-F]{6}|#[0-9a-fA-F]{3}|rgb\([^)]+\)|rgba\([^)]+\))/g);
+
+                    extractedCategories[typeClass] = {
+                        name: typeClass.charAt(0).toUpperCase() + typeClass.slice(1),
+                        color1: colorMatches && colorMatches[0] ? colorMatches[0] : '#667eea',
+                        color2: colorMatches && colorMatches[1] ? colorMatches[1] : (colorMatches && colorMatches[0] ? colorMatches[0] : '#764ba2'),
+                        textColor: colorMatch ? colorMatch[1].trim() : '#ffffff'
+                    };
+                }
+            });
+
+            // Extract layout
+            const layout = { columns: [] };
+            const columns = doc.querySelectorAll('.column');
+
+            columns.forEach(column => {
+                const header = column.querySelector('.column-header');
+                const columnData = {
+                    id: column.getAttribute('data-column-id') || Date.now().toString(),
+                    title: header ? header.childNodes[0].textContent.trim() : 'Spalte',
+                    width: column.style.width || '400px',
+                    splitState: column.getAttribute('data-split-state') || 'normal',
+                    splitParts: parseInt(column.getAttribute('data-split-parts') || '1', 10),
+                    contentAreas: []
+                };
+
+                const contentWrapper = column.querySelector('.column-content');
+                if (contentWrapper) {
+                    const sections = contentWrapper.querySelectorAll('.section-group');
+                    const areaData = { sections: [] };
+
+                    sections.forEach(section => {
+                        const sectionTitle = section.querySelector('.section-title');
+                        const sectionData = {
+                            title: sectionTitle ? sectionTitle.childNodes[0].textContent.trim() : 'Section',
+                            color: sectionTitle ? (sectionTitle.style.background || '#8B4513') : '#8B4513',
+                            boxes: []
+                        };
+
+                        const sectionBoxes = section.querySelectorAll('.app-box');
+                        sectionBoxes.forEach(box => {
+                            const classList = Array.from(box.classList);
+                            const typeClass = classList.find(cls => cls !== 'app-box' && cls !== 'full-width' && cls !== 'half-width' && cls !== 'dragging' && cls !== 'image-box' && cls !== 'line-box') || 'saas';
+                            const widthClass = classList.find(cls => cls === 'full-width' || cls === 'half-width') || 'full-width';
+
+                            // Extract text (ignore buttons)
+                            let text = '';
+                            box.childNodes.forEach(node => {
+                                if (node.nodeType === 3) text += node.textContent;
+                                else if (node.nodeType === 1 && node.tagName !== 'BUTTON') text += node.textContent;
+                            });
+
+                            sectionData.boxes.push({
+                                isImage: false,
+                                text: text.trim(),
+                                type: typeClass,
+                                width: widthClass,
+                                lines: box.getAttribute('data-lines') || '1'
+                            });
+                        });
+
+                        areaData.sections.push(sectionData);
+                    });
+
+                    columnData.contentAreas.push(areaData);
+                }
+
+                layout.columns.push(columnData);
+            });
+
+            return {
+                name: name,
+                date: new Date().toISOString(),
+                categories: Object.keys(extractedCategories).length > 0 ? extractedCategories : categories,
+                layout: layout
+            };
+        }
+
         function loadTemplateFromFile() {
             const fileInput = document.getElementById('templateFileInput');
             const file = fileInput.files[0];
             const t = translations[currentLanguage];
             if (!file) { alert(t.alertChooseFile); return; }
-            
+
             const reader = new FileReader();
             reader.onload = e => {
                 try {
-                    const templateData = JSON.parse(e.target.result);
+                    let templateData;
+                    const content = e.target.result;
+
+                    // Check if HTML file
+                    if (file.name.toLowerCase().endsWith('.html') || content.trim().startsWith('<!DOCTYPE')) {
+                        templateData = parseStandaloneHTML(content);
+                    } else {
+                        templateData = JSON.parse(content);
+                    }
+
                     if (!templateData.categories || !templateData.layout) throw new Error('Invalid format');
                     if (!confirm(t.confirmLoadFromFile.replace('{name}', templateData.name))) return;
-                    
+
                     categories = templateData.categories;
                     updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
                     if (templateData.fontSettings) { try { window.fontSettings = templateData.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
                     applyLayoutData(templateData.layout);
                     try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); else if (typeof enforceBoxHeights==='function') enforceBoxHeights(document); } catch(_){}
                     window.currentTemplateName = templateData.name || '';
-                    
+
                     closeModal('loadTemplateModal');
                     // HINWEIS: Die Erfolgsmeldung wurde hier entfernt (auskommentiert).
                     // alert(t.alertFileLoaded.replace('{name}', templateData.name));
@@ -4738,8 +4847,19 @@ function insertSplitBlock(btn) {
                 .map(s => s.textContent)
                 .join('\n');
 
-            // Build the HTML content from layout
-            const mainContainerHTML = document.getElementById('mainContainer').outerHTML;
+            // Build the HTML content from layout - but first add inline styles to boxes for color preservation
+            const mainContainer = document.getElementById('mainContainer').cloneNode(true);
+            mainContainer.querySelectorAll('.app-box').forEach(box => {
+                const classList = Array.from(box.classList);
+                const typeClass = classList.find(cls => cls !== 'app-box' && cls !== 'full-width' && cls !== 'half-width' && cls !== 'dragging' && cls !== 'image-box' && cls !== 'line-box');
+                if (typeClass && data.categories[typeClass]) {
+                    const cat = data.categories[typeClass];
+                    const gradient = `linear-gradient(135deg, ${cat.color1} 0%, ${cat.color2} 100%)`;
+                    box.style.background = gradient;
+                    box.style.color = cat.textColor || '#ffffff';
+                }
+            });
+            const mainContainerHTML = mainContainer.outerHTML;
 
             const categoriesJSON = JSON.stringify(data.categories).replace(/`/g, '\\`');
 
@@ -4758,8 +4878,15 @@ allStyles + '\n' +
 '        body { margin: 0; padding: 20px; background: #f5f7fa; overflow: auto !important; }\n' +
 '        body.presentation-mode { overflow: auto !important; }\n' +
 '        body.presentation-mode .container { height: auto !important; max-width: 100%; }\n' +
-'        body.presentation-mode .main-container { height: auto !important; min-height: calc(100vh - 60px); }\n' +
+'        body.presentation-mode .main-container { height: auto !important; min-height: auto !important; }\n' +
+'        body.presentation-mode .column { height: auto !important; }\n' +
+'        body.presentation-mode .column-content { height: auto !important; }\n' +
 '        .presentation-add-box-btn, .presentation-export-btn { display: flex !important; position: fixed !important; }\n' +
+'        .category-legend { position: fixed; top: 20px; right: 20px; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 9999; max-width: 250px; }\n' +
+'        .category-legend h3 { margin: 0 0 10px 0; font-size: 14px; font-weight: 600; color: #333; }\n' +
+'        .legend-item { display: flex; align-items: center; gap: 8px; padding: 5px 0; }\n' +
+'        .legend-box { width: 30px; height: 20px; border-radius: 4px; }\n' +
+'        .legend-label { font-size: 13px; color: #555; }\n' +
 '    </style>\n' +
 '</head>\n' +
 '<body class="presentation-mode">\n' +
@@ -4770,6 +4897,7 @@ mainContainerHTML + '\n' +
 '            </div>\n' +
 '        </div>\n' +
 '    </div>\n' +
+'    <div class="category-legend"><h3>Kategorien</h3><div id="legendContent"></div></div>\n' +
 '    <button class="presentation-add-box-btn" onclick="showAddBoxModal()" title="Neue Box hinzufügen">➕</button>\n' +
 '    <button class="presentation-export-btn" onclick="exportToPNG()" title="Als PNG exportieren" style="left: 30px;"><span>🖼️</span><span>PNG</span></button>\n' +
 '    <button class="presentation-export-btn" onclick="saveStandalone()" title="Änderungen speichern" style="left: 140px;"><span>💾</span><span>Speichern</span></button>\n' +
@@ -4999,7 +5127,27 @@ mainContainerHTML + '\n' +
 '            };\n' +
 '            input.click();\n' +
 '        }\n' +
+'        function initializeLegend() {\n' +
+'            const legendContent = document.getElementById("legendContent");\n' +
+'            if (!legendContent) return;\n' +
+'            legendContent.innerHTML = "";\n' +
+'            Object.keys(categories).forEach(key => {\n' +
+'                const cat = categories[key];\n' +
+'                const item = document.createElement("div");\n' +
+'                item.className = "legend-item";\n' +
+'                const box = document.createElement("div");\n' +
+'                box.className = "legend-box";\n' +
+'                box.style.background = "linear-gradient(135deg, " + cat.color1 + " 0%, " + cat.color2 + " 100%)";\n' +
+'                const label = document.createElement("span");\n' +
+'                label.className = "legend-label";\n' +
+'                label.textContent = cat.name;\n' +
+'                item.appendChild(box);\n' +
+'                item.appendChild(label);\n' +
+'                legendContent.appendChild(item);\n' +
+'            });\n' +
+'        }\n' +
 '        setupDragAndDrop();\n' +
+'        initializeLegend();\n' +
 '        document.addEventListener("keydown", function(e) { if (e.key === "Escape") document.querySelectorAll(".modal.show").forEach(m => m.classList.remove("show")); });\n' +
 '    <\/script>\n' +
 '</body>\n' +
