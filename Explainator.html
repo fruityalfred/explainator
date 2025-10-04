@@ -827,7 +827,7 @@
   </style>
   <style>
   /* Open Canvas Mode */
-  .main-container.canvas-mode { display:block !important; position:relative; width:1920px; height:1080px; margin:0 auto; background-image: linear-gradient(transparent 39px, rgba(0,0,0,0.05) 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.05) 40px); background-size: 40px 40px, 40px 40px; border: 2px dashed #bbb; }
+  .main-container.canvas-mode { display:block !important; position:relative; margin:0 auto; background-image: linear-gradient(transparent 39px, rgba(0,0,0,0.05) 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.05) 40px); background-size: 40px 40px, 40px 40px; border: 2px dashed #bbb; }
   .main-container.canvas-mode .column { position:absolute !important; }
   .main-container.canvas-mode .column .column-header { cursor:grab; }
   .main-container.canvas-mode .column[data-hide-column-header="true"] { cursor:grab; }
@@ -840,6 +840,64 @@
   .controls [data-role="connector-toggle-btn"].is-active {
     outline: 2px solid #1E88E5;
     box-shadow: 0 0 0 2px rgba(30,136,229,0.15);
+  }
+
+  /* Phone Mockup for Social Media Formats */
+  .phone-mockup-wrapper {
+    display: none;
+    position: fixed;
+    top: 80px;
+    right: 40px;
+    z-index: 9999;
+    pointer-events: auto;
+    cursor: move;
+  }
+  .phone-mockup-wrapper.active {
+    display: block;
+  }
+  .phone-mockup {
+    position: relative;
+    background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
+    border-radius: 40px;
+    padding: 14px;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.5), 0 10px 20px rgba(0,0,0,0.3);
+    cursor: move;
+  }
+  .phone-screen {
+    position: relative;
+    background: #000;
+    border-radius: 32px;
+    overflow: hidden;
+    box-shadow: inset 0 0 0 3px #333;
+  }
+  .phone-notch {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 26px;
+    background: #1a1a1a;
+    border-radius: 0 0 18px 18px;
+    z-index: 10;
+  }
+  .phone-screen-content {
+    width: 100%;
+    height: 100%;
+    background: white;
+    transform-origin: top left;
+    overflow: hidden;
+    position: relative;
+  }
+  .phone-screen-content iframe {
+    border: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+  /* Hide phone mockup from screenshots */
+  [data-screenshot="true"] .phone-mockup-wrapper {
+    display: none !important;
   }
   /* Anchor point selection overlay */
   .connector-anchor-overlay {
@@ -1731,8 +1789,10 @@ body.presentation-mode .section-pipette {
                     <div class="nav-item-select">
                         <span class="icon">📐</span>
                         <select data-role="canvas-res-select" title="Canvas Resolution" onchange="(function(s){var v=s.value.split('x'); setCanvasSize(parseInt(v[0],10), parseInt(v[1],10));})(this)">
-                            <option value="1280x720">HD 720p</option>
-                            <option value="1920x1080" selected>Full HD</option>
+                            <option value="1280x720">HD 720p (16:9)</option>
+                            <option value="1920x1080" selected>Full HD (16:9)</option>
+                            <option value="1080x1080">Instagram Post (1:1)</option>
+                            <option value="1080x1920">Story/Reels (9:16)</option>
                         </select>
                     </div>
                     <button class="nav-item" data-role="connector-toggle-btn" onclick="toggleConnectorMode()" title="Connections">
@@ -6307,7 +6367,35 @@ mainContainerHTML + '\n' +
     state.width = Math.max(640, parseInt(w,10)||state.width);
     state.height = Math.max(360, parseInt(h,10)||state.height);
     var mc = document.getElementById('mainContainer'); if(!mc) return;
-    if (state.enabled){ mc.style.width = state.width+'px'; mc.style.height = state.height+'px'; clampColumnsIntoCanvas(); }
+    if (state.enabled){
+      mc.style.width = state.width+'px';
+      mc.style.height = state.height+'px';
+
+      // Adjust column widths for social media formats
+      var cols = Array.from(mc.querySelectorAll(':scope > .column'));
+      var optimalColumnWidth = 400; // default
+
+      // For narrow formats (1:1 or 9:16), make columns narrower
+      if (state.width <= 1080) {
+        optimalColumnWidth = Math.min(state.width - 40, 350); // 20px margin on each side
+      }
+
+      cols.forEach(function(c){
+        // Only adjust if column doesn't have a custom width set
+        if (!c.hasAttribute('data-custom-width')) {
+          c.style.width = optimalColumnWidth + 'px';
+        }
+      });
+
+      clampColumnsIntoCanvas();
+
+      // Show phone mockup for social media formats
+      if (state.width === 1080 && (state.height === 1080 || state.height === 1920)) {
+        showPhoneMockup();
+      } else {
+        hidePhoneMockup();
+      }
+    }
   };
 
   function enableCanvas(){
@@ -6317,8 +6405,24 @@ mainContainerHTML + '\n' +
     mc.style.height = state.height + 'px';
     // ensure connector layer
     ensureConnectorLayer();
-    // position columns in a simple grid initially
+
+    // Adjust column widths for social media formats
     var cols = Array.from(mc.querySelectorAll(':scope > .column'));
+    var optimalColumnWidth = 400; // default
+
+    // For narrow formats (1:1 or 9:16), make columns narrower
+    if (state.width <= 1080) {
+      optimalColumnWidth = Math.min(state.width - 40, 350); // 20px margin on each side
+    }
+
+    cols.forEach(function(c){
+      // Only adjust if column doesn't have a custom width set
+      if (!c.hasAttribute('data-custom-width')) {
+        c.style.width = optimalColumnWidth + 'px';
+      }
+    });
+
+    // position columns in a simple grid initially
     var x = 10, y = 10, maxH = 0; var gap = 10;
     cols.forEach(function(c, idx){
       var sx = c.getAttribute('data-canvas-x'); var sy = c.getAttribute('data-canvas-y');
@@ -6336,6 +6440,11 @@ mainContainerHTML + '\n' +
     });
     installColumnDrag();
     try{ updateAllConnectors(); }catch(_){ }
+
+    // Show phone mockup for social media formats
+    if (state.width === 1080 && (state.height === 1080 || state.height === 1920)) {
+      if (typeof showPhoneMockup === 'function') showPhoneMockup();
+    }
   }
 
   // Column/Section header visibility toggles
@@ -6402,6 +6511,149 @@ mainContainerHTML + '\n' +
     if (btn) btn.textContent = off ? 'Sections: Aus' : 'Sections: An';
   };
 
+  // Phone Mockup for Social Media Formats (6.3" simulation)
+  var phoneMockupUpdateInterval = null;
+
+  window.showPhoneMockup = function(){
+    var wrapper = document.getElementById('phoneMockupWrapper');
+    if (!wrapper) {
+      // Create phone mockup wrapper
+      wrapper = document.createElement('div');
+      wrapper.id = 'phoneMockupWrapper';
+      wrapper.className = 'phone-mockup-wrapper';
+
+      // Real phone dimensions for proper preview
+      // Using actual pixel dimensions to show content at realistic size
+      var phoneDisplayWidth = 390;  // iPhone 14 Pro logical width
+      var phoneDisplayHeight = 844; // iPhone 14 Pro logical height
+      var bodyPadding = 14; // padding from CSS
+
+      wrapper.innerHTML =
+        '<div class="phone-mockup" style="width:' + (phoneDisplayWidth + bodyPadding * 2) + 'px;">' +
+          '<div class="phone-screen" style="width:' + phoneDisplayWidth + 'px; height:' + phoneDisplayHeight + 'px;">' +
+            '<div class="phone-notch"></div>' +
+            '<div class="phone-screen-content" id="phoneScreenContent"></div>' +
+          '</div>' +
+        '</div>';
+
+      document.body.appendChild(wrapper);
+
+      // Make phone mockup draggable
+      installPhoneDrag(wrapper);
+    }
+
+    wrapper.classList.add('active');
+
+    // Update phone content immediately
+    updatePhoneContent();
+
+    // Set up live update (every 500ms)
+    if (phoneMockupUpdateInterval) clearInterval(phoneMockupUpdateInterval);
+    phoneMockupUpdateInterval = setInterval(updatePhoneContent, 500);
+  };
+
+  function installPhoneDrag(wrapper) {
+    var isDragging = false;
+    var startX, startY, initialLeft, initialTop;
+
+    wrapper.addEventListener('mousedown', function(e) {
+      isDragging = true;
+      startX = e.clientX;
+      startY = e.clientY;
+
+      var rect = wrapper.getBoundingClientRect();
+      initialLeft = rect.left;
+      initialTop = rect.top;
+
+      wrapper.style.transition = 'none';
+      e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      if (!isDragging) return;
+
+      var dx = e.clientX - startX;
+      var dy = e.clientY - startY;
+
+      wrapper.style.left = (initialLeft + dx) + 'px';
+      wrapper.style.top = (initialTop + dy) + 'px';
+      wrapper.style.right = 'auto';
+    });
+
+    document.addEventListener('mouseup', function() {
+      if (isDragging) {
+        isDragging = false;
+        wrapper.style.transition = '';
+      }
+    });
+  }
+
+  function updatePhoneContent() {
+    var mc = document.getElementById('mainContainer');
+    var phoneContent = document.getElementById('phoneScreenContent');
+    if (!mc || !phoneContent || !mc.classList.contains('canvas-mode')) return;
+
+    var canvasWidth = parseInt(mc.style.width) || 1080;
+    var canvasHeight = parseInt(mc.style.height) || 1920;
+
+    // Phone screen dimensions (iPhone 14 Pro logical size)
+    var phoneScreenWidth = 390;
+    var phoneScreenHeight = 844;
+
+    // Calculate scale to fit canvas into phone screen
+    var scaleX = phoneScreenWidth / canvasWidth;
+    var scaleY = phoneScreenHeight / canvasHeight;
+    var contentScale = Math.min(scaleX, scaleY);
+
+    // Calculate centering offset for 1:1 formats
+    var scaledWidth = canvasWidth * contentScale;
+    var scaledHeight = canvasHeight * contentScale;
+    var offsetX = (phoneScreenWidth - scaledWidth) / 2;
+    var offsetY = (phoneScreenHeight - scaledHeight) / 2;
+
+    // Create wrapper div that will be scaled
+    var wrapper = document.createElement('div');
+    wrapper.style.width = canvasWidth + 'px';
+    wrapper.style.height = canvasHeight + 'px';
+    wrapper.style.transform = 'scale(' + contentScale + ')';
+    wrapper.style.transformOrigin = 'top left';
+    wrapper.style.position = 'absolute';
+    wrapper.style.left = offsetX + 'px';
+    wrapper.style.top = offsetY + 'px';
+    wrapper.style.backgroundColor = mc.style.backgroundColor || '#f5f7fa';
+
+    // Deep clone all columns with computed styles
+    var columns = mc.querySelectorAll(':scope > .column');
+    columns.forEach(function(col) {
+      var clonedCol = col.cloneNode(true);
+
+      // Copy computed position and size
+      var rect = col.getBoundingClientRect();
+      var mcRect = mc.getBoundingClientRect();
+      clonedCol.style.position = 'absolute';
+      clonedCol.style.left = (rect.left - mcRect.left) + 'px';
+      clonedCol.style.top = (rect.top - mcRect.top) + 'px';
+      clonedCol.style.width = col.style.width || rect.width + 'px';
+
+      wrapper.appendChild(clonedCol);
+    });
+
+    phoneContent.innerHTML = '';
+    phoneContent.appendChild(wrapper);
+  }
+
+  window.hidePhoneMockup = function(){
+    var wrapper = document.getElementById('phoneMockupWrapper');
+    if (wrapper) {
+      wrapper.classList.remove('active');
+    }
+    // Stop live updates
+    if (phoneMockupUpdateInterval) {
+      clearInterval(phoneMockupUpdateInterval);
+      phoneMockupUpdateInterval = null;
+    }
+  };
+
   // Presentation Mode Toggle
   window.togglePresentationMode = function(){
     document.body.classList.toggle('presentation-mode');
@@ -6461,6 +6713,8 @@ mainContainerHTML + '\n' +
       c.style.left = ''; c.style.top = ''; c.style.position='';
     });
     uninstallColumnDrag();
+    // Hide phone mockup when canvas mode is disabled
+    if (typeof hidePhoneMockup === 'function') hidePhoneMockup();
   }
 
   var dragging = null, dx=0, dy=0;
@@ -7916,6 +8170,9 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
   window.zoomReset = function() {
     applyZoom(1.0);
   };
+
+  // Expose applyZoom globally for auto-zoom in canvas mode
+  window.applyZoom = applyZoom;
 
   // Keyboard shortcuts: Ctrl + Plus/Minus/0
   document.addEventListener('keydown', function(e) {
