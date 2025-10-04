@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(start \"\" \"F:\\2025 Coding\\local_explainator\\explainator\\Explainator.html\")"
+      "Bash(start \"\" \"F:\\2025 Coding\\local_explainator\\explainator\\Explainator.html\")",
+      "Read(//x/Downloads/**)"
     ],
     "deny": [],
     "ask": []

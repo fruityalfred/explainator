@@ -827,13 +827,23 @@
   </style>
   <style>
   /* Open Canvas Mode */
-  .main-container.canvas-mode { display:block !important; position:relative; margin:0 auto; background-image: linear-gradient(transparent 39px, rgba(0,0,0,0.05) 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.05) 40px); background-size: 40px 40px, 40px 40px; border: 2px dashed #bbb; }
+  .main-container.canvas-mode {
+    display:block !important;
+    position:relative;
+    margin:0 auto;
+    background-image: linear-gradient(transparent 39px, rgba(0,0,0,0.05) 40px), linear-gradient(90deg, transparent 39px, rgba(0,0,0,0.05) 40px);
+    background-size: 40px 40px, 40px 40px;
+    border: 2px dashed #bbb;
+    overflow: hidden !important;
+    box-sizing: border-box;
+  }
   .main-container.canvas-mode .column { position:absolute !important; }
   .main-container.canvas-mode .column .column-header { cursor:grab; }
   .main-container.canvas-mode .column[data-hide-column-header="true"] { cursor:grab; }
   .main-container.canvas-mode .add-column { display:none !important; }
   /* SVG overlay for connectors */
   .canvas-connectors { position:absolute; left:0; top:0; width:100%; height:100%; pointer-events:none; overflow:visible; shape-rendering: geometricPrecision; }
+  .main-container.canvas-mode .canvas-connectors { overflow:hidden !important; }
   .canvas-connectors path { stroke:#1E88E5; stroke-width:2; fill:none; pointer-events:stroke; vector-effect: non-scaling-stroke; }
   .canvas-connectors path.conn-highlight { stroke:#EF6C00; stroke-width:3; }
   /* Visual feedback for active connector mode button */
@@ -898,6 +908,26 @@
   /* Hide phone mockup from screenshots */
   [data-screenshot="true"] .phone-mockup-wrapper {
     display: none !important;
+  }
+  /* Clean preview mode in phone mockup - hide ALL UI elements like screenshot mode */
+  .phone-screen-content .column-header .header-btn,
+  .phone-screen-content .section-title button,
+  .phone-screen-content .add-app-box-btn,
+  .phone-screen-content .resize-handle,
+  .phone-screen-content .color-column-btn,
+  .phone-screen-content .pipette-column-btn,
+  .phone-screen-content .section-pipette,
+  .phone-screen-content .add-column,
+  .phone-screen-content button[onclick*="delete"],
+  .phone-screen-content button[onclick*="duplicate"],
+  .phone-screen-content button[onclick*="color"],
+  .phone-screen-content .connector-anchor-overlay {
+    display: none !important;
+  }
+  /* Hide canvas grid/border in phone preview */
+  .phone-screen-content > div {
+    background-image: none !important;
+    border: none !important;
   }
   /* Anchor point selection overlay */
   .connector-anchor-overlay {
@@ -4494,7 +4524,11 @@ function insertSplitBlock(btn) {
 // Extract current layout data
         function extractLayoutData() {
             const columns = [];
-            document.querySelectorAll('.column').forEach(column => {
+            // WICHTIG: Nur Columns vom mainContainer, NICHT vom Phone-Mockup!
+            const mainContainer = document.getElementById('mainContainer');
+            if (!mainContainer) return { columns: [] };
+
+            mainContainer.querySelectorAll(':scope > .column').forEach(column => {
                 const columnData = {
                     id: column.getAttribute('data-column-id'),
                     title: column.querySelector('.column-header').childNodes[0].textContent.trim(),
@@ -4742,6 +4776,12 @@ function insertSplitBlock(btn) {
             categories = template.categories || categories;
             updateCategoryStyles(); updateCategoryDropdown(); updateLegend();
             // Restore font settings if present
+            // Clear any existing phone mockup before loading
+            if (typeof hidePhoneMockup === 'function') hidePhoneMockup();
+
+            // Remove any leftover UI elements
+            document.querySelectorAll('.connector-anchor-overlay').forEach(function(el){ el.remove(); });
+
             if (template.fontSettings) { try { window.fontSettings = template.fontSettings; if (typeof applyAllFontStyles==='function') applyAllFontStyles(); } catch(_){} }
             applyLayoutData(template.layout);
             try { if (typeof enforceBoxFlex==='function') enforceBoxFlex(document); if (typeof applyBoxLayoutAll==='function') applyBoxLayoutAll(document); } catch(_){}
@@ -4751,6 +4791,14 @@ function insertSplitBlock(btn) {
                     if (typeof setCanvasSize==='function') setCanvasSize(template.canvas.width||1920, template.canvas.height||1080);
                     var mc=document.getElementById('mainContainer'); if (typeof toggleCanvasMode==='function' && mc && !mc.classList.contains('canvas-mode')) toggleCanvasMode();
                     if (template.canvas.connectors && typeof window.__setCanvasConnectors==='function') { try{ if (typeof ensureConnectorLayer==='function') ensureConnectorLayer(); }catch(_){ } window.__setCanvasConnectors(template.canvas.connectors); }
+
+                    // Update resolution dropdown to match loaded canvas size
+                    var resSelect = document.querySelector('[data-role="canvas-res-select"]');
+                    if (resSelect) {
+                        var w = template.canvas.width || 1920;
+                        var h = template.canvas.height || 1080;
+                        resSelect.value = w + 'x' + h;
+                    }
                 }
             }catch(_){ }
             window.currentTemplateName = template.name || templateName;
@@ -5150,54 +5198,74 @@ function insertSplitBlock(btn) {
         function exportToPNG() {
             const container = document.querySelector('.main-container');
             const t = translations[currentLanguage];
-            
+
             const button = event.target;
             const originalText = button.textContent;
             button.textContent = t.exporting;
             button.disabled = true;
-            
+
             hideExportUIElements();
-            
-            // Compute bounding box of currently visible columns (and connectors) with padding
-            function getVisibleColumnsBBox(padding){
-                const cols = Array.from(document.querySelectorAll('.column'));
+
+            // Check if in canvas mode
+            const isCanvasMode = container && container.classList.contains('canvas-mode');
+
+            // Compute bounding box of ALL columns (and connectors) with padding
+            function getColumnsBBox(padding){
+                const mainContainer = document.getElementById('mainContainer');
+                if (!mainContainer) return null;
+
+                // Get only columns from mainContainer (not from phone mockup!)
+                const cols = Array.from(mainContainer.querySelectorAll(':scope > .column'));
                 const vw = window.innerWidth || document.documentElement.clientWidth || 0;
                 const vh = window.innerHeight || document.documentElement.clientHeight || 0;
                 let left = Infinity, top = Infinity, right = -Infinity, bottom = -Infinity;
-                cols.forEach(col => {
-                    const r = col.getBoundingClientRect();
-                    const visible = r.right > 0 && r.left < vw && r.bottom > 0 && r.top < vh;
-                    if (!visible) return;
-                    left = Math.min(left, r.left);
-                    top = Math.min(top, r.top);
-                    right = Math.max(right, r.right);
-                    bottom = Math.max(bottom, r.bottom);
-                });
+
+                // In canvas mode: Use exact canvas dimensions, ignore actual column positions
+                if (isCanvasMode && mainContainer) {
+                    const canvasRect = mainContainer.getBoundingClientRect();
+                    left = canvasRect.left;
+                    top = canvasRect.top;
+                    right = canvasRect.right;
+                    bottom = canvasRect.bottom;
+                } else {
+                    cols.forEach(col => {
+                        const r = col.getBoundingClientRect();
+                        const visible = r.right > 0 && r.left < vw && r.bottom > 0 && r.top < vh;
+                        if (!visible) return;
+                        left = Math.min(left, Math.floor(r.left));
+                        top = Math.min(top, Math.floor(r.top));
+                        right = Math.max(right, Math.ceil(r.right));
+                        bottom = Math.max(bottom, Math.ceil(r.bottom));
+                    });
+                }
+
                 // include connectors if present
                 try{
                     const svg = document.getElementById('canvasConnectors');
                     if (svg && svg.style.display !== 'none'){
                         svg.querySelectorAll('path').forEach(p => {
                             const r = p.getBoundingClientRect();
-                            left = Math.min(left, r.left);
-                            top = Math.min(top, r.top);
-                            right = Math.max(right, r.right);
-                            bottom = Math.max(bottom, r.bottom);
+                            left = Math.min(left, Math.floor(r.left));
+                            top = Math.min(top, Math.floor(r.top));
+                            right = Math.max(right, Math.ceil(r.right));
+                            bottom = Math.max(bottom, Math.ceil(r.bottom));
                         });
                     }
                 }catch(_){ }
+
                 if (right <= left || bottom <= top) return null;
-                const pad = typeof padding==='number' ? padding : 10;  // Increased from 5 to 10 for safety
+                const pad = typeof padding==='number' ? padding : 5;  // 5px safety margin
                 // Coordinates are viewport‑relative for html2canvas(target=document.body)
-                const x = Math.max(0, Math.floor(left) - pad);
-                const y = Math.max(0, Math.floor(top) - pad);
-                const width = Math.ceil((right - left) + pad * 2 + 5);   // +5 extra buffer for right edge
-                const height = Math.ceil((bottom - top) + pad * 2 + 5);  // +5 extra buffer for bottom edge
+                // Subtract padding from left/top, add to width/height
+                const x = Math.max(0, left - pad);
+                const y = Math.max(0, top - pad);
+                const width = (right - left) + (pad * 2);
+                const height = (bottom - top) + (pad * 2);
                 return { x, y, width, height };
             }
 
             setTimeout(() => {
-                const bbox = getVisibleColumnsBBox(10);  // Increased padding from 5 to 10
+                const bbox = getColumnsBBox(5);  // 5px safety margin
                 const target = document.body; // crop from full page to avoid scroll issues
                 const opts = bbox ? {
                     x: bbox.x, y: bbox.y, width: bbox.width, height: bbox.height,
@@ -5208,20 +5276,32 @@ function insertSplitBlock(btn) {
                     height: Math.max(container.scrollHeight, container.offsetHeight)
                 };
 
+                // Ensure the capture area is not clipped at the right/bottom edge.
+                // html2canvas(target=document.body) will clamp to the document box.
+                // If our requested bbox extends beyond, add a temporary spacer to grow the page.
+                let spacer = null;
+                if (bbox) {
+                    const needWidth = Math.ceil(bbox.x + bbox.width);
+                    const needHeight = Math.ceil(bbox.y + bbox.height);
+                    const docWidth = Math.max(document.documentElement.scrollWidth, document.body.scrollWidth);
+                    const docHeight = Math.max(document.documentElement.scrollHeight, document.body.scrollHeight);
+                    if (needWidth > docWidth || needHeight > docHeight) {
+                        spacer = document.createElement('div');
+                        spacer.style.position = 'absolute';
+                        spacer.style.left = (needWidth + 1) + 'px';
+                        spacer.style.top = (needHeight + 1) + 'px';
+                        spacer.style.width = '1px';
+                        spacer.style.height = '1px';
+                        spacer.style.opacity = '0';
+                        spacer.style.pointerEvents = 'none';
+                        document.body.appendChild(spacer);
+                    }
+                }
+
                 html2canvas(target, opts).then(canvas => {
-                    // Wrap with a constant 5px border on all sides
-                    try {
-                        const BORDER = 5;
-                        const out = document.createElement('canvas');
-                        out.width = canvas.width + BORDER*2;
-                        out.height = canvas.height + BORDER*2;
-                        const ctx = out.getContext('2d');
-                        ctx.fillStyle = '#ffffff';
-                        ctx.fillRect(0,0,out.width,out.height);
-                        ctx.drawImage(canvas, BORDER, BORDER);
-                        canvas = out;
-                    } catch(_){ }
+                    // No additional border needed - already included in bbox
                     showExportUIElements();
+                    if (spacer && spacer.parentNode) spacer.parentNode.removeChild(spacer);
                     const a = document.createElement('a');
                     a.href = canvas.toDataURL('image/png', 0.95);
                     a.download = 'enterprise-architecture-' + new Date().toISOString().split('T')[0] + '.png';
@@ -5234,6 +5314,7 @@ function insertSplitBlock(btn) {
                     alert(t.alertExportSuccess);
                 }).catch(error => {
                     showExportUIElements();
+                    if (spacer && spacer.parentNode) spacer.parentNode.removeChild(spacer);
                     button.textContent = originalText;
                     button.disabled = false;
                     alert(t.alertExportError + error.message);
@@ -5244,6 +5325,11 @@ function insertSplitBlock(btn) {
         function hideExportUIElements() {
             // Mark document for screenshot-specific CSS rules
             document.documentElement.setAttribute('data-screenshot', 'true');
+
+            // Hide header, sidebar, and all UI chrome
+            document.querySelectorAll('.top-header').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.sidebar').forEach(el => el.style.display = 'none');
+            document.querySelectorAll('.controls').forEach(el => el.style.display = 'none');
 
             // Hide interactive UI for clean export
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'none');
@@ -5265,6 +5351,11 @@ function insertSplitBlock(btn) {
         function showExportUIElements() {
             // Remove screenshot flag
             document.documentElement.removeAttribute('data-screenshot');
+
+            // Restore header, sidebar, controls
+            document.querySelectorAll('.top-header').forEach(el => el.style.display = '');
+            document.querySelectorAll('.sidebar').forEach(el => el.style.display = '');
+            document.querySelectorAll('.controls').forEach(el => el.style.display = '');
 
             // Restore interactive UI
             document.querySelectorAll('.add-section-btn').forEach(el => el.style.display = 'block');
@@ -6370,23 +6461,6 @@ mainContainerHTML + '\n' +
     if (state.enabled){
       mc.style.width = state.width+'px';
       mc.style.height = state.height+'px';
-
-      // Adjust column widths for social media formats
-      var cols = Array.from(mc.querySelectorAll(':scope > .column'));
-      var optimalColumnWidth = 400; // default
-
-      // For narrow formats (1:1 or 9:16), make columns narrower
-      if (state.width <= 1080) {
-        optimalColumnWidth = Math.min(state.width - 40, 350); // 20px margin on each side
-      }
-
-      cols.forEach(function(c){
-        // Only adjust if column doesn't have a custom width set
-        if (!c.hasAttribute('data-custom-width')) {
-          c.style.width = optimalColumnWidth + 'px';
-        }
-      });
-
       clampColumnsIntoCanvas();
 
       // Show phone mockup for social media formats
@@ -6403,26 +6477,11 @@ mainContainerHTML + '\n' +
     mc.classList.add('canvas-mode');
     mc.style.width = state.width + 'px';
     mc.style.height = state.height + 'px';
+
     // ensure connector layer
     ensureConnectorLayer();
-
-    // Adjust column widths for social media formats
-    var cols = Array.from(mc.querySelectorAll(':scope > .column'));
-    var optimalColumnWidth = 400; // default
-
-    // For narrow formats (1:1 or 9:16), make columns narrower
-    if (state.width <= 1080) {
-      optimalColumnWidth = Math.min(state.width - 40, 350); // 20px margin on each side
-    }
-
-    cols.forEach(function(c){
-      // Only adjust if column doesn't have a custom width set
-      if (!c.hasAttribute('data-custom-width')) {
-        c.style.width = optimalColumnWidth + 'px';
-      }
-    });
-
     // position columns in a simple grid initially
+    var cols = Array.from(mc.querySelectorAll(':scope > .column'));
     var x = 10, y = 10, maxH = 0; var gap = 10;
     cols.forEach(function(c, idx){
       var sx = c.getAttribute('data-canvas-x'); var sy = c.getAttribute('data-canvas-y');
@@ -6515,32 +6574,35 @@ mainContainerHTML + '\n' +
   var phoneMockupUpdateInterval = null;
 
   window.showPhoneMockup = function(){
-    var wrapper = document.getElementById('phoneMockupWrapper');
-    if (!wrapper) {
-      // Create phone mockup wrapper
-      wrapper = document.createElement('div');
-      wrapper.id = 'phoneMockupWrapper';
-      wrapper.className = 'phone-mockup-wrapper';
-
-      // Real phone dimensions for proper preview
-      // Using actual pixel dimensions to show content at realistic size
-      var phoneDisplayWidth = 390;  // iPhone 14 Pro logical width
-      var phoneDisplayHeight = 844; // iPhone 14 Pro logical height
-      var bodyPadding = 14; // padding from CSS
-
-      wrapper.innerHTML =
-        '<div class="phone-mockup" style="width:' + (phoneDisplayWidth + bodyPadding * 2) + 'px;">' +
-          '<div class="phone-screen" style="width:' + phoneDisplayWidth + 'px; height:' + phoneDisplayHeight + 'px;">' +
-            '<div class="phone-notch"></div>' +
-            '<div class="phone-screen-content" id="phoneScreenContent"></div>' +
-          '</div>' +
-        '</div>';
-
-      document.body.appendChild(wrapper);
-
-      // Make phone mockup draggable
-      installPhoneDrag(wrapper);
+    // First, clean up any existing mockup
+    var existingWrapper = document.getElementById('phoneMockupWrapper');
+    if (existingWrapper) {
+      existingWrapper.remove();
     }
+
+    // Create fresh phone mockup wrapper
+    var wrapper = document.createElement('div');
+    wrapper.id = 'phoneMockupWrapper';
+    wrapper.className = 'phone-mockup-wrapper';
+
+    // Real phone dimensions for proper preview
+    // Using actual pixel dimensions to show content at realistic size
+    var phoneDisplayWidth = 390;  // iPhone 14 Pro logical width
+    var phoneDisplayHeight = 844; // iPhone 14 Pro logical height
+    var bodyPadding = 14; // padding from CSS
+
+    wrapper.innerHTML =
+      '<div class="phone-mockup" style="width:' + (phoneDisplayWidth + bodyPadding * 2) + 'px;">' +
+        '<div class="phone-screen" style="width:' + phoneDisplayWidth + 'px; height:' + phoneDisplayHeight + 'px;">' +
+          '<div class="phone-notch"></div>' +
+          '<div class="phone-screen-content" id="phoneScreenContent"></div>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(wrapper);
+
+    // Make phone mockup draggable
+    installPhoneDrag(wrapper);
 
     wrapper.classList.add('active');
 
@@ -6621,6 +6683,13 @@ mainContainerHTML + '\n' +
     wrapper.style.left = offsetX + 'px';
     wrapper.style.top = offsetY + 'px';
     wrapper.style.backgroundColor = mc.style.backgroundColor || '#f5f7fa';
+
+    // Clone connector SVG first (if exists)
+    var connectorSvg = mc.querySelector('.canvas-connectors');
+    if (connectorSvg) {
+      var clonedSvg = connectorSvg.cloneNode(true);
+      wrapper.appendChild(clonedSvg);
+    }
 
     // Deep clone all columns with computed styles
     var columns = mc.querySelectorAll(':scope > .column');
@@ -6706,6 +6775,7 @@ mainContainerHTML + '\n' +
     mc.classList.remove('canvas-mode');
     mc.style.width = '';
     mc.style.height = '';
+
     // hide connector layer
     var svg = document.getElementById('canvasConnectors'); if (svg) svg.style.display='none';
     // reset absolute positioning but keep saved attributes for later re-enable
