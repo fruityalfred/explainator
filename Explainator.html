@@ -3886,9 +3886,9 @@ body.slides-presentation .main-container.canvas-mode {
                     }
                 } 
                 else if (draggedElement.classList.contains('section-group') || draggedElement.classList.contains('column-split-content')) {
-                    // This part is for dragging a section from one split part to another.
-                    // It should only apply when dragging a section-group.
-                    if (draggedFromSplit && draggedElement.classList.contains('section-group')) {
+                    // First check: Can we drop into a split column part?
+                    // This applies to ALL section drags, regardless of source (split or normal)
+                    if (draggedElement.classList.contains('section-group')) {
                         let part = e.target.closest('.column-part');
                         if (!part) {
                             const split = e.target.closest('.column-split-content');
@@ -3905,9 +3905,9 @@ body.slides-presentation .main-container.canvas-mode {
                             return;
                         }
                     }
-                    
-                    // This part is for dropping into the main column content area.
-                    // It should apply to both section-group and column-split-content.
+
+                    // Fallback: Drop into the main column content area.
+                    // This applies to both section-group and column-split-content.
                     const container = e.target.closest('.column-content');
                     if (container) {
                         const afterElement = getDragAfterBlock(container, e.clientY);
