@@ -1760,6 +1760,141 @@ body.presentation-mode .section-pipette {
 .sidebar.collapsed .nav-item:hover::after {
     opacity: 1;
 }
+
+/* Slides System Styles */
+.slide-item {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 2px solid transparent;
+}
+
+.slide-item:hover {
+    background: #e9ecef;
+    transform: translateX(-2px);
+}
+
+.slide-item.active {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.slide-item .slide-thumbnail {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+    position: relative;
+    overflow: hidden;
+}
+
+.slide-item .slide-number {
+    font-size: 24px;
+    font-weight: bold;
+    color: #adb5bd;
+}
+
+.slide-item .slide-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.slide-item .slide-name {
+    font-weight: 600;
+    font-size: 13px;
+    color: #2c3e50;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.slide-item .slide-actions {
+    display: flex;
+    gap: 4px;
+}
+
+.slide-btn {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    flex: 1;
+}
+
+.slide-btn:hover {
+    background: #667eea;
+    border-color: #667eea;
+    transform: scale(1.05);
+}
+
+/* Presentation Mode Styles */
+#presentationControls {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    border-radius: 50px;
+    padding: 12px 24px;
+    display: none;
+    align-items: center;
+    gap: 16px;
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+}
+
+#presentationControls span {
+    color: white;
+    font-weight: 600;
+    font-size: 16px;
+    min-width: 60px;
+    text-align: center;
+}
+
+.pres-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    color: white;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    cursor: pointer;
+    font-size: 20px;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pres-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: scale(1.1);
+}
+
+.pres-btn:active {
+    transform: scale(0.95);
+}
+
+.pres-exit {
+    background: rgba(244, 67, 54, 0.8);
+    border-color: rgba(244, 67, 54, 1);
+}
+
+.pres-exit:hover {
+    background: rgba(244, 67, 54, 1);
+}
 </style>
 
 </head>
@@ -1843,6 +1978,42 @@ body.presentation-mode .section-pipette {
                         <button class="btn small-btn" onclick="zoomIn()" title="Zoom In (Ctrl +)">+</button>
                         <button class="btn small-btn" onclick="zoomReset()" title="Reset Zoom (Ctrl 0)">⟲</button>
                     </div>
+                </div>
+
+                <!-- Slides Section -->
+                <div class="nav-section">
+                    <div class="nav-section-title">Slides</div>
+                    <button class="nav-item" onclick="toggleSlidesMode()" title="Slides-Modus aktivieren/deaktivieren">
+                        <span class="icon">📽️</span>
+                        <span class="label">Slides Mode</span>
+                    </button>
+                    <button class="nav-item" onclick="createNewSlide()" title="Neue Folie erstellen">
+                        <span class="icon">➕</span>
+                        <span class="label">Neue Folie</span>
+                    </button>
+                    <button class="nav-item" data-role="prev-slide" onclick="previousSlide()" title="Vorherige Folie">
+                        <span class="icon">⬅️</span>
+                        <span class="label">Zurück</span>
+                    </button>
+                    <button class="nav-item" data-role="next-slide" onclick="nextSlide()" title="Nächste Folie">
+                        <span class="icon">➡️</span>
+                        <span class="label">Weiter</span>
+                    </button>
+                    <div style="text-align: center; padding: 8px; color: rgba(255,255,255,0.7); font-size: 13px;">
+                        <span id="slideCounter">0 / 0</span>
+                    </div>
+                    <button class="nav-item" onclick="enterPresentationMode()" title="Präsentation starten">
+                        <span class="icon">🎬</span>
+                        <span class="label">Präsentation</span>
+                    </button>
+                    <button class="nav-item" onclick="exportSlides()" title="Präsentation exportieren">
+                        <span class="icon">💾</span>
+                        <span class="label">Exportieren</span>
+                    </button>
+                    <button class="nav-item" onclick="importSlides()" title="Präsentation importieren">
+                        <span class="icon">📥</span>
+                        <span class="label">Importieren</span>
+                    </button>
                 </div>
 
                 <!-- Data Section -->
@@ -2580,7 +2751,20 @@ body.presentation-mode .section-pipette {
                 confirmRemoveFile: "Datei \"{name}\" wirklich entfernen?",
                 setFileOutgoing: "Als ausgehend markieren",
                 setFileIncoming: "Als eingehend markieren",
-                setFileNeutral: "Richtung entfernen"
+                setFileNeutral: "Richtung entfernen",
+                // Slides
+                slidesMode: "Slides-Modus",
+                newSlide: "Neue Folie",
+                previousSlide: "Zurück",
+                nextSlide: "Weiter",
+                presentation: "Präsentation",
+                exportSlides: "Exportieren",
+                importSlides: "Importieren",
+                noSlides: "Keine Folien vorhanden. Erstelle die erste Folie!",
+                confirmDeleteSlide: "Folie \"{name}\" wirklich löschen?",
+                renameSlide: "Neuer Name:",
+                slidesImportSuccess: "Präsentation erfolgreich importiert!",
+                noPresentationSlides: "Keine Folien für Präsentation vorhanden!"
             },
             en: {
                 mainTitle: "🏢 Explainator - Ultimate Edition",
@@ -2737,7 +2921,20 @@ body.presentation-mode .section-pipette {
                 confirmRemoveFile: "Really remove file \"{name}\"?",
                 setFileOutgoing: "Mark as outgoing",
                 setFileIncoming: "Mark as incoming",
-                setFileNeutral: "Remove direction"
+                setFileNeutral: "Remove direction",
+                // Slides
+                slidesMode: "Slides Mode",
+                newSlide: "New Slide",
+                previousSlide: "Previous",
+                nextSlide: "Next",
+                presentation: "Presentation",
+                exportSlides: "Export",
+                importSlides: "Import",
+                noSlides: "No slides available. Create the first slide!",
+                confirmDeleteSlide: "Really delete slide \"{name}\"?",
+                renameSlide: "New name:",
+                slidesImportSuccess: "Presentation imported successfully!",
+                noPresentationSlides: "No slides available for presentation!"
             }
         };
 
@@ -3143,6 +3340,17 @@ body.presentation-mode .section-pipette {
             // keep split parts attribute/state
             const parts = parseInt(orig.getAttribute('data-split-parts') || '1', 10);
             clone.setAttribute('data-split-parts', String(parts));
+
+            // IMPORTANT: Remove cloned buttons that have stale event listeners
+            const header = clone.querySelector('.column-header');
+            if (header) {
+                // Remove old clone button (has stale event listener)
+                header.querySelectorAll('.clone-column').forEach(el => el.remove());
+                // Remove old color button (has stale event listener)
+                header.querySelectorAll('.color-column-btn').forEach(el => el.remove());
+                // The MutationObserver will re-add them with fresh event listeners
+            }
+
             // insert after original
             parent.insertBefore(clone, orig.nextSibling);
             // placeholders entfernt
@@ -4097,11 +4305,19 @@ function insertSplitBlock(btn) {
         }       
         
         function resetLayout() {
-            if (confirm(translations[currentLanguage].confirmResetLayout)) location.reload();
+            if (confirm(translations[currentLanguage].confirmResetLayout)) {
+                // Clear slides data before reload
+                clearSlidesData();
+                location.reload();
+            }
         }
-        
+
         function clearAll() {
             if (confirm(translations[currentLanguage].confirmClearAll)) {
+                // Clear slides data
+                clearSlidesData();
+
+                // Clear the canvas
                 document.getElementById('mainContainer').innerHTML = '<div class="add-column" onclick="addNewColumn()"><span>+</span></div>';
             }
         }
@@ -4545,12 +4761,13 @@ function insertSplitBlock(btn) {
                     hideSectionHeaders: column.getAttribute('data-hide-section-headers') === 'true',
                     contentAreas: []
                 };
-                // Save canvas positions when in canvas mode
+                // Save canvas positions (always save from attributes if present)
                 try{
-                    var mc=document.getElementById('mainContainer');
-                    if (mc && mc.classList.contains('canvas-mode')){
-                        var lx = parseInt(column.style.left)||0; var ty = parseInt(column.style.top)||0;
-                        columnData.canvasX = lx; columnData.canvasY = ty;
+                    var canvasX = column.getAttribute('data-canvas-x');
+                    var canvasY = column.getAttribute('data-canvas-y');
+                    if (canvasX !== null && canvasY !== null) {
+                        columnData.canvasX = parseInt(canvasX, 10);
+                        columnData.canvasY = parseInt(canvasY, 10);
                     }
                 }catch(_){ }
                 
@@ -6472,6 +6689,11 @@ mainContainerHTML + '\n' +
     }
   };
 
+  // Expose canvas state for slides system
+  window.__getCanvasSize = function(){
+    return { width: state.width, height: state.height, enabled: state.enabled };
+  };
+
   function enableCanvas(){
     var mc = document.getElementById('mainContainer'); if(!mc) return;
     mc.classList.add('canvas-mode');
@@ -7184,10 +7406,17 @@ mainContainerHTML + '\n' +
 function updateAllConnectors(){
     var svg = document.getElementById('canvasConnectors'); if(!svg) return;
     while (svg.firstChild) svg.removeChild(svg.firstChild);
+    var mc = document.getElementById('mainContainer');
+    if (!mc) return;
+
     connectors.forEach(function(c, idx){
-      var from = document.querySelector(`.column[data-column-id="${c.from}"]`);
-      var to = document.querySelector(`.column[data-column-id="${c.to}"]`);
-      if (!from || !to) return;
+      // IMPORTANT: Only search within mainContainer (not phone mockup or other clones)
+      var from = mc.querySelector(`:scope > .column[data-column-id="${c.from}"]`);
+      var to = mc.querySelector(`:scope > .column[data-column-id="${c.to}"]`);
+      if (!from || !to) {
+        // Connection target not found - skip silently (might be deleted or in different slide)
+        return;
+      }
 
       // Use manual anchors if specified, otherwise auto-choose
       var pair = chooseBestAnchors(from, to, c.fromAnchor, c.toAnchor);
@@ -7909,6 +8138,18 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
             <button onclick="closeNewProjectModal()" class="btn" data-translate="cancel">Abbrechen</button>
         </div>
     </div>
+</div>
+
+<!-- Slides Panel (floating) -->
+<div id="slidesPanel" style="display: none; position: fixed; right: 20px; top: 80px; width: 320px; max-height: calc(100vh - 100px); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; display: flex; flex-direction: column;">
+    <div style="padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
+        <h3 style="margin: 0; font-size: 16px;">📽️ Folien</h3>
+        <button onclick="toggleSlidesMode()" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;" title="Schließen">✕</button>
+    </div>
+    <div style="padding: 8px 12px; background: #fff3cd; border-bottom: 1px solid #ffc107; font-size: 11px; color: #856404; text-align: center;">
+        ⚠️ Folien nur temporär! Nutze "Exportieren" zum Speichern.
+    </div>
+    <div id="slidesList" style="flex: 1; overflow-y: auto; padding: 12px;"></div>
 </div>
 
 </body>
@@ -9147,6 +9388,638 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Load projects on startup
 loadProjects();
+
+// ============================================
+// SLIDES SYSTEM (PowerPoint-ähnlich)
+// ============================================
+let slides = [];
+let currentSlideIndex = 0;
+let slidesEnabled = false;
+
+function initSlidesSystem() {
+    slides = [];
+    currentSlideIndex = 0;
+    slidesEnabled = false;
+}
+
+// Helper functions for slides system
+function getAllCategories() {
+    // Get all categories from the legend
+    const legend = document.getElementById('legend');
+    if (!legend) return [];
+
+    const categories = [];
+    legend.querySelectorAll('.legend-item').forEach(item => {
+        const name = item.querySelector('.legend-label')?.textContent || '';
+        const colorDiv = item.querySelector('.legend-color');
+        if (colorDiv && name) {
+            const style = window.getComputedStyle(colorDiv);
+            const background = style.backgroundImage || style.backgroundColor;
+            categories.push({ name, color: background });
+        }
+    });
+    return categories;
+}
+
+function clearAllColumns() {
+    const mainContainer = document.getElementById('mainContainer');
+    if (!mainContainer) return;
+
+    // Remove all columns except the add-column button
+    const columns = mainContainer.querySelectorAll('.column');
+    columns.forEach(col => col.remove());
+}
+
+function restoreCategories(categories) {
+    if (!categories || !Array.isArray(categories)) return;
+
+    // This would need to restore categories to the legend
+    // For now, we'll use the existing template loading logic
+    // The categories are already stored in the slideData and will be restored through layout
+}
+
+function captureCurrentSlide() {
+    // Captures the complete current canvas state
+    const mc = document.getElementById('mainContainer');
+    const categories = getAllCategories();
+
+    // Get canvas size from the canvas state (not from DOM which might be stale)
+    let canvasWidth = 1920;
+    let canvasHeight = 1080;
+    let canvasEnabled = false;
+
+    if (typeof window.__getCanvasSize === 'function') {
+        const canvasState = window.__getCanvasSize();
+        canvasWidth = canvasState.width || 1920;
+        canvasHeight = canvasState.height || 1080;
+        canvasEnabled = canvasState.enabled;
+    } else {
+        // Fallback to DOM
+        canvasEnabled = mc && mc.classList.contains('canvas-mode');
+        if (canvasEnabled) {
+            canvasWidth = parseInt(mc.style.width) || 1920;
+            canvasHeight = parseInt(mc.style.height) || 1080;
+        }
+    }
+
+    const slideData = {
+        id: 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+        timestamp: Date.now(),
+        name: `Folie ${slides.length + 1}`,
+        categories: JSON.parse(JSON.stringify(categories)),
+        layout: extractLayoutData(),
+        fontSettings: window.fontSettings ? JSON.parse(JSON.stringify(window.fontSettings)) : null,
+        canvas: {
+            enabled: canvasEnabled,
+            width: canvasWidth,
+            height: canvasHeight,
+            connectors: (typeof window.__getCanvasConnectors === 'function') ? window.__getCanvasConnectors() : []
+        }
+    };
+
+    return slideData;
+}
+
+function restoreSlide(slideData) {
+    if (!slideData) return;
+
+    const mc = document.getElementById('mainContainer');
+
+    // Step 1: Disable canvas mode if currently enabled (to clear state)
+    const isCurrentlyEnabled = mc && mc.classList.contains('canvas-mode');
+    if (isCurrentlyEnabled && typeof toggleCanvasMode === 'function') {
+        toggleCanvasMode(); // Disable first
+    }
+
+    // Step 2: Restore the layout (this sets the data-canvas-x/y attributes)
+    if (slideData.layout && typeof applyLayoutData === 'function') {
+        applyLayoutData(slideData.layout);
+    }
+
+    // Step 3: Set canvas size
+    if (slideData.canvas && typeof setCanvasSize === 'function') {
+        setCanvasSize(slideData.canvas.width || 1920, slideData.canvas.height || 1080);
+    }
+
+    // Step 4: Enable canvas mode if needed (this will apply positions from attributes)
+    if (slideData.canvas && slideData.canvas.enabled && typeof toggleCanvasMode === 'function') {
+        toggleCanvasMode(); // Enable (this applies data-canvas-x/y to style.left/top)
+    }
+
+    // Step 5: Update resolution dropdown
+    if (slideData.canvas) {
+        const resSelect = document.querySelector('[data-role="canvas-res-select"]');
+        if (resSelect) {
+            const w = slideData.canvas.width || 1920;
+            const h = slideData.canvas.height || 1080;
+            const optionValue = `${w}x${h}`;
+            for (let i = 0; i < resSelect.options.length; i++) {
+                if (resSelect.options[i].value === optionValue) {
+                    resSelect.selectedIndex = i;
+                    break;
+                }
+            }
+        }
+    }
+
+    // Step 6: Restore connectors (only if canvas mode is enabled)
+    if (slideData.canvas && slideData.canvas.enabled && typeof window.__setCanvasConnectors === 'function') {
+        setTimeout(() => {
+            // IMPORTANT: Always set connectors, even if empty array (to clear previous slide's connections)
+            const connectorsToRestore = slideData.canvas.connectors || [];
+            if (typeof ensureConnectorLayer === 'function') ensureConnectorLayer();
+            window.__setCanvasConnectors(connectorsToRestore);
+        }, 150);
+    } else if (typeof window.__setCanvasConnectors === 'function') {
+        // Clear connectors if canvas mode is not enabled
+        setTimeout(() => {
+            window.__setCanvasConnectors([]);
+        }, 150);
+    }
+
+    // Step 7: Restore font settings
+    if (slideData.fontSettings) {
+        window.fontSettings = JSON.parse(JSON.stringify(slideData.fontSettings));
+        if (typeof applyFontSettings === 'function') applyFontSettings();
+    }
+}
+
+function createNewSlide() {
+    // Sync positions before capturing
+    syncCanvasPositionsToAttributes();
+
+    const slideData = captureCurrentSlide();
+    slides.push(slideData);
+    currentSlideIndex = slides.length - 1;
+    saveSlidesToStorage();
+    updateSlidesUI();
+    return slideData;
+}
+
+function deleteSlide(index) {
+    if (index < 0 || index >= slides.length) return;
+
+    const t = translations[currentLanguage];
+    const slide = slides[index];
+    const msg = (t.confirmDeleteSlide || 'Folie "{name}" wirklich löschen?').replace('{name}', slide.name);
+
+    if (!confirm(msg)) return;
+
+    slides.splice(index, 1);
+
+    // Adjust current index
+    if (currentSlideIndex >= slides.length) {
+        currentSlideIndex = Math.max(0, slides.length - 1);
+    }
+
+    // Restore current slide if slides still exist
+    if (slides.length > 0) {
+        restoreSlide(slides[currentSlideIndex]);
+    }
+
+    saveSlidesToStorage();
+    updateSlidesUI();
+}
+
+function duplicateSlide(index) {
+    if (index < 0 || index >= slides.length) return;
+
+    const original = slides[index];
+    const duplicate = JSON.parse(JSON.stringify(original));
+    duplicate.id = 'slide_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    duplicate.timestamp = Date.now();
+    duplicate.name = original.name + ' (Kopie)';
+
+    slides.splice(index + 1, 0, duplicate);
+    currentSlideIndex = index + 1;
+    restoreSlide(duplicate);
+    saveSlidesToStorage();
+    updateSlidesUI();
+}
+
+function renameSlide(index) {
+    if (index < 0 || index >= slides.length) return;
+
+    const slide = slides[index];
+    const t = translations[currentLanguage];
+    const newName = prompt(t.renameSlide || 'Neuer Name:', slide.name);
+
+    if (newName && newName.trim()) {
+        slide.name = newName.trim();
+        saveSlidesToStorage();
+        updateSlidesUI();
+    }
+}
+
+function goToSlide(index) {
+    if (index < 0 || index >= slides.length) return;
+
+    // Save current slide before switching
+    if (slides[currentSlideIndex]) {
+        // IMPORTANT: Sync DOM positions to attributes before capturing
+        syncCanvasPositionsToAttributes();
+
+        const originalName = slides[currentSlideIndex].name;
+        const originalId = slides[currentSlideIndex].id;
+        slides[currentSlideIndex] = captureCurrentSlide();
+        slides[currentSlideIndex].name = originalName; // Keep original name
+        slides[currentSlideIndex].id = originalId; // Keep original id
+    }
+
+    currentSlideIndex = index;
+    restoreSlide(slides[index]);
+    saveSlidesToStorage();
+    updateSlidesUI();
+}
+
+// Helper function to sync canvas positions from DOM to attributes
+function syncCanvasPositionsToAttributes() {
+    const mc = document.getElementById('mainContainer');
+    if (!mc || !mc.classList.contains('canvas-mode')) return;
+
+    mc.querySelectorAll(':scope > .column').forEach(col => {
+        const x = parseInt(col.style.left) || 0;
+        const y = parseInt(col.style.top) || 0;
+        col.setAttribute('data-canvas-x', String(x));
+        col.setAttribute('data-canvas-y', String(y));
+    });
+}
+
+function previousSlide() {
+    if (currentSlideIndex > 0) {
+        goToSlide(currentSlideIndex - 1);
+    }
+}
+
+function nextSlide() {
+    if (currentSlideIndex < slides.length - 1) {
+        goToSlide(currentSlideIndex + 1);
+    }
+}
+
+function moveSlide(fromIndex, toIndex) {
+    if (fromIndex < 0 || fromIndex >= slides.length || toIndex < 0 || toIndex >= slides.length) return;
+
+    const [movedSlide] = slides.splice(fromIndex, 1);
+    slides.splice(toIndex, 0, movedSlide);
+
+    // Adjust current index
+    if (currentSlideIndex === fromIndex) {
+        currentSlideIndex = toIndex;
+    } else if (currentSlideIndex > fromIndex && currentSlideIndex <= toIndex) {
+        currentSlideIndex--;
+    } else if (currentSlideIndex < fromIndex && currentSlideIndex >= toIndex) {
+        currentSlideIndex++;
+    }
+
+    saveSlidesToStorage();
+    updateSlidesUI();
+}
+
+// IMPORTANT: Slides are now SESSION-ONLY (RAM only, no localStorage)
+// They disappear when browser is closed/refreshed unless explicitly exported
+function saveSlidesToStorage() {
+    // DO NOTHING - slides are only in RAM now
+    // User must explicitly use "Export" to save slides to disk
+}
+
+function loadSlidesFromStorage() {
+    // DO NOTHING - no persistent storage
+    // Slides only exist during current session
+    slides = [];
+    currentSlideIndex = 0;
+    slidesEnabled = false;
+}
+
+function clearSlidesData() {
+    // Clear slides from memory
+    slides = [];
+    currentSlideIndex = 0;
+    slidesEnabled = false;
+
+    // Hide slides panel
+    const panel = document.getElementById('slidesPanel');
+    if (panel) panel.style.display = 'none';
+
+    // Update UI
+    updateSlidesUI();
+}
+
+// Clear any leftover localStorage data from previous version
+function clearLegacySlidesStorage() {
+    try {
+        localStorage.removeItem('ea_slides');
+    } catch(e) {
+        console.error('Error clearing legacy slides storage:', e);
+    }
+}
+
+function toggleSlidesMode() {
+    slidesEnabled = !slidesEnabled;
+
+    if (slidesEnabled) {
+        // Show slides panel
+        const panel = document.getElementById('slidesPanel');
+        if (panel) panel.style.display = 'block';
+
+        // Update UI to show current state
+        updateSlidesUI();
+
+        // If no slides exist, user needs to click "New Slide" button
+        // DO NOT automatically create a slide here
+    } else {
+        // Hide slides panel
+        const panel = document.getElementById('slidesPanel');
+        if (panel) panel.style.display = 'none';
+    }
+
+    saveSlidesToStorage();
+}
+
+function exportSlides() {
+    const data = {
+        slides: slides,
+        version: '1.0',
+        exportDate: new Date().toISOString()
+    };
+
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `presentation_${new Date().getTime()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function importSlides() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+
+    input.onchange = function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            try {
+                const data = JSON.parse(event.target.result);
+                if (data.slides && Array.isArray(data.slides)) {
+                    slides = data.slides;
+                    currentSlideIndex = 0;
+                    slidesEnabled = true;
+
+                    if (slides.length > 0) {
+                        restoreSlide(slides[0]);
+                    }
+
+                    saveSlidesToStorage();
+                    updateSlidesUI();
+
+                    const t = translations[currentLanguage];
+                    alert(t.slidesImportSuccess || 'Präsentation erfolgreich importiert!');
+                } else {
+                    alert('Ungültiges Dateiformat!');
+                }
+            } catch(err) {
+                console.error('Error importing slides:', err);
+                alert('Fehler beim Importieren der Präsentation!');
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    input.click();
+}
+
+function updateSlidesUI() {
+    // Update slides panel
+    renderSlidesPanel();
+
+    // Update navigation buttons
+    updateSlideNavigation();
+
+    // Update slide counter
+    updateSlideCounter();
+}
+
+function renderSlidesPanel() {
+    const container = document.getElementById('slidesList');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    if (slides.length === 0) {
+        const t = translations[currentLanguage];
+        container.innerHTML = `<p style="text-align: center; color: #999; padding: 20px;">${t.noSlides || 'Keine Folien vorhanden. Erstelle die erste Folie!'}</p>`;
+        return;
+    }
+
+    slides.forEach((slide, index) => {
+        const item = document.createElement('div');
+        item.className = 'slide-item' + (index === currentSlideIndex ? ' active' : '');
+        item.draggable = true;
+
+        item.innerHTML = `
+            <div class="slide-thumbnail">
+                <span class="slide-number">${index + 1}</span>
+            </div>
+            <div class="slide-info">
+                <div class="slide-name">${slide.name}</div>
+                <div class="slide-actions">
+                    <button class="slide-btn" onclick="goToSlide(${index})" title="Zu Folie wechseln">👁️</button>
+                    <button class="slide-btn" onclick="renameSlide(${index})" title="Umbenennen">✏️</button>
+                    <button class="slide-btn" onclick="duplicateSlide(${index})" title="Duplizieren">📋</button>
+                    <button class="slide-btn" onclick="deleteSlide(${index})" title="Löschen">🗑️</button>
+                </div>
+            </div>
+        `;
+
+        // Drag and drop for reordering
+        item.addEventListener('dragstart', function(e) {
+            e.dataTransfer.setData('text/plain', index);
+            item.style.opacity = '0.5';
+        });
+
+        item.addEventListener('dragend', function() {
+            item.style.opacity = '1';
+        });
+
+        item.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            item.style.borderTop = '3px solid #667eea';
+        });
+
+        item.addEventListener('dragleave', function() {
+            item.style.borderTop = '';
+        });
+
+        item.addEventListener('drop', function(e) {
+            e.preventDefault();
+            item.style.borderTop = '';
+            const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+            moveSlide(fromIndex, index);
+        });
+
+        container.appendChild(item);
+    });
+}
+
+function updateSlideNavigation() {
+    const prevBtn = document.querySelector('[data-role="prev-slide"]');
+    const nextBtn = document.querySelector('[data-role="next-slide"]');
+
+    if (prevBtn) {
+        prevBtn.disabled = currentSlideIndex === 0 || slides.length === 0;
+    }
+
+    if (nextBtn) {
+        nextBtn.disabled = currentSlideIndex >= slides.length - 1 || slides.length === 0;
+    }
+}
+
+function updateSlideCounter() {
+    const counter = document.getElementById('slideCounter');
+    if (counter) {
+        if (slides.length > 0) {
+            counter.textContent = `${currentSlideIndex + 1} / ${slides.length}`;
+        } else {
+            counter.textContent = '0 / 0';
+        }
+    }
+}
+
+// Presentation mode (fullscreen with navigation)
+let presentationMode = false;
+
+function enterPresentationMode() {
+    if (slides.length === 0) {
+        const t = translations[currentLanguage];
+        alert(t.noPresentationSlides || 'Keine Folien für Präsentation vorhanden!');
+        return;
+    }
+
+    presentationMode = true;
+
+    // Hide UI elements
+    const header = document.querySelector('.header');
+    const sidebar = document.getElementById('sidebar');
+    const legend = document.getElementById('legend');
+    const slidesPanel = document.getElementById('slidesPanel');
+
+    if (header) header.style.display = 'none';
+    if (sidebar) sidebar.style.display = 'none';
+    if (legend) legend.style.display = 'none';
+    if (slidesPanel) slidesPanel.style.display = 'none';
+
+    // Show presentation controls
+    let controls = document.getElementById('presentationControls');
+    if (!controls) {
+        controls = document.createElement('div');
+        controls.id = 'presentationControls';
+        controls.innerHTML = `
+            <button onclick="previousSlide()" class="pres-btn pres-prev">◀</button>
+            <span id="presCounter"></span>
+            <button onclick="nextSlide()" class="pres-btn pres-next">▶</button>
+            <button onclick="exitPresentationMode()" class="pres-btn pres-exit">✕</button>
+        `;
+        document.body.appendChild(controls);
+    }
+    controls.style.display = 'flex';
+
+    // Try to go fullscreen
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) {
+        elem.requestFullscreen().catch(err => console.log('Fullscreen error:', err));
+    }
+
+    updatePresentationCounter();
+}
+
+function exitPresentationMode() {
+    presentationMode = false;
+
+    // Show UI elements
+    const header = document.querySelector('.header');
+    const sidebar = document.getElementById('sidebar');
+    const legend = document.getElementById('legend');
+    const slidesPanel = document.getElementById('slidesPanel');
+
+    if (header) header.style.display = 'flex';
+    if (sidebar) sidebar.style.display = 'block';
+    if (legend) legend.style.display = 'flex';
+    if (slidesPanel && slidesEnabled) slidesPanel.style.display = 'block';
+
+    // Hide presentation controls
+    const controls = document.getElementById('presentationControls');
+    if (controls) controls.style.display = 'none';
+
+    // Exit fullscreen
+    if (document.fullscreenElement) {
+        document.exitFullscreen().catch(err => console.log('Exit fullscreen error:', err));
+    }
+}
+
+function updatePresentationCounter() {
+    const counter = document.getElementById('presCounter');
+    if (counter) {
+        counter.textContent = `${currentSlideIndex + 1} / ${slides.length}`;
+    }
+}
+
+// Keyboard shortcuts for presentation mode
+document.addEventListener('keydown', function(e) {
+    if (!presentationMode) return;
+
+    switch(e.key) {
+        case 'ArrowRight':
+        case 'ArrowDown':
+        case ' ':
+        case 'PageDown':
+            e.preventDefault();
+            nextSlide();
+            updatePresentationCounter();
+            break;
+        case 'ArrowLeft':
+        case 'ArrowUp':
+        case 'PageUp':
+            e.preventDefault();
+            previousSlide();
+            updatePresentationCounter();
+            break;
+        case 'Escape':
+            e.preventDefault();
+            exitPresentationMode();
+            break;
+        case 'Home':
+            e.preventDefault();
+            goToSlide(0);
+            updatePresentationCounter();
+            break;
+        case 'End':
+            e.preventDefault();
+            goToSlide(slides.length - 1);
+            updatePresentationCounter();
+            break;
+    }
+});
+
+// Load slides on startup
+document.addEventListener('DOMContentLoaded', function() {
+    // Clear any legacy localStorage data from previous version
+    clearLegacySlidesStorage();
+
+    // Initialize slides (empty - session only)
+    loadSlidesFromStorage();
+
+    // IMPORTANT: Slides are now SESSION-ONLY
+    // After F5 / browser close, all slides are GONE
+    // User must use "Export" button to save slides to disk permanently
+});
 
 </script>
 
