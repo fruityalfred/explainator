@@ -1998,7 +1998,7 @@ body.slides-presentation .main-container.canvas-mode {
                 </div>
 
                 <!-- Slides Section -->
-                <div class="nav-section">
+                <div class="nav-section collapsed">
                     <div class="nav-section-title">Slides</div>
                     <button class="nav-item" onclick="toggleSlidesMode()" title="Slides-Modus aktivieren/deaktivieren">
                         <span class="icon">📽️</span>
@@ -2034,7 +2034,7 @@ body.slides-presentation .main-container.canvas-mode {
                 </div>
 
                 <!-- Data Section -->
-                <div class="nav-section">
+                <div class="nav-section collapsed">
                     <div class="nav-section-title">Data</div>
                     <button class="nav-item" onclick="saveTemplate()" data-translate="saveTemplate" title="Template speichern">
                         <span class="icon">💾</span>
@@ -2067,7 +2067,7 @@ body.slides-presentation .main-container.canvas-mode {
                 </div>
 
                 <!-- System Section -->
-                <div class="nav-section">
+                <div class="nav-section collapsed">
                     <div class="nav-section-title">System</div>
                     <button class="nav-item" onclick="resetLayout()" data-translate="resetLayout" title="Layout zurücksetzen">
                         <span class="icon">🔄</span>
@@ -8158,7 +8158,7 @@ window.addEventListener('vc:screenshot:end', function(){ document.body.classList
 </div>
 
 <!-- Slides Panel (floating) -->
-<div id="slidesPanel" style="display: none; position: fixed; right: 20px; top: 80px; width: 320px; max-height: calc(100vh - 100px); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; display: flex; flex-direction: column;">
+<div id="slidesPanel" style="display: none; position: fixed; right: 20px; top: 80px; width: 320px; max-height: calc(100vh - 100px); background: white; border-radius: 12px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); z-index: 9999; overflow: hidden; flex-direction: column;">
     <div style="padding: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; display: flex; justify-content: space-between; align-items: center;">
         <h3 style="margin: 0; font-size: 16px;">📽️ Folien</h3>
         <button onclick="toggleSlidesMode()" style="background: rgba(255,255,255,0.2); border: none; color: white; border-radius: 50%; width: 28px; height: 28px; cursor: pointer; font-size: 18px; display: flex; align-items: center; justify-content: center;" title="Schließen">✕</button>
@@ -9735,15 +9735,17 @@ function toggleSlidesMode() {
     slidesEnabled = !slidesEnabled;
 
     if (slidesEnabled) {
-        // Show slides panel
+        // Show slides panel (use flex to match layout)
         const panel = document.getElementById('slidesPanel');
-        if (panel) panel.style.display = 'block';
+        if (panel) panel.style.display = 'flex';
+
+        // If no slides exist, automatically create first slide from current state
+        if (slides.length === 0) {
+            createNewSlide();
+        }
 
         // Update UI to show current state
         updateSlidesUI();
-
-        // If no slides exist, user needs to click "New Slide" button
-        // DO NOT automatically create a slide here
     } else {
         // Hide slides panel
         const panel = document.getElementById('slidesPanel');
@@ -9978,7 +9980,7 @@ function exitPresentationMode() {
     if (header) header.style.display = 'flex';
     if (sidebar) sidebar.style.display = 'block';
     if (legend) legend.style.display = 'flex';
-    if (slidesPanel && slidesEnabled) slidesPanel.style.display = 'block';
+    if (slidesPanel && slidesEnabled) slidesPanel.style.display = 'flex';
 
     // Hide presentation controls
     const controls = document.getElementById('presentationControls');
