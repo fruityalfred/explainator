@@ -10008,6 +10008,38 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Mouse wheel navigation for slides (works in both normal and presentation mode)
+document.addEventListener('wheel', function(e) {
+    // Only activate if slides mode is enabled and we have slides
+    if (!slidesEnabled || slides.length === 0) return;
+
+    // Only if user is not actively scrolling in slides panel or other scrollable areas
+    const target = e.target;
+    const isInScrollableArea = target.closest('#slidesList') ||
+                               target.closest('.modal') ||
+                               target.closest('[style*="overflow"]');
+
+    if (isInScrollableArea) return;
+
+    // Prevent default scroll behavior when navigating slides
+    if (Math.abs(e.deltaY) > 10) { // Minimum threshold to avoid accidental triggers
+        e.preventDefault();
+
+        if (e.deltaY > 0) {
+            // Scroll down = next slide
+            nextSlide();
+        } else {
+            // Scroll up = previous slide
+            previousSlide();
+        }
+
+        // Update counter if in presentation mode
+        if (presentationMode) {
+            updatePresentationCounter();
+        }
+    }
+}, { passive: false }); // passive: false allows preventDefault()
+
 // Load slides on startup
 document.addEventListener('DOMContentLoaded', function() {
     // Clear any legacy localStorage data from previous version
