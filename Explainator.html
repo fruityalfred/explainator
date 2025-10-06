@@ -1249,8 +1249,9 @@ body.presentation-mode .main-container {
     transform: translateY(0);
 }
 
-/* Hide in presentation mode */
-body.presentation-mode .floating-notes-btn {
+/* Floating Notes Button stays visible in NORMAL presentation mode */
+/* Only hide in SLIDES presentation mode (has .slides-presentation class) */
+body.slides-presentation .floating-notes-btn {
     display: none !important;
 }
 
@@ -1276,7 +1277,8 @@ body.presentation-mode .floating-notes-btn {
     justify-content: center;
 }
 
-body.presentation-mode .presentation-add-box-btn {
+/* Show Add Box Button only in NORMAL presentation mode, NOT in SLIDES presentation */
+body.presentation-mode:not(.slides-presentation) .presentation-add-box-btn {
     display: flex;
 }
 
@@ -1323,18 +1325,33 @@ body.presentation-mode .presentation-export-btn {
     transform: translateY(0);
 }
 
-/* Hide all edit controls in presentation mode */
-body.presentation-mode .add-section-btn,
-body.presentation-mode .add-column,
-body.presentation-mode .delete-column,
-body.presentation-mode .section-delete,
-body.presentation-mode .color-column-btn,
-body.presentation-mode .pipette-column-btn,
-body.presentation-mode .insert-split-btn,
-body.presentation-mode .split-counter,
-body.presentation-mode .section-menu,
-body.presentation-mode .section-pipette {
+/* IMPORTANT: Only hide edit controls in SLIDES presentation mode, NOT in normal presentation mode */
+/* Normal presentation mode keeps all functionality available */
+body.slides-presentation .add-section-btn,
+body.slides-presentation .add-column,
+body.slides-presentation .delete-column,
+body.slides-presentation .section-delete,
+body.slides-presentation .color-column-btn,
+body.slides-presentation .pipette-column-btn,
+body.slides-presentation .insert-split-btn,
+body.slides-presentation .split-counter,
+body.slides-presentation .section-menu,
+body.slides-presentation .section-pipette,
+body.slides-presentation .header-btn,
+body.slides-presentation .delete-btn,
+body.slides-presentation .resize-btn,
+body.slides-presentation .height-resizer,
+body.slides-presentation .clone-column,
+body.slides-presentation .add-app-box-btn,
+body.slides-presentation .column-visibility-btn,
+body.slides-presentation .presentation-add-box-btn {
     display: none !important;
+}
+
+/* Hide canvas grid/border in SLIDES presentation mode */
+body.slides-presentation .main-container.canvas-mode {
+    background-image: none !important;
+    border: none !important;
 }
 </style>
 
@@ -9905,6 +9922,11 @@ function enterPresentationMode() {
 
     presentationMode = true;
 
+    // Add presentation-mode class to body (triggers CSS to hide all controls)
+    document.body.classList.add('presentation-mode');
+    // Add slides-presentation class to differentiate from normal presentation mode
+    document.body.classList.add('slides-presentation');
+
     // Hide UI elements
     const header = document.querySelector('.header');
     const sidebar = document.getElementById('sidebar');
@@ -9942,6 +9964,10 @@ function enterPresentationMode() {
 
 function exitPresentationMode() {
     presentationMode = false;
+
+    // Remove presentation-mode classes from body (restores controls)
+    document.body.classList.remove('presentation-mode');
+    document.body.classList.remove('slides-presentation');
 
     // Show UI elements
     const header = document.querySelector('.header');
