@@ -3273,30 +3273,62 @@ body.slides-presentation .main-container.canvas-mode {
 
         function splitColumn(column, parts) {
             const content = column.querySelector('.column-content');
-            const sections = Array.from(content.querySelectorAll('.section-group'));
-            
+            const existingSplitContainer = content.querySelector('.column-split-content');
+
             column.classList.remove('split-column', 'split-column-3');
-            
-            const splitContainer = document.createElement('div');
-            splitContainer.className = 'column-split-content';
-            
-            for (let i = 0; i < parts; i++) {
-                const partDiv = document.createElement('div');
-                partDiv.className = 'column-part';
-                
-                const sectionsPerSplit = Math.ceil(sections.length / parts);
-                const startIndex = i * sectionsPerSplit;
-                const endIndex = Math.min((i + 1) * sectionsPerSplit, sections.length);
-                
-                for (let j = startIndex; j < endIndex; j++) {
-                    if (sections[j]) partDiv.appendChild(sections[j]);
+
+            // If already split, preserve existing structure
+            if (existingSplitContainer) {
+                const existingParts = Array.from(existingSplitContainer.querySelectorAll(':scope > .column-part'));
+                const currentPartCount = existingParts.length;
+
+                if (parts > currentPartCount) {
+                    // Add new empty parts at the end
+                    for (let i = currentPartCount; i < parts; i++) {
+                        const partDiv = document.createElement('div');
+                        partDiv.className = 'column-part';
+                        existingSplitContainer.appendChild(partDiv);
+                    }
+                } else if (parts < currentPartCount) {
+                    // Remove parts from the end, move their sections to the previous part
+                    for (let i = currentPartCount - 1; i >= parts; i--) {
+                        const partToRemove = existingParts[i];
+                        const sectionsToMove = Array.from(partToRemove.querySelectorAll('.section-group'));
+
+                        // Move sections to the last remaining part
+                        if (parts > 0 && sectionsToMove.length > 0) {
+                            const targetPart = existingParts[parts - 1];
+                            sectionsToMove.forEach(section => targetPart.appendChild(section));
+                        }
+
+                        partToRemove.remove();
+                    }
                 }
-                
-                splitContainer.appendChild(partDiv);
+                // Structure is preserved, parts adjusted
+            } else {
+                // Initial split: distribute sections evenly
+                const sections = Array.from(content.querySelectorAll('.section-group'));
+                const splitContainer = document.createElement('div');
+                splitContainer.className = 'column-split-content';
+
+                for (let i = 0; i < parts; i++) {
+                    const partDiv = document.createElement('div');
+                    partDiv.className = 'column-part';
+
+                    const sectionsPerSplit = Math.ceil(sections.length / parts);
+                    const startIndex = i * sectionsPerSplit;
+                    const endIndex = Math.min((i + 1) * sectionsPerSplit, sections.length);
+
+                    for (let j = startIndex; j < endIndex; j++) {
+                        if (sections[j]) partDiv.appendChild(sections[j]);
+                    }
+
+                    splitContainer.appendChild(partDiv);
+                }
+
+                content.innerHTML = '';
+                content.appendChild(splitContainer);
             }
-            
-            content.innerHTML = '';
-            content.appendChild(splitContainer);
             // Do not force width on split; user controls size by dragging
         }
 
