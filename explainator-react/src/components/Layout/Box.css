@@ -1,0 +1,198 @@
+/* Box Component Styles */
+
+.app-box {
+  padding: 8px 12px;
+  text-align: center;
+  font-size: 11px;
+  border-radius: 4px;
+  border: 1px solid #ccc;
+  cursor: move;
+  position: relative;
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: pre-line;
+  transition: box-shadow 0.2s ease;
+  flex: 0 0 auto;
+  max-width: 100%;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  overflow: hidden;
+}
+
+.app-box.half-width {
+  flex: 0 0 calc(50% - 3px);
+}
+
+.app-box.full-width {
+  flex: 0 0 100%;
+}
+
+.app-box:hover {
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.2);
+}
+
+.app-box.dragging {
+  opacity: 0.5;
+}
+
+/* Lines by height */
+.app-box.lines-1 {
+  min-height: 30px;
+}
+
+.app-box.lines-2 {
+  min-height: 50px;
+}
+
+.app-box.lines-3 {
+  min-height: 70px;
+}
+
+/* Delete Button */
+.app-box .delete-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #f44336;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  z-index: 10;
+}
+
+.app-box:hover .delete-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-box .delete-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.1);
+}
+
+/* Resize Button */
+.app-box .resize-btn {
+  position: absolute;
+  bottom: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.12s ease;
+  z-index: 10;
+}
+
+.app-box:hover .resize-btn {
+  opacity: 1;
+  visibility: visible;
+}
+
+.app-box .resize-btn:hover {
+  background: #1976d2;
+  transform: translateX(-50%) scale(1.1);
+}
+
+/* Text Box */
+.box-text-content {
+  width: 100%;
+  display: block;
+}
+
+.box-edit-input {
+  background: transparent;
+  border: none;
+  color: inherit;
+  text-align: inherit;
+  font-size: inherit;
+  font-weight: inherit;
+  width: 100%;
+  outline: 2px solid rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  padding: 2px;
+}
+
+/* Line Box */
+.box-line {
+  padding: 0;
+  border: none;
+  background: transparent !important;
+  min-height: 10px;
+  cursor: default;
+}
+
+.box-line .line {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+}
+
+.line-thin {
+  height: 2px !important;
+}
+
+.line-medium {
+  height: 4px !important;
+}
+
+.line-thick {
+  height: 6px !important;
+}
+
+.line-dashed {
+  background: repeating-linear-gradient(
+    to right,
+    currentColor 0,
+    currentColor 10px,
+    transparent 10px,
+    transparent 15px
+  ) !important;
+}
+
+.line-dotted {
+  background: repeating-linear-gradient(
+    to right,
+    currentColor 0,
+    currentColor 5px,
+    transparent 5px,
+    transparent 10px
+  ) !important;
+}
+
+/* Image Box */
+.box-image {
+  padding: 0;
+  min-height: 100px;
+  border: 2px solid #ddd;
+  background: #f5f5f5;
+}
+
+.box-image-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

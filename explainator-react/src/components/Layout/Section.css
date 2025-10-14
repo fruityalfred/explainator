@@ -1,0 +1,120 @@
+/* Section Component Styles */
+
+.section-group {
+  border: 2px dashed #999;
+  border-radius: 6px;
+  padding: 10px;
+  min-height: 80px;
+  transition: all 0.3s;
+  position: relative;
+  cursor: move;
+  margin-bottom: 8px;
+}
+
+.section-group.drag-over {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  border-style: solid;
+}
+
+.section-group.dragging {
+  opacity: 0.7;
+  transform: rotate(2deg);
+  z-index: 1000;
+}
+
+.section-title {
+  background: #8b4513;
+  color: white;
+  padding: 6px 12px;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  position: relative;
+  cursor: pointer;
+  user-select: none;
+}
+
+.section-title:hover {
+  opacity: 0.9;
+}
+
+.section-title input {
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: center;
+  font-size: 12px;
+  font-weight: bold;
+  width: 100%;
+  outline: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 2px;
+  padding: 2px;
+}
+
+.section-title-input {
+  background: rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  width: 100%;
+}
+
+.section-delete {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 0, 0, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.3s;
+}
+
+.section-delete:hover {
+  background: rgba(255, 0, 0, 0.9);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.box-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 30px;
+  overflow: visible;
+}
+
+.add-box-btn {
+  width: 100%;
+  padding: 6px 8px;
+  border: 2px dashed #ccc;
+  background: #f9f9f9;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  text-align: center;
+  transition: all 0.3s;
+  font-size: 11px;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.add-box-btn:hover {
+  background: #e8f5e9;
+  border-color: #4caf50;
+  color: #2e7d32;
+}
