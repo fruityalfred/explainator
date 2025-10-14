@@ -14,6 +14,7 @@ import { ImageUploadModal } from '../Modals/ImageUploadModal';
 import { LineSelectorModal } from '../Modals/LineSelectorModal';
 import { BatchImportModal } from '../Modals/BatchImportModal';
 import { SlidesModal } from '../Modals/SlidesModal';
+import { ProjectsModal } from '../Modals/ProjectsModal';
 import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
@@ -26,6 +27,7 @@ export const Sidebar = () => {
   const [showLineSelectorModal, setShowLineSelectorModal] = useState(false);
   const [showBatchImportModal, setShowBatchImportModal] = useState(false);
   const [showSlidesModal, setShowSlidesModal] = useState(false);
+  const [showProjectsModal, setShowProjectsModal] = useState(false);
   const { addColumn, clearLayout, columns } = useLayoutStore();
   const { resetCategories } = useCategoryStore();
   const {
@@ -156,6 +158,14 @@ export const Sidebar = () => {
           </div>
 
           <div className="sidebar-section">
+            <h3 className="sidebar-section-title">Projects</h3>
+            <button className="sidebar-btn btn-primary" onClick={() => setShowProjectsModal(true)}>
+              <span className="btn-icon">💼</span>
+              Projects
+            </button>
+          </div>
+
+          <div className="sidebar-section">
             <h3 className="sidebar-section-title">Presentation</h3>
             <button className="sidebar-btn btn-primary" onClick={() => setShowSlidesModal(true)}>
               <span className="btn-icon">🎬</span>
@@ -222,6 +232,7 @@ export const Sidebar = () => {
       <ImageUploadModal isOpen={showImageUploadModal} onClose={() => setShowImageUploadModal(false)} />
       <LineSelectorModal isOpen={showLineSelectorModal} onClose={() => setShowLineSelectorModal(false)} />
       <SlidesModal isOpen={showSlidesModal} onClose={() => setShowSlidesModal(false)} />
+      <ProjectsModal isOpen={showProjectsModal} onClose={() => setShowProjectsModal(false)} />
     </div>
   );
 };
