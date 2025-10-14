@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ColumnData, SectionData, BoxData } from '../types';
+import { ColumnData, SectionData, BoxData } from '../types/layout.types';
 import { v4 as uuidv4 } from 'uuid';
 
 interface LayoutState {
