@@ -136,8 +136,8 @@ export const Sidebar = () => {
               value={`${canvasWidth}x${canvasHeight}`}
               onChange={handleCanvasSizeChange}
             >
-              {CANVAS_PRESETS.map((preset) => (
-                <option key={preset.id} value={`${preset.width}x${preset.height}`}>
+              {Object.entries(CANVAS_PRESETS).map(([key, preset]) => (
+                <option key={key} value={`${preset.width}x${preset.height}`}>
                   {preset.name}
                 </option>
               ))}
