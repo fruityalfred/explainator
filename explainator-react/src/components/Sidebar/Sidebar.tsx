@@ -6,12 +6,26 @@
 import { useState } from 'react';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useCategoryStore } from '../../store/categoryStore';
+import { useCanvasStore } from '../../store/canvasStore';
+import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
 export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { addColumn, clearLayout, columns } = useLayoutStore();
   const { resetCategories } = useCategoryStore();
+  const {
+    canvasMode,
+    toggleCanvasMode,
+    setCanvasSize,
+    showGrid,
+    toggleGrid,
+    snapToGrid,
+    toggleSnapToGrid,
+    connectorMode,
+    toggleConnectorMode,
+    clearConnectors,
+  } = useCanvasStore();
 
   const handleNewColumn = () => {
     addColumn(`Column ${columns.length + 1}`);
@@ -26,6 +40,12 @@ export const Sidebar = () => {
   const handleResetCategories = () => {
     if (confirm('Reset categories to default?')) {
       resetCategories();
+    }
+  };
+
+  const handleClearConnectors = () => {
+    if (confirm('Clear all connectors?')) {
+      clearConnectors();
     }
   };
 
@@ -48,6 +68,57 @@ export const Sidebar = () => {
               <span className="btn-icon">+</span>
               New Column
             </button>
+          </div>
+
+          <div className="sidebar-section">
+            <h3 className="sidebar-section-title">Canvas</h3>
+            <button
+              className={`sidebar-btn ${canvasMode ? 'btn-success' : 'btn-secondary'}`}
+              onClick={toggleCanvasMode}
+            >
+              <span className="btn-icon">{canvasMode ? '✓' : '○'}</span>
+              Canvas Mode
+            </button>
+            {canvasMode && (
+              <>
+                <select
+                  className="sidebar-select"
+                  onChange={(e) => setCanvasSize(e.target.value)}
+                  defaultValue="full-hd"
+                >
+                  {Object.entries(CANVAS_PRESETS).map(([key, preset]) => (
+                    <option key={key} value={key}>
+                      {preset.name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  className={`sidebar-btn btn-small ${showGrid ? 'btn-success' : 'btn-secondary'}`}
+                  onClick={toggleGrid}
+                >
+                  <span className="btn-icon">{showGrid ? '✓' : '○'}</span>
+                  Grid
+                </button>
+                <button
+                  className={`sidebar-btn btn-small ${snapToGrid ? 'btn-success' : 'btn-secondary'}`}
+                  onClick={toggleSnapToGrid}
+                >
+                  <span className="btn-icon">{snapToGrid ? '✓' : '○'}</span>
+                  Snap
+                </button>
+                <button
+                  className={`sidebar-btn ${connectorMode ? 'btn-success' : 'btn-secondary'}`}
+                  onClick={toggleConnectorMode}
+                >
+                  <span className="btn-icon">{connectorMode ? '✓' : '○'}</span>
+                  Connectors
+                </button>
+                <button className="sidebar-btn btn-warning btn-small" onClick={handleClearConnectors}>
+                  <span className="btn-icon">🗑️</span>
+                  Clear Connectors
+                </button>
+              </>
+            )}
           </div>
 
           <div className="sidebar-section">

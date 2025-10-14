@@ -19,6 +19,7 @@ interface LayoutState {
   deleteColumn: (columnId: string) => void;
   updateColumn: (columnId: string, updates: Partial<ColumnData>) => void;
   moveColumn: (fromIndex: number, toIndex: number) => void;
+  updateColumnCanvasPosition: (columnId: string, x: number, y: number) => void;
 
   // Section Actions
   addSection: (columnId: string, title?: string) => void;
@@ -107,6 +108,17 @@ export const useLayoutStore = create<LayoutState>()(
           newColumns.splice(toIndex, 0, movedColumn);
           return { columns: newColumns };
         });
+      },
+
+      /**
+       * Update column canvas position (for canvas mode)
+       */
+      updateColumnCanvasPosition: (columnId: string, x: number, y: number) => {
+        set((state) => ({
+          columns: state.columns.map((col) =>
+            col.id === columnId ? { ...col, canvasX: x, canvasY: y } : col
+          ),
+        }));
       },
 
       /**

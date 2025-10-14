@@ -176,3 +176,36 @@
 .sidebar-content::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* Additional button styles */
+.btn-success {
+  background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
+  color: white;
+}
+
+.btn-small {
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.sidebar-select {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font-size: 12px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-select:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.sidebar-select option {
+  background: #2c3e50;
+  color: white;
+}

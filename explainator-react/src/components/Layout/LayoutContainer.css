@@ -99,3 +99,45 @@
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
 }
+
+/* Canvas Mode Styles */
+.main-container.canvas-mode {
+  display: block;
+  overflow: visible;
+}
+
+.main-container.canvas-mode .column {
+  position: absolute;
+}
+
+.canvas-toolbar {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  padding: 15px 25px;
+  border-radius: 50px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+  z-index: 100;
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+.canvas-btn {
+  padding: 10px 20px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.canvas-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}

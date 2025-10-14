@@ -2,7 +2,17 @@
   "permissions": {
     "allow": [
       "Bash(start \"\" \"F:\\2025 Coding\\local_explainator\\explainator\\Explainator.html\")",
-      "Read(//x/Downloads/**)"
+      "Read(//x/Downloads/**)",
+      "Bash(npm create vite@latest:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(mkdir:*)",
+      "Bash(npx prisma:*)",
+      "Bash(test:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nInitial project setup - Segment 1 complete\n\nExplainator React/TypeScript Migration - Segment 1: Infrastructure\n\n✅ Frontend Setup:\n- Vite + React 18 + TypeScript initialized\n- Dependencies installed: Zustand, @dnd-kit, react-query, axios, i18next, html2canvas, xlsx, react-color, react-router-dom\n- Project structure created: components/, hooks/, store/, types/, utils/, constants/, pages/\n- Type definitions: layout.types.ts, user.types.ts\n- Constants: colors.ts (DEFAULT_CATEGORIES), canvas.ts (CANVAS_PRESETS)\n\n✅ Backend Setup:\n- Node.js + Express + TypeScript initialized\n- Dependencies installed: Prisma, bcryptjs, jsonwebtoken, express-validator, cors, helmet, stripe\n- Project structure: controllers/, routes/, middleware/, services/, utils/\n- Scripts configured: dev, build, start, prisma:generate, prisma:migrate\n- Environment template (.env.example) created\n\n✅ Database Schema (Prisma):\n- User model (id, email, password, name)\n- Subscription model (tier: free/pro/enterprise, status, stripeId)\n- Template model (userId, name, data JSON, thumbnail, isPublic)\n- Project model (userId, name, status, description, data JSON)\n- Relationships: User 1:1 Subscription, User 1:N Templates/Projects\n- Cascade delete enabled\n\n📝 Documentation:\n- README.md with installation & development instructions\n- update.md for tracking development progress\n- 7-segment roadmap defined\n\n🎯 Next Steps: Segment 2 - Authentication & User Management\n\n🤖 Generated with Claude Code\nhttps://claude.com/claude-code\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git commit:*)",
+      "Bash(npm run dev)"
     ],
     "deny": [],
     "ask": []
