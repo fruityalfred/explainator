@@ -23,11 +23,11 @@
 }
 
 .app-box.half-width {
-  flex: 0 0 calc(50% - 3px);
+  flex: 0 0 calc(50% - 3px) !important;
 }
 
 .app-box.full-width {
-  flex: 0 0 100%;
+  flex: 0 0 100% !important;
 }
 
 .app-box:hover {
