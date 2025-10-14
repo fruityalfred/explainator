@@ -5,8 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { ColumnData, SectionData, BoxData } from '../types/layout.types';
-import { v4 as uuidv4 } from 'uuid';
+import type { ColumnData, SectionData, BoxData } from '../types/layout.types';
 
 interface LayoutState {
   columns: ColumnData[];
@@ -53,10 +52,107 @@ const generateUuid = (): string => {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 };
 
+// Initial demo data to show app working on first load
+const INITIAL_DEMO_DATA: ColumnData[] = [
+  {
+    id: 'demo-col-1',
+    title: 'Welcome to Explainator',
+    width: '400px',
+    splitState: 'normal',
+    splitParts: 1,
+    sections: [
+      {
+        id: 'demo-sec-1',
+        title: 'Getting Started',
+        boxes: [
+          {
+            id: 'demo-box-1',
+            text: 'Click + Add Column to create more columns',
+            type: 'blue',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+          {
+            id: 'demo-box-2',
+            text: 'Click + Add Section to add sections',
+            type: 'green',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+          {
+            id: 'demo-box-3',
+            text: 'Click + Add Box to create content boxes',
+            type: 'purple',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+        ],
+      },
+    ],
+  },
+  {
+    id: 'demo-col-2',
+    title: 'Features',
+    width: '400px',
+    splitState: 'normal',
+    splitParts: 1,
+    sections: [
+      {
+        id: 'demo-sec-2',
+        title: 'Main Features',
+        boxes: [
+          {
+            id: 'demo-box-4',
+            text: 'Drag & drop to reorder',
+            type: 'blue',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+          {
+            id: 'demo-box-5',
+            text: 'Export to PDF/PNG/Excel',
+            type: 'yellow',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+          {
+            id: 'demo-box-6',
+            text: 'Split columns (2-8 parts)',
+            type: 'orange',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+          {
+            id: 'demo-box-7',
+            text: 'Create presentation slides',
+            type: 'red',
+            width: 'full-width',
+            lines: 1,
+            baseLines: 1,
+            dynamic: false,
+          },
+        ],
+      },
+    ],
+  },
+];
+
 export const useLayoutStore = create<LayoutState>()(
   persist(
-    (set, get) => ({
-      columns: [],
+    (set, _get) => ({
+      columns: INITIAL_DEMO_DATA,
       selectedBoxId: null,
       selectedSectionId: null,
       selectedColumnId: null,
