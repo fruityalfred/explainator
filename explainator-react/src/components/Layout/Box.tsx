@@ -6,7 +6,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { BoxData } from '../../types';
+import type { BoxData } from '../../types';
 import { useCategoryStore } from '../../store/categoryStore';
 import './Box.css';
 

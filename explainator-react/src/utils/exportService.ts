@@ -5,7 +5,7 @@
 
 import html2canvas from 'html2canvas';
 import * as XLSX from 'xlsx';
-import { ColumnData, BoxData, SectionData } from '../types';
+import type { ColumnData, SectionData } from '../types';
 
 /**
  * Export layout as PNG image

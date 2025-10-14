@@ -48,7 +48,7 @@ interface CanvasState {
 
 export const useCanvasStore = create<CanvasState>()(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       canvasMode: false,
       canvasWidth: 1920,
       canvasHeight: 1080,

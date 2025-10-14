@@ -70,7 +70,7 @@ export const BatchImportModal = ({ isOpen, onClose }: BatchImportModalProps) => 
         addBox(selectedColumn, selectedSection, {
           text,
           type: category,
-          width: 'auto',
+          width: 'full-width',
           lines: 1,
         });
         importCount++;
@@ -153,8 +153,8 @@ export const BatchImportModal = ({ isOpen, onClose }: BatchImportModalProps) => 
               value={defaultCategory}
               onChange={(e) => setDefaultCategory(e.target.value)}
             >
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
+              {Object.entries(categories).map(([key, cat]) => (
+                <option key={key} value={key}>
                   {cat.name}
                 </option>
               ))}

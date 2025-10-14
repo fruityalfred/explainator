@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CategoryMap, CategoryData } from '../types';
+import type { CategoryMap, CategoryData } from '../types';
 import { DEFAULT_CATEGORIES } from '../constants';
 
 interface CategoryState {

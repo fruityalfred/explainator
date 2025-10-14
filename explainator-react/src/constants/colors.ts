@@ -2,7 +2,7 @@
  * Default color palette and categories
  */
 
-import { CategoryMap } from '../types';
+import type { CategoryMap } from '../types';
 
 export const DEFAULT_COLORS = [
   '#FF6B6B', '#4ECDC4', '#45B7D1', '#FFA07A', '#98D8C8',

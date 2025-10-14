@@ -58,13 +58,14 @@ export const ProjectsModal = ({ isOpen, onClose }: ProjectsModalProps) => {
       layout: {
         columns: layoutStore.columns,
       },
-      categories: {
-        categories: categoryStore.categories,
-      },
+      categories: categoryStore.categories,
       canvas: {
         canvasMode: canvasStore.canvasMode,
-        canvasSize: canvasStore.canvasSize,
-        canvasColor: canvasStore.canvasColor,
+        width: canvasStore.canvasWidth,
+        height: canvasStore.canvasHeight,
+        showGrid: canvasStore.showGrid,
+        snapToGrid: canvasStore.snapToGrid,
+        gridSize: canvasStore.gridSize,
         connectors: canvasStore.connectors,
       },
       slides: {
@@ -118,26 +119,30 @@ export const ProjectsModal = ({ isOpen, onClose }: ProjectsModalProps) => {
         }
       });
 
-      // Restore categories
-      categoryStore.categories.forEach((cat) => {
-        categoryStore.deleteCategory(cat.id);
-      });
-      project.categories.categories.forEach((cat: any) => {
-        categoryStore.addCategory(cat.name, cat.color);
-      });
+      // Restore categories (replace entirely if present)
+      if (project.categories && typeof project.categories === 'object') {
+        categoryStore.loadCategories(project.categories);
+      }
 
       // Restore canvas
       if (project.canvas.canvasMode !== canvasStore.canvasMode) {
         canvasStore.toggleCanvasMode();
       }
-      canvasStore.setCanvasSize(project.canvas.canvasSize);
-      canvasStore.setCanvasColor(project.canvas.canvasColor);
-      canvasStore.connectors.forEach((conn) => {
-        canvasStore.deleteConnector(conn.id);
-      });
-      project.canvas.connectors.forEach((conn: any) => {
-        canvasStore.addConnector(conn.from, conn.to, conn.style);
-      });
+      if (project.canvas) {
+        if (project.canvas.width && project.canvas.height) {
+          canvasStore.setCustomCanvasSize(project.canvas.width, project.canvas.height);
+        }
+        if (Array.isArray(project.canvas.connectors)) {
+          canvasStore.clearConnectors();
+          project.canvas.connectors.forEach((conn: any) => {
+            if (conn && conn.fromColumnId && conn.toColumnId && conn.fromAnchor && conn.toAnchor) {
+              const { id, ...rest } = conn;
+              // addConnector expects Omit<Connector,'id'>
+              canvasStore.addConnector(rest);
+            }
+          });
+        }
+      }
 
       // Restore slides
       slidesStore.clearSlides();

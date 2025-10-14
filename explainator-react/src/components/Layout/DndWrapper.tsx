@@ -3,18 +3,16 @@
  * Handles all drag and drop operations for boxes, sections, and columns
  */
 
-import { ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   DndContext,
-  DragEndEvent,
   DragOverlay,
-  DragStartEvent,
   PointerSensor,
   useSensor,
   useSensors,
   closestCorners,
 } from '@dnd-kit/core';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { useState } from 'react';
 import { useLayoutStore } from '../../store/layoutStore';
 
