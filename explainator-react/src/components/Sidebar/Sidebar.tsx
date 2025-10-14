@@ -9,6 +9,9 @@ import { useCategoryStore } from '../../store/categoryStore';
 import { useCanvasStore } from '../../store/canvasStore';
 import { ExportModal } from '../Modals/ExportModal';
 import { ImportModal } from '../Modals/ImportModal';
+import { NotesModal } from '../Modals/NotesModal';
+import { ImageUploadModal } from '../Modals/ImageUploadModal';
+import { LineSelectorModal } from '../Modals/LineSelectorModal';
 import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
@@ -16,6 +19,9 @@ export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
+  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
+  const [showLineSelectorModal, setShowLineSelectorModal] = useState(false);
   const { addColumn, clearLayout, columns } = useLayoutStore();
   const { resetCategories } = useCategoryStore();
   const {
@@ -126,6 +132,22 @@ export const Sidebar = () => {
           </div>
 
           <div className="sidebar-section">
+            <h3 className="sidebar-section-title">Tools</h3>
+            <button className="sidebar-btn btn-secondary" onClick={() => setShowNotesModal(true)}>
+              <span className="btn-icon">📝</span>
+              Notes
+            </button>
+            <button className="sidebar-btn btn-secondary" onClick={() => setShowImageUploadModal(true)}>
+              <span className="btn-icon">🖼️</span>
+              Upload Image
+            </button>
+            <button className="sidebar-btn btn-secondary" onClick={() => setShowLineSelectorModal(true)}>
+              <span className="btn-icon">➖</span>
+              Insert Line
+            </button>
+          </div>
+
+          <div className="sidebar-section">
             <h3 className="sidebar-section-title">Styling</h3>
             <button className="sidebar-btn btn-secondary" onClick={handleResetCategories}>
               <span className="btn-icon">🎨</span>
@@ -179,6 +201,9 @@ export const Sidebar = () => {
 
       <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
       <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
+      <NotesModal isOpen={showNotesModal} onClose={() => setShowNotesModal(false)} />
+      <ImageUploadModal isOpen={showImageUploadModal} onClose={() => setShowImageUploadModal(false)} />
+      <LineSelectorModal isOpen={showLineSelectorModal} onClose={() => setShowLineSelectorModal(false)} />
     </div>
   );
 };
