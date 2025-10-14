@@ -23,6 +23,7 @@ export const LayoutContainer = () => {
     <div className="layout-container">
       <DndWrapper>
         <div
+          id="main-container"
           className={`main-container ${canvasMode ? 'canvas-mode' : ''}`}
           style={
             canvasMode

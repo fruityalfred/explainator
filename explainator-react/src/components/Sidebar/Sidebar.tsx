@@ -7,11 +7,15 @@ import { useState } from 'react';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useCanvasStore } from '../../store/canvasStore';
+import { ExportModal } from '../Modals/ExportModal';
+import { ImportModal } from '../Modals/ImportModal';
 import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
 export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [showExportModal, setShowExportModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const { addColumn, clearLayout, columns } = useLayoutStore();
   const { resetCategories } = useCategoryStore();
   const {
@@ -130,6 +134,18 @@ export const Sidebar = () => {
           </div>
 
           <div className="sidebar-section">
+            <h3 className="sidebar-section-title">Import / Export</h3>
+            <button className="sidebar-btn btn-primary" onClick={() => setShowExportModal(true)}>
+              <span className="btn-icon">⬇️</span>
+              Export
+            </button>
+            <button className="sidebar-btn btn-secondary" onClick={() => setShowImportModal(true)}>
+              <span className="btn-icon">⬆️</span>
+              Import
+            </button>
+          </div>
+
+          <div className="sidebar-section">
             <h3 className="sidebar-section-title">System</h3>
             <button className="sidebar-btn btn-warning" onClick={handleClearAll}>
               <span className="btn-icon">🗑️</span>
@@ -160,6 +176,9 @@ export const Sidebar = () => {
           </div>
         </div>
       )}
+
+      <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
+      <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
     </div>
   );
 };

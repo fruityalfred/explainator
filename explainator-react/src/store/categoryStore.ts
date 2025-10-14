@@ -16,6 +16,7 @@ interface CategoryState {
   updateCategory: (key: string, updates: Partial<CategoryData>) => void;
   deleteCategory: (key: string) => void;
   resetCategories: () => void;
+  loadCategories: (categories: CategoryMap) => void;
   getCategoryGradient: (key: string) => string;
   getCategoryTextColor: (key: string) => string;
 }
@@ -68,6 +69,13 @@ export const useCategoryStore = create<CategoryState>()(
        */
       resetCategories: () => {
         set({ categories: DEFAULT_CATEGORIES });
+      },
+
+      /**
+       * Load categories from imported data
+       */
+      loadCategories: (categories: CategoryMap) => {
+        set({ categories });
       },
 
       /**
