@@ -11,16 +11,17 @@ import './Editor.css';
 export const Editor = () => {
   return (
     <div className="editor-container">
-      <header className="editor-header">
-        <h1 className="editor-title">Explainator Editor</h1>
-        <div className="editor-user-info">
-          <span className="user-name">Client Mode</span>
-          <span className="user-tier">FULL ACCESS</span>
-        </div>
-      </header>
+      <Sidebar />
 
       <div className="editor-main">
-        <Sidebar />
+        <header className="editor-header">
+          <h1 className="editor-title">🏢 Explainator - Ultimate Edition</h1>
+          <div className="editor-user-info">
+            <span className="user-name">Client Mode</span>
+            <span className="user-tier">FULL ACCESS</span>
+          </div>
+        </header>
+
         <LayoutContainer />
       </div>
 
