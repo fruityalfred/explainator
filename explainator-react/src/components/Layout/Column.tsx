@@ -4,7 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { ColumnData, SectionData } from '../../types';
+import type { ColumnData, SectionData } from '../../types';
 import { Section } from './Section';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useCanvasStore } from '../../store/canvasStore';
@@ -17,7 +17,7 @@ interface ColumnProps {
 }
 
 export const Column = ({ data, index }: ColumnProps) => {
-  const { updateColumn, updateColumnCanvasPosition, deleteColumn, addSection, splitColumn, unsplitColumn } = useLayoutStore();
+  const { updateColumn, updateColumnCanvasPosition, deleteColumn, addSection, splitColumn, unsplitColumn, cloneColumn } = useLayoutStore();
   const { canvasMode, snapToGrid, gridSize } = useCanvasStore();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState(data.title);
@@ -67,6 +67,10 @@ export const Column = ({ data, index }: ColumnProps) => {
 
   const handleAddSection = () => {
     addSection(data.id, `Section ${(data.sections as SectionData[]).length + 1}`);
+  };
+
+  const handleCloneColumn = () => {
+    cloneColumn(data.id);
   };
 
   const handleSplit = (parts: number) => {
@@ -210,6 +214,13 @@ export const Column = ({ data, index }: ColumnProps) => {
         )}
 
         <div className="column-header-actions">
+          <button
+            className="column-color-btn"
+            onClick={handleCloneColumn}
+            title="Clone column"
+          >
+            📋
+          </button>
           <button
             className="column-color-btn"
             onClick={() => setShowSplitMenu(!showSplitMenu)}

@@ -6,7 +6,7 @@
 import { useState } from 'react';
 import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
-import { SectionData } from '../../types';
+import type { SectionData } from '../../types';
 import { Box } from './Box';
 import { useLayoutStore } from '../../store/layoutStore';
 import './Section.css';
@@ -18,7 +18,7 @@ interface SectionProps {
 }
 
 export const Section = ({ data, columnId, index }: SectionProps) => {
-  const { updateSection, deleteSection, updateBox, deleteBox, addBox } = useLayoutStore();
+  const { updateSection, deleteSection, updateBox, deleteBox, addBox, cloneSection } = useLayoutStore();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState(data.title);
 
@@ -66,6 +66,10 @@ export const Section = ({ data, columnId, index }: SectionProps) => {
     });
   };
 
+  const handleCloneSection = () => {
+    cloneSection(columnId, data.id);
+  };
+
   return (
     <div
       className={`section-group ${isOver ? 'drag-over' : ''}`}
@@ -91,6 +95,9 @@ export const Section = ({ data, columnId, index }: SectionProps) => {
           <span onClick={handleTitleClick}>{data.title}</span>
         )}
 
+        <button className="section-clone" onClick={handleCloneSection} title="Clone section">
+          📋
+        </button>
         <button className="section-delete" onClick={handleDeleteSection} title="Delete section">
           ×
         </button>
