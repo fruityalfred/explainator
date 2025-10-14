@@ -7,33 +7,13 @@ import { useState } from 'react';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useCategoryStore } from '../../store/categoryStore';
 import { useCanvasStore } from '../../store/canvasStore';
-import { ExportModal } from '../Modals/ExportModal';
-import { ImportModal } from '../Modals/ImportModal';
-import { NotesModal } from '../Modals/NotesModal';
-import { BatchImportModal } from '../Modals/BatchImportModal';
-import { ImageUploadModal } from '../Modals/ImageUploadModal';
-import { LineSelectorModal } from '../Modals/LineSelectorModal';
-import { SlidesModal } from '../Modals/SlidesModal';
-import { ProjectsModal } from '../Modals/ProjectsModal';
-import { AddBoxModal } from '../Modals/AddBoxModal';
-import { FormattingModal } from '../Modals/FormattingModal';
-import { CategoryModal } from '../Modals/CategoryModal';
+import { useModalStore } from '../../store/modalStore';
 import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
 export const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [showImportModal, setShowImportModal] = useState(false);
-  const [showNotesModal, setShowNotesModal] = useState(false);
-  const [showImageUploadModal, setShowImageUploadModal] = useState(false);
-  const [showLineSelectorModal, setShowLineSelectorModal] = useState(false);
-  const [showBatchImportModal, setShowBatchImportModal] = useState(false);
-  const [showSlidesModal, setShowSlidesModal] = useState(false);
-  const [showProjectsModal, setShowProjectsModal] = useState(false);
-  const [showFormattingModal, setShowFormattingModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showAddBoxModal, setShowAddBoxModal] = useState(false);
+  const { openModal } = useModalStore();
 
   // Section collapse states (matching original)
   const [contentCollapsed, setContentCollapsed] = useState(false);
@@ -101,19 +81,19 @@ export const Sidebar = () => {
           <div className="nav-section-title" onClick={() => setContentCollapsed(!contentCollapsed)}>
             Content
           </div>
-          <button className="nav-item" onClick={() => setShowAddBoxModal(true)} title="Neue Box">
+          <button className="nav-item" onClick={() => openModal('showAddBoxModal')} title="Neue Box">
             <span className="icon">📦</span>
             <span className="label">Neue Box</span>
           </button>
-          <button className="nav-item" onClick={() => setShowNotesModal(true)} title="Notizbox hinzufügen">
+          <button className="nav-item" onClick={() => openModal('showNotesModal')} title="Notizbox hinzufügen">
             <span className="icon">📝</span>
             <span className="label">Notizbox</span>
           </button>
-          <button className="nav-item" onClick={() => setShowLineSelectorModal(true)} title="Lines">
+          <button className="nav-item" onClick={() => openModal('showLineSelectorModal')} title="Lines">
             <span className="icon">📏</span>
             <span className="label">Lines</span>
           </button>
-          <button className="nav-item" onClick={() => setShowBatchImportModal(true)} title="Batch Import">
+          <button className="nav-item" onClick={() => openModal('showBatchImportModal')} title="Batch Import">
             <span className="icon">📋</span>
             <span className="label">Batch Import</span>
           </button>
@@ -124,11 +104,11 @@ export const Sidebar = () => {
           <div className="nav-section-title" onClick={() => setStylingCollapsed(!stylingCollapsed)}>
             Styling
           </div>
-          <button className="nav-item" onClick={() => setShowFormattingModal(true)} title="Formatting">
+          <button className="nav-item" onClick={() => openModal('showFormattingModal')} title="Formatting">
             <span className="icon">🎨</span>
             <span className="label">Formatting</span>
           </button>
-          <button className="nav-item" onClick={() => setShowCategoryModal(true)} title="Manage Categories">
+          <button className="nav-item" onClick={() => openModal('showCategoryModal')} title="Manage Categories">
             <span className="icon">🏷️</span>
             <span className="label">Manage Categories</span>
           </button>
@@ -194,7 +174,7 @@ export const Sidebar = () => {
           <div className="nav-section-title" onClick={() => setSlidesCollapsed(!slidesCollapsed)}>
             Slides
           </div>
-          <button className="nav-item" onClick={() => setShowSlidesModal(true)} title="Slides-Modus aktivieren/deaktivieren">
+          <button className="nav-item" onClick={() => openModal('showSlidesModal')} title="Slides-Modus aktivieren/deaktivieren">
             <span className="icon">📽️</span>
             <span className="label">Slides Mode</span>
           </button>
@@ -232,19 +212,19 @@ export const Sidebar = () => {
           <div className="nav-section-title" onClick={() => setDataCollapsed(!dataCollapsed)}>
             Data
           </div>
-          <button className="nav-item" onClick={() => setShowProjectsModal(true)} title="Template speichern">
+          <button className="nav-item" onClick={() => openModal('showProjectsModal')} title="Template speichern">
             <span className="icon">💾</span>
             <span className="label">Speichern</span>
           </button>
-          <button className="nav-item" onClick={() => setShowProjectsModal(true)} title="Template laden">
+          <button className="nav-item" onClick={() => openModal('showProjectsModal')} title="Template laden">
             <span className="icon">📂</span>
             <span className="label">Laden</span>
           </button>
-          <button className="nav-item" onClick={() => setShowExportModal(true)} title="Excel Export">
+          <button className="nav-item" onClick={() => openModal('showExportModal')} title="Excel Export">
             <span className="icon">📊</span>
             <span className="label">Excel</span>
           </button>
-          <button className="nav-item" onClick={() => setShowExportModal(true)} title="PNG Export">
+          <button className="nav-item" onClick={() => openModal('showExportModal')} title="PNG Export">
             <span className="icon">🖼️</span>
             <span className="label">PNG Export</span>
           </button>
@@ -252,11 +232,11 @@ export const Sidebar = () => {
             <span className="icon">🎭</span>
             <span className="label">Präsentation</span>
           </button>
-          <button className="nav-item" onClick={() => setShowExportModal(true)} title="Standalone HTML Export">
+          <button className="nav-item" onClick={() => openModal('showExportModal')} title="Standalone HTML Export">
             <span className="icon">📦</span>
             <span className="label">HTML Export</span>
           </button>
-          <button className="nav-item" onClick={() => setShowProjectsModal(true)} title="Projektverwaltung">
+          <button className="nav-item" onClick={() => openModal('showProjectsModal')} title="Projektverwaltung">
             <span className="icon">📁</span>
             <span className="label">Projekte</span>
           </button>
@@ -285,19 +265,6 @@ export const Sidebar = () => {
           </button>
         </div>
       </nav>
-
-      {/* MODALS */}
-      <AddBoxModal isOpen={showAddBoxModal} onClose={() => setShowAddBoxModal(false)} />
-      <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
-      <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
-      <NotesModal isOpen={showNotesModal} onClose={() => setShowNotesModal(false)} />
-      <BatchImportModal isOpen={showBatchImportModal} onClose={() => setShowBatchImportModal(false)} />
-      <ImageUploadModal isOpen={showImageUploadModal} onClose={() => setShowImageUploadModal(false)} />
-      <LineSelectorModal isOpen={showLineSelectorModal} onClose={() => setShowLineSelectorModal(false)} />
-      <SlidesModal isOpen={showSlidesModal} onClose={() => setShowSlidesModal(false)} />
-      <ProjectsModal isOpen={showProjectsModal} onClose={() => setShowProjectsModal(false)} />
-      <FormattingModal isOpen={showFormattingModal} onClose={() => setShowFormattingModal(false)} />
-      <CategoryModal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} />
     </aside>
   );
 };

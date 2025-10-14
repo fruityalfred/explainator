@@ -5,6 +5,7 @@
 
 import { Sidebar } from '../components/Sidebar/Sidebar';
 import { LayoutContainer } from '../components/Layout';
+import { ModalManager } from '../components/ModalManager';
 import './Editor.css';
 
 export const Editor = () => {
@@ -22,6 +23,9 @@ export const Editor = () => {
         <Sidebar />
         <LayoutContainer />
       </div>
+
+      {/* Render all modals at root level for proper overlay */}
+      <ModalManager />
     </div>
   );
 };

@@ -15,7 +15,9 @@
       "Bash(npm run dev)",
       "Bash(pkill:*)",
       "Bash(lsof:*)",
-      "Bash(xargs -r kill)"
+      "Bash(xargs -r kill)",
+      "Bash(netstat:*)",
+      "Bash(findstr:*)"
     ],
     "deny": [],
     "ask": []
