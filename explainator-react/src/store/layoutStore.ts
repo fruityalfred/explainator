@@ -20,6 +20,8 @@ interface LayoutState {
   updateColumn: (columnId: string, updates: Partial<ColumnData>) => void;
   moveColumn: (fromIndex: number, toIndex: number) => void;
   updateColumnCanvasPosition: (columnId: string, x: number, y: number) => void;
+  splitColumn: (columnId: string, parts: number) => void;
+  unsplitColumn: (columnId: string) => void;
 
   // Section Actions
   addSection: (columnId: string, title?: string) => void;
@@ -119,6 +121,87 @@ export const useLayoutStore = create<LayoutState>()(
             col.id === columnId ? { ...col, canvasX: x, canvasY: y } : col
           ),
         }));
+      },
+
+      /**
+       * Split column into multiple vertical parts (2-8)
+       */
+      splitColumn: (columnId: string, parts: number) => {
+        set((state) => {
+          const column = state.columns.find((col) => col.id === columnId);
+          if (!column || parts < 2 || parts > 8) return state;
+
+          // If already in normal mode with sections, distribute them across splits
+          const currentSections = Array.isArray(column.sections[0])
+            ? []
+            : (column.sections as SectionData[]);
+
+          // Create empty section arrays for each split part
+          const splitSections: SectionData[][] = Array.from({ length: parts }, () => []);
+
+          // Distribute existing sections evenly across splits
+          currentSections.forEach((section, idx) => {
+            const targetSplit = idx % parts;
+            splitSections[targetSplit].push(section);
+          });
+
+          // If no sections exist, create default sections for each split
+          if (currentSections.length === 0) {
+            for (let i = 0; i < parts; i++) {
+              splitSections[i] = [
+                {
+                  id: generateUuid(),
+                  title: `Part ${i + 1}`,
+                  boxes: [],
+                },
+              ];
+            }
+          }
+
+          return {
+            columns: state.columns.map((col) =>
+              col.id === columnId
+                ? {
+                    ...col,
+                    splitState: `split-${parts}` as any,
+                    splitParts: parts,
+                    sections: splitSections,
+                  }
+                : col
+            ),
+          };
+        });
+      },
+
+      /**
+       * Unsplit column back to normal mode
+       */
+      unsplitColumn: (columnId: string) => {
+        set((state) => {
+          const column = state.columns.find((col) => col.id === columnId);
+          if (!column || column.splitState === 'normal') return state;
+
+          // Merge all split sections into single array
+          const mergedSections: SectionData[] = [];
+          if (Array.isArray(column.sections[0])) {
+            (column.sections as SectionData[][]).forEach((splitPart) => {
+              mergedSections.push(...splitPart);
+            });
+          }
+
+          return {
+            columns: state.columns.map((col) =>
+              col.id === columnId
+                ? {
+                    ...col,
+                    splitState: 'normal',
+                    splitParts: 1,
+                    sections: mergedSections,
+                  }
+                : col
+            ),
+          };
+        });
       },
 
       /**
