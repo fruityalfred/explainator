@@ -12,6 +12,7 @@ import { ImportModal } from '../Modals/ImportModal';
 import { NotesModal } from '../Modals/NotesModal';
 import { ImageUploadModal } from '../Modals/ImageUploadModal';
 import { LineSelectorModal } from '../Modals/LineSelectorModal';
+import { BatchImportModal } from '../Modals/BatchImportModal';
 import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
@@ -22,6 +23,7 @@ export const Sidebar = () => {
   const [showNotesModal, setShowNotesModal] = useState(false);
   const [showImageUploadModal, setShowImageUploadModal] = useState(false);
   const [showLineSelectorModal, setShowLineSelectorModal] = useState(false);
+  const [showBatchImportModal, setShowBatchImportModal] = useState(false);
   const { addColumn, clearLayout, columns } = useLayoutStore();
   const { resetCategories } = useCategoryStore();
   const {
@@ -137,6 +139,10 @@ export const Sidebar = () => {
               <span className="btn-icon">📝</span>
               Notes
             </button>
+            <button className="sidebar-btn btn-secondary" onClick={() => setShowBatchImportModal(true)}>
+              <span className="btn-icon">📋</span>
+              Batch Import
+            </button>
             <button className="sidebar-btn btn-secondary" onClick={() => setShowImageUploadModal(true)}>
               <span className="btn-icon">🖼️</span>
               Upload Image
@@ -202,6 +208,7 @@ export const Sidebar = () => {
       <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
       <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
       <NotesModal isOpen={showNotesModal} onClose={() => setShowNotesModal(false)} />
+      <BatchImportModal isOpen={showBatchImportModal} onClose={() => setShowBatchImportModal(false)} />
       <ImageUploadModal isOpen={showImageUploadModal} onClose={() => setShowImageUploadModal(false)} />
       <LineSelectorModal isOpen={showLineSelectorModal} onClose={() => setShowLineSelectorModal(false)} />
     </div>
