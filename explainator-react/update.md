@@ -301,3 +301,270 @@ backend/
 ---
 
 **Nächster Update:** Nach Abschluss von Segment 2 (Authentication)
+
+---
+
+## ✅ Segment 2: Authentication & User Management
+
+**Status:** ✅ Abgeschlossen
+**Datum:** 2025-10-14
+
+### 2.1 Backend Authentication System
+
+**Implementierte Dateien:**
+
+1. **`backend/src/utils/prisma.ts`**
+   - Prisma Client Singleton
+   - Connection Pool Management
+   - Development Logging
+
+2. **`backend/src/services/auth.service.ts`**
+   - User Registration mit Free-Tier Subscription
+   - Login mit bcrypt Password Verification
+   - JWT Token Generation (Access + Refresh)
+   - Token Refresh Logic
+   - User Retrieval by ID
+   - Token Expiry: Access 15min, Refresh 7d
+
+3. **`backend/src/controllers/auth.controller.ts`**
+   - `POST /api/auth/register` - Benutzer registrieren
+   - `POST /api/auth/login` - Benutzer einloggen
+   - `POST /api/auth/refresh` - Access Token erneuern
+   - `GET /api/auth/me` - Aktuellen Benutzer abrufen (protected)
+   - `POST /api/auth/logout` - Logout (client-side)
+   - Express-Validator Integration
+
+4. **`backend/src/middleware/auth.middleware.ts`**
+   - `authMiddleware` - JWT Verification für protected Routes
+   - `optionalAuthMiddleware` - Optionale Auth für public/mixed Routes
+   - User Info wird an Request attached (userId, userEmail)
+
+5. **`backend/src/routes/auth.routes.ts`**
+   - Route-Definitionen mit Validation Rules
+   - Email/Password Validation
+   - Middleware-Stacking
+
+6. **`backend/src/index.ts`**
+   - Express Server Setup
+   - CORS Configuration (Frontend URL)
+   - Helmet Security Headers
+   - JSON Body Parser (10MB Limit)
+   - Health Check Endpoint (`/health`)
+   - Global Error Handler
+   - Graceful Shutdown (SIGINT/SIGTERM)
+
+### 2.2 Frontend Authentication System
+
+**Implementierte Dateien:**
+
+1. **`src/store/authStore.ts`** (Zustand)
+   - User State Management
+   - `register()` - Registrierung mit auto-login
+   - `login()` - Login mit JWT Tokens
+   - `logout()` - Clear user state
+   - `refreshAccessToken()` - Token Refresh
+   - `fetchCurrentUser()` - User-Daten abrufen
+   - Zustand Persist (localStorage)
+   - Axios Interceptors:
+     - Auto-attach Bearer Token
+     - Auto-refresh on 401 errors
+
+2. **`src/pages/Login.tsx`**
+   - Login Form mit Email/Password
+   - Error Display
+   - Loading States
+   - Link zu Register
+   - Styled mit Inline-Styles (Gradient Theme)
+
+3. **`src/pages/Register.tsx`**
+   - Registration Form (Name, Email, Password, Confirm)
+   - Password Match Validation
+   - Free Tier Info Display
+   - Error Handling
+   - Auto-login nach Registration
+
+4. **`src/pages/Editor.tsx`**
+   - Placeholder für Main Application
+   - Header mit User Info
+   - Subscription Tier Display
+   - Logout Button
+   - User Account Status Display
+
+5. **`src/components/ProtectedRoute.tsx`**
+   - Route Guard Component
+   - Redirect zu `/login` wenn nicht authenticated
+   - Auto-fetch current user on mount
+
+6. **`src/App.tsx`**
+   - React Router Setup (BrowserRouter)
+   - Public Routes: `/login`, `/register`
+   - Protected Routes: `/editor`
+   - Default Redirect: `/` → `/editor`
+   - 404 → `/editor`
+
+7. **`.env.local`**
+   - `VITE_API_URL=http://localhost:3001/api`
+
+### 2.3 Prisma Client Generation
+
+```bash
+cd backend
+npx prisma generate
+# ✅ Prisma Client generiert in node_modules/@prisma/client
+```
+
+### 2.4 Environment Setup
+
+**Backend `.env`:**
+```
+DATABASE_URL="postgresql://postgres:postgres@localhost:5432/explainator_dev?schema=public"
+JWT_ACCESS_SECRET="dev-secret-access-key-change-in-production-12345"
+JWT_REFRESH_SECRET="dev-secret-refresh-key-change-in-production-67890"
+PORT=3001
+NODE_ENV="development"
+FRONTEND_URL="http://localhost:5173"
+```
+
+### 2.5 API Endpoints
+
+| Endpoint | Method | Auth | Description |
+|----------|--------|------|-------------|
+| `/api/auth/register` | POST | ❌ | Register new user |
+| `/api/auth/login` | POST | ❌ | Login user |
+| `/api/auth/refresh` | POST | ❌ | Refresh access token |
+| `/api/auth/me` | GET | ✅ | Get current user |
+| `/api/auth/logout` | POST | ✅ | Logout (placeholder) |
+| `/health` | GET | ❌ | Health check |
+
+### 2.6 Security Features
+
+- ✅ Password Hashing mit bcrypt (10 rounds)
+- ✅ JWT Tokens (Access 15min, Refresh 7d)
+- ✅ Bearer Token Authentication
+- ✅ CORS Protection (Frontend URL whitelist)
+- ✅ Helmet Security Headers
+- ✅ Input Validation (express-validator)
+- ✅ SQL Injection Protection (Prisma ORM)
+- ✅ Automatic Token Refresh on 401
+
+### 2.7 User Flow
+
+1. **Registration:**
+   - User füllt Register-Form aus
+   - Backend erstellt User + Free Subscription
+   - JWT Tokens werden generiert
+   - Frontend speichert Tokens in localStorage
+   - Auto-Redirect zu `/editor`
+
+2. **Login:**
+   - User füllt Login-Form aus
+   - Backend verifiziert Credentials
+   - JWT Tokens werden generiert
+   - Frontend speichert Tokens
+   - Redirect zu `/editor`
+
+3. **Protected Route Access:**
+   - User navigiert zu `/editor`
+   - ProtectedRoute prüft `isAuthenticated`
+   - Falls nicht authenticated → Redirect zu `/login`
+   - Falls authenticated → Render Editor
+
+4. **Auto Token Refresh:**
+   - API Request mit abgelaufenem Access Token
+   - 401 Error von Backend
+   - Axios Interceptor fängt 401 ab
+   - Auto-Refresh mit Refresh Token
+   - Original Request wird mit neuem Token wiederholt
+
+5. **Logout:**
+   - User klickt Logout Button
+   - Frontend löscht User State + Tokens
+   - Redirect zu `/login`
+
+### 2.8 Testing Commands
+
+**Backend starten:**
+```bash
+cd backend
+npm run dev
+# Server läuft auf http://localhost:3001
+```
+
+**Frontend starten:**
+```bash
+npm run dev
+# App läuft auf http://localhost:5173
+```
+
+**Prisma Studio (DB GUI):**
+```bash
+cd backend
+npm run prisma:studio
+# Öffnet http://localhost:5555
+```
+
+---
+
+## 🎬 Nächste Schritte
+
+### Segment 3: Core Layout Engine (Woche 4-5)
+
+**Als Nächstes zu implementieren:**
+
+1. **Layout Store (Zustand):**
+   - Columns State Management
+   - Sections State Management
+   - Boxes State Management
+   - Add/Delete/Update Actions
+
+2. **Core Components:**
+   - `<Column />` - Spalten mit Resize Handle
+   - `<Section />` - Sections mit Title & Color
+   - `<Box />` - Content Boxes (Text/Image/Line)
+   - `<AddButton />` - Hinzufügen-Buttons
+
+3. **Category System:**
+   - Category Store
+   - Color Picker Component
+   - Apply Category to Box
+
+4. **Basic Layout:**
+   - Sidebar Navigation
+   - Main Canvas Container
+   - Add Column/Section/Box Flow
+
+5. **Persistence:**
+   - Save Layout to Backend (Template API)
+   - Load Layout from Backend
+
+---
+
+## ✨ Git Commits
+
+### Commit 2: "Segment 2 complete - Authentication & User Management"
+**Datum:** 2025-10-14
+**Inhalt:**
+- ✅ Backend Auth Service (Register, Login, Token Refresh)
+- ✅ Auth Controller & Routes
+- ✅ JWT Middleware (authMiddleware, optionalAuthMiddleware)
+- ✅ Express Server Setup mit Health Check
+- ✅ Prisma Client Integration
+- ✅ Frontend Auth Store (Zustand + Persist)
+- ✅ Login/Register Pages mit Validation
+- ✅ Protected Route Component
+- ✅ Editor Placeholder Page
+- ✅ React Router Setup
+- ✅ Axios Interceptors (Auto-Token, Auto-Refresh)
+- ✅ Environment Configuration (.env, .env.local)
+
+**Technische Details:**
+- JWT Access Token: 15min Expiry
+- JWT Refresh Token: 7d Expiry
+- bcrypt Password Hashing (10 rounds)
+- Auto-Registration mit Free Tier Subscription
+- Token Auto-Refresh on 401 Errors
+- Zustand Persist für Auth State
+
+---
+
+**Nächster Update:** Nach Abschluss von Segment 3 (Core Layout Engine)
