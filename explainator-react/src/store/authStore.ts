@@ -6,7 +6,15 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import axios from 'axios';
-import { User, AuthResponse, LoginCredentials, RegisterCredentials } from '../types';
+// NOTE: Temporarily commented out to avoid import errors while auth is not used
+// Uncomment when implementing backend authentication
+// import { User, AuthResponse, LoginCredentials, RegisterCredentials } from '../types';
+
+// Temporary type definitions (remove when uncommenting imports above)
+type User = any;
+type AuthResponse = any;
+type LoginCredentials = any;
+type RegisterCredentials = any;
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
