@@ -15,6 +15,9 @@ import { ImageUploadModal } from '../Modals/ImageUploadModal';
 import { LineSelectorModal } from '../Modals/LineSelectorModal';
 import { SlidesModal } from '../Modals/SlidesModal';
 import { ProjectsModal } from '../Modals/ProjectsModal';
+import { AddBoxModal } from '../Modals/AddBoxModal';
+import { FormattingModal } from '../Modals/FormattingModal';
+import { CategoryModal } from '../Modals/CategoryModal';
 import { CANVAS_PRESETS } from '../../constants';
 import './Sidebar.css';
 
@@ -30,6 +33,7 @@ export const Sidebar = () => {
   const [showProjectsModal, setShowProjectsModal] = useState(false);
   const [showFormattingModal, setShowFormattingModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showAddBoxModal, setShowAddBoxModal] = useState(false);
 
   // Section collapse states (matching original)
   const [contentCollapsed, setContentCollapsed] = useState(false);
@@ -97,7 +101,7 @@ export const Sidebar = () => {
           <div className="nav-section-title" onClick={() => setContentCollapsed(!contentCollapsed)}>
             Content
           </div>
-          <button className="nav-item" onClick={handleAddColumn} title="Neue Box">
+          <button className="nav-item" onClick={() => setShowAddBoxModal(true)} title="Neue Box">
             <span className="icon">📦</span>
             <span className="label">Neue Box</span>
           </button>
@@ -283,6 +287,7 @@ export const Sidebar = () => {
       </nav>
 
       {/* MODALS */}
+      <AddBoxModal isOpen={showAddBoxModal} onClose={() => setShowAddBoxModal(false)} />
       <ExportModal isOpen={showExportModal} onClose={() => setShowExportModal(false)} />
       <ImportModal isOpen={showImportModal} onClose={() => setShowImportModal(false)} />
       <NotesModal isOpen={showNotesModal} onClose={() => setShowNotesModal(false)} />
@@ -291,7 +296,8 @@ export const Sidebar = () => {
       <LineSelectorModal isOpen={showLineSelectorModal} onClose={() => setShowLineSelectorModal(false)} />
       <SlidesModal isOpen={showSlidesModal} onClose={() => setShowSlidesModal(false)} />
       <ProjectsModal isOpen={showProjectsModal} onClose={() => setShowProjectsModal(false)} />
-      {/* TODO: Add FormattingModal and CategoryModal */}
+      <FormattingModal isOpen={showFormattingModal} onClose={() => setShowFormattingModal(false)} />
+      <CategoryModal isOpen={showCategoryModal} onClose={() => setShowCategoryModal(false)} />
     </aside>
   );
 };
