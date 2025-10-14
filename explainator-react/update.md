@@ -603,3 +603,76 @@ npm run prisma:studio
 ---
 
 **Nächster Update:** Nach Segment 4 (Drag & Drop)
+
+---
+
+## 🚧 Segment 4: Drag & Drop System (IN ARBEIT)
+
+**Status:** 🚧 Work in Progress
+**Datum:** 2025-10-14
+
+### 4.1 @dnd-kit Integration (Grundlage gelegt)
+
+**Implementierte Dateien:**
+
+1. **DndWrapper.tsx** - Drag & Drop Context
+   - DndContext Setup mit sensors
+   - PointerSensor (8px activation distance)
+   - handleDragStart/handleDragEnd Logic
+   - DragOverlay für visuelles Feedback
+   - Unterstützt 3 Drag-Typen: box, section, column
+
+2. **Box.tsx** - Updated mit useSortable
+   - useSortable Hook integriert
+   - attributes, listeners für drag
+   - transform & transition CSS
+   - isDragging opacity effect
+   - Index parameter hinzugefügt
+
+3. **Section.tsx** - Sortable Container
+   - useDroppable Hook (drop zone)
+   - SortableContext für boxes
+   - isOver state → drag-over styling
+   - Index parameter
+
+4. **Column.tsx** - Index-Weitergabe
+   - Sections erhalten index prop
+   - Vorbereitet für column drag
+
+5. **LayoutContainer.tsx** - DndWrapper Integration
+   - Wrapped mit DndWrapper
+
+### 4.2 Status
+
+✅ **Funktioniert:**
+- DnD Grundstruktur steht
+- Drag detection
+- Store hat moveBox/moveSection/moveColumn
+
+⚠️ **TODO:**
+- DnD Testing & Debugging
+- Visual Feedback verbessern
+- Section drag implementieren
+- Column drag implementieren
+
+---
+
+## 📋 IMPLEMENTATION_PLAN.md
+
+**Komplette Roadmap erstellt** mit verbleibenden Features:
+
+**Offen (17-24 Tage geschätzt):**
+- Canvas Mode (absolute positioning, grid, snap, alignment)
+- SVG Connectors System (8-directional anchors, bezier paths)
+- Slides System (PowerPoint-like, fullscreen presentation)
+- Export System (PNG html2canvas, Excel xlsx, HTML, JSON)
+- Project Manager (Kanban Board, file attachments)
+- Split Columns (2-8 vertikale Teile)
+- Modals (Notes, Batch Import, Image Upload, etc.)
+- i18n (DE/EN), Zoom, Shortcuts, Help
+
+**Details:** Siehe [IMPLEMENTATION_PLAN.md](./IMPLEMENTATION_PLAN.md)
+
+---
+
+**Nächster Update:** Nach vollständiger DnD Implementation
