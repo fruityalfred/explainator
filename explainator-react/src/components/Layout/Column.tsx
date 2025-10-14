@@ -164,9 +164,10 @@ export const Column = ({ data, index }: ColumnProps) => {
     }
   }, [canvasMode, data.canvasX, data.canvasY, data.id, index, updateColumnCanvasPosition]);
 
-  const sections = Array.isArray(data.sections[0])
-    ? [] // Split mode - not implemented yet
-    : (data.sections as SectionData[]);
+  // Determine if in split mode
+  const isSplitMode = Array.isArray(data.sections[0]);
+  const splitSections = isSplitMode ? (data.sections as SectionData[][]) : [];
+  const normalSections = !isSplitMode ? (data.sections as SectionData[]) : [];
 
   const columnStyle = canvasMode
     ? {
@@ -181,7 +182,7 @@ export const Column = ({ data, index }: ColumnProps) => {
   return (
     <div
       ref={columnRef}
-      className="column"
+      className={`column ${isSplitMode ? 'column-split' : ''}`}
       style={columnStyle}
       data-column-id={data.id}
       onMouseDown={canvasMode ? handleCanvasDragStart : undefined}
@@ -211,6 +212,13 @@ export const Column = ({ data, index }: ColumnProps) => {
         <div className="column-header-actions">
           <button
             className="column-color-btn"
+            onClick={() => setShowSplitMenu(!showSplitMenu)}
+            title="Split column"
+          >
+            ⫴
+          </button>
+          <button
+            className="column-color-btn"
             onClick={() => setShowColorPicker(!showColorPicker)}
             title="Change color"
           >
@@ -220,6 +228,40 @@ export const Column = ({ data, index }: ColumnProps) => {
             ×
           </button>
         </div>
+
+        {showSplitMenu && (
+          <div className="split-menu-dropdown">
+            {isSplitMode ? (
+              <button className="split-option" onClick={handleUnsplit}>
+                Unsplit Column
+              </button>
+            ) : (
+              <>
+                <button className="split-option" onClick={() => handleSplit(2)}>
+                  Split into 2
+                </button>
+                <button className="split-option" onClick={() => handleSplit(3)}>
+                  Split into 3
+                </button>
+                <button className="split-option" onClick={() => handleSplit(4)}>
+                  Split into 4
+                </button>
+                <button className="split-option" onClick={() => handleSplit(5)}>
+                  Split into 5
+                </button>
+                <button className="split-option" onClick={() => handleSplit(6)}>
+                  Split into 6
+                </button>
+                <button className="split-option" onClick={() => handleSplit(7)}>
+                  Split into 7
+                </button>
+                <button className="split-option" onClick={() => handleSplit(8)}>
+                  Split into 8
+                </button>
+              </>
+            )}
+          </div>
+        )}
 
         {showColorPicker && (
           <div className="color-picker-dropdown">
@@ -237,13 +279,27 @@ export const Column = ({ data, index }: ColumnProps) => {
       </div>
 
       <div className="column-content">
-        {sections.map((section, idx) => (
-          <Section key={section.id} data={section} columnId={data.id} index={idx} />
-        ))}
+        {isSplitMode ? (
+          <div className="split-container">
+            {splitSections.map((splitPart, splitIdx) => (
+              <div key={splitIdx} className="split-part">
+                {splitPart.map((section, secIdx) => (
+                  <Section key={section.id} data={section} columnId={data.id} index={secIdx} />
+                ))}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <>
+            {normalSections.map((section, idx) => (
+              <Section key={section.id} data={section} columnId={data.id} index={idx} />
+            ))}
 
-        <button className="add-section-btn" onClick={handleAddSection}>
-          + Add Section
-        </button>
+            <button className="add-section-btn" onClick={handleAddSection}>
+              + Add Section
+            </button>
+          </>
+        )}
       </div>
 
       <div className="resize-handle" onMouseDown={handleResizeStart} />

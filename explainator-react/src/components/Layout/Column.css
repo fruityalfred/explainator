@@ -189,3 +189,67 @@
   border-color: #4caf50;
   color: #2e7d32;
 }
+
+/* Split Column Styles */
+.split-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 70px;
+  margin-top: 8px;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  min-width: 150px;
+}
+
+.split-option {
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  background: white;
+  color: #333;
+  cursor: pointer;
+  text-align: left;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.split-option:hover {
+  background: #f0f0f0;
+}
+
+.split-container {
+  display: flex;
+  flex-direction: row;
+  gap: 1px;
+  width: 100%;
+  height: 100%;
+  background: #ddd;
+}
+
+.split-part {
+  flex: 1;
+  background: white;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.split-part:first-child {
+  padding-left: 12px;
+}
+
+.split-part:last-child {
+  padding-right: 12px;
+}
+
+.column-split .column-content {
+  padding: 0;
+  gap: 0;
+}
