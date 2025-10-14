@@ -151,7 +151,7 @@ export const ImageUploadModal = ({ isOpen, onClose }: ImageUploadModalProps) => 
           />
 
           {selectedImage && (
-            <div style={{ marginBottom: '20px', text-align: 'center' }}>
+            <div style={{ marginBottom: '20px', textAlign: 'center' }}>
               <img
                 src={selectedImage}
                 alt="Preview"
