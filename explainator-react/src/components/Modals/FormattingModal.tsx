@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect } from 'react';
-import './Modal.css';
+import './ExportModal.css';
 
 interface FormattingModalProps {
   isOpen: boolean;

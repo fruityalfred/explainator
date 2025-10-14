@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { useCategoryStore } from '../../store/categoryStore';
-import './Modal.css';
+import './ExportModal.css';
 
 interface CategoryModalProps {
   isOpen: boolean;

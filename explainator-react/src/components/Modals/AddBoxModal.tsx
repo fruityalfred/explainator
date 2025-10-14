@@ -6,7 +6,7 @@
 import { useState, useEffect } from 'react';
 import { useLayoutStore } from '../../store/layoutStore';
 import { useCategoryStore } from '../../store/categoryStore';
-import './Modal.css';
+import './ExportModal.css';
 
 interface AddBoxModalProps {
   isOpen: boolean;
