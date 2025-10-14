@@ -15,6 +15,7 @@ interface LayoutState {
 
   // Column Actions
   addColumn: (title?: string) => void;
+  cloneColumn: (columnId: string) => void;
   deleteColumn: (columnId: string) => void;
   updateColumn: (columnId: string, updates: Partial<ColumnData>) => void;
   moveColumn: (fromIndex: number, toIndex: number) => void;
@@ -24,6 +25,7 @@ interface LayoutState {
 
   // Section Actions
   addSection: (columnId: string, title?: string) => void;
+  cloneSection: (columnId: string, sectionId: string) => void;
   deleteSection: (columnId: string, sectionId: string) => void;
   updateSection: (columnId: string, sectionId: string, updates: Partial<SectionData>) => void;
   moveSection: (fromColumnId: string, toColumnId: string, sectionId: string, toIndex?: number) => void;
@@ -176,6 +178,57 @@ export const useLayoutStore = create<LayoutState>()(
       },
 
       /**
+       * Clone an existing column with all its sections and boxes
+       */
+      cloneColumn: (columnId: string) => {
+        set((state) => {
+          const columnToClone = state.columns.find((col) => col.id === columnId);
+          if (!columnToClone) return state;
+
+          // Deep clone helper function
+          const deepCloneSections = (sections: SectionData[] | SectionData[][]): SectionData[] | SectionData[][] => {
+            if (Array.isArray(sections[0])) {
+              // Split mode - array of arrays
+              return (sections as SectionData[][]).map((splitPart) =>
+                splitPart.map((section) => ({
+                  ...section,
+                  id: generateUuid(),
+                  boxes: section.boxes.map((box) => ({
+                    ...box,
+                    id: generateUuid(),
+                  })),
+                }))
+              );
+            } else {
+              // Normal mode - single array
+              return (sections as SectionData[]).map((section) => ({
+                ...section,
+                id: generateUuid(),
+                boxes: section.boxes.map((box) => ({
+                  ...box,
+                  id: generateUuid(),
+                })),
+              }));
+            }
+          };
+
+          const clonedColumn: ColumnData = {
+            ...columnToClone,
+            id: generateUuid(),
+            title: `${columnToClone.title} (Copy)`,
+            sections: deepCloneSections(columnToClone.sections),
+          };
+
+          // Insert cloned column after the original
+          const originalIndex = state.columns.findIndex((col) => col.id === columnId);
+          const newColumns = [...state.columns];
+          newColumns.splice(originalIndex + 1, 0, clonedColumn);
+
+          return { columns: newColumns };
+        });
+      },
+
+      /**
        * Delete a column
        */
       deleteColumn: (columnId: string) => {
@@ -322,6 +375,41 @@ export const useLayoutStore = create<LayoutState>()(
               : col
           ),
         }));
+      },
+
+      /**
+       * Clone an existing section with all its boxes
+       */
+      cloneSection: (columnId: string, sectionId: string) => {
+        set((state) => {
+          const column = state.columns.find((col) => col.id === columnId);
+          if (!column || Array.isArray(column.sections[0])) return state; // Don't clone in split mode
+
+          const sections = column.sections as SectionData[];
+          const sectionToClone = sections.find((sec) => sec.id === sectionId);
+          if (!sectionToClone) return state;
+
+          const clonedSection: SectionData = {
+            ...sectionToClone,
+            id: generateUuid(),
+            title: `${sectionToClone.title} (Copy)`,
+            boxes: sectionToClone.boxes.map((box) => ({
+              ...box,
+              id: generateUuid(),
+            })),
+          };
+
+          // Insert cloned section after the original
+          const originalIndex = sections.findIndex((sec) => sec.id === sectionId);
+          const newSections = [...sections];
+          newSections.splice(originalIndex + 1, 0, clonedSection);
+
+          return {
+            columns: state.columns.map((col) =>
+              col.id === columnId ? { ...col, sections: newSections } : col
+            ),
+          };
+        });
       },
 
       /**
