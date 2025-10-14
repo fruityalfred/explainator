@@ -9,13 +9,11 @@
   cursor: move;
   position: relative;
   min-height: 30px;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
   white-space: pre-line;
   transition: box-shadow 0.2s ease;
-  flex: 0 0 auto;
-  max-width: 100%;
   word-break: break-word;
   overflow-wrap: anywhere;
   overflow: hidden;
