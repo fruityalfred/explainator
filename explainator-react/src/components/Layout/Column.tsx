@@ -17,11 +17,12 @@ interface ColumnProps {
 }
 
 export const Column = ({ data, index }: ColumnProps) => {
-  const { updateColumn, updateColumnCanvasPosition, deleteColumn, addSection } = useLayoutStore();
+  const { updateColumn, updateColumnCanvasPosition, deleteColumn, addSection, splitColumn, unsplitColumn } = useLayoutStore();
   const { canvasMode, snapToGrid, gridSize } = useCanvasStore();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState(data.title);
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [showSplitMenu, setShowSplitMenu] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const columnRef = useRef<HTMLDivElement>(null);
@@ -66,6 +67,16 @@ export const Column = ({ data, index }: ColumnProps) => {
 
   const handleAddSection = () => {
     addSection(data.id, `Section ${(data.sections as SectionData[]).length + 1}`);
+  };
+
+  const handleSplit = (parts: number) => {
+    splitColumn(data.id, parts);
+    setShowSplitMenu(false);
+  };
+
+  const handleUnsplit = () => {
+    unsplitColumn(data.id);
+    setShowSplitMenu(false);
   };
 
   // Resize handling
