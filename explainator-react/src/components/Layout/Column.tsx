@@ -153,8 +153,8 @@ export const Column = ({ data, index }: ColumnProps) => {
       </div>
 
       <div className="column-content">
-        {sections.map((section) => (
-          <Section key={section.id} data={section} columnId={data.id} />
+        {sections.map((section, idx) => (
+          <Section key={section.id} data={section} columnId={data.id} index={idx} />
         ))}
 
         <button className="add-section-btn" onClick={handleAddSection}>

@@ -4,6 +4,8 @@
  */
 
 import { useState } from 'react';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { useDroppable } from '@dnd-kit/core';
 import { SectionData } from '../../types';
 import { Box } from './Box';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -12,12 +14,23 @@ import './Section.css';
 interface SectionProps {
   data: SectionData;
   columnId: string;
+  index: number;
 }
 
-export const Section = ({ data, columnId }: SectionProps) => {
+export const Section = ({ data, columnId, index }: SectionProps) => {
   const { updateSection, deleteSection, updateBox, deleteBox, addBox } = useLayoutStore();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState(data.title);
+
+  const { setNodeRef, isOver } = useDroppable({
+    id: `section-${data.id}`,
+    data: {
+      type: 'section',
+      columnId,
+      sectionId: data.id,
+      index,
+    },
+  });
 
   const handleTitleClick = () => {
     setIsEditingTitle(true);
@@ -54,7 +67,10 @@ export const Section = ({ data, columnId }: SectionProps) => {
   };
 
   return (
-    <div className="section-group" data-section-id={data.id}>
+    <div
+      className={`section-group ${isOver ? 'drag-over' : ''}`}
+      data-section-id={data.id}
+    >
       <div
         className="section-title"
         style={{
@@ -80,17 +96,20 @@ export const Section = ({ data, columnId }: SectionProps) => {
         </button>
       </div>
 
-      <div className="box-container">
-        {data.boxes.map((box) => (
-          <Box
-            key={box.id}
-            data={box}
-            columnId={columnId}
-            sectionId={data.id}
-            onUpdate={(updates) => updateBox(columnId, data.id, box.id, updates)}
-            onDelete={() => deleteBox(columnId, data.id, box.id)}
-          />
-        ))}
+      <div ref={setNodeRef} className="box-container">
+        <SortableContext items={data.boxes.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+          {data.boxes.map((box, idx) => (
+            <Box
+              key={box.id}
+              data={box}
+              columnId={columnId}
+              sectionId={data.id}
+              index={idx}
+              onUpdate={(updates) => updateBox(columnId, data.id, box.id, updates)}
+              onDelete={() => deleteBox(columnId, data.id, box.id)}
+            />
+          ))}
+        </SortableContext>
       </div>
 
       <button className="add-box-btn" onClick={handleAddBox}>
