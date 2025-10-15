@@ -155,6 +155,15 @@ export const Box = ({ data, columnId, sectionId, index, onUpdate, onDelete }: Bo
       }}
       className={`app-box box-text ${data.width} lines-${data.lines}`}
       data-box-id={data.id}
+      onClick={(e) => {
+        if (e.ctrlKey || (e as any).metaKey) {
+          e.preventDefault();
+          e.stopPropagation();
+          // toggle CSS selection class on the box element
+          const el = e.currentTarget as HTMLDivElement;
+          el.classList.toggle('selected');
+        }
+      }}
       onDoubleClick={handleDoubleClick}
       {...attributes}
       {...listeners}

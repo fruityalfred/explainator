@@ -4,6 +4,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
+import { useDroppable } from '@dnd-kit/core';
 import type { ColumnData, SectionData } from '../../types';
 import { Section } from './Section';
 import { useLayoutStore } from '../../store/layoutStore';
@@ -293,15 +294,16 @@ export const Column = ({ data, index }: ColumnProps) => {
         {isSplitMode ? (
           <div className="split-container">
             {splitSections.map((splitPart, splitIdx) => (
-              <div key={splitIdx} className="split-part">
+              <SplitPart key={splitIdx} columnId={data.id} partIndex={splitIdx}>
                 {splitPart.map((section, secIdx) => (
-                  <Section key={section.id} data={section} columnId={data.id} index={secIdx} />
+                  <Section key={section.id} data={section} columnId={data.id} index={secIdx} splitPartIndex={splitIdx} />
                 ))}
-              </div>
+              </SplitPart>
             ))}
           </div>
         ) : (
           <>
+            <ColumnDropArea columnId={data.id}>
             {normalSections.map((section, idx) => (
               <Section key={section.id} data={section} columnId={data.id} index={idx} />
             ))}
@@ -309,11 +311,38 @@ export const Column = ({ data, index }: ColumnProps) => {
             <button className="add-section-btn" onClick={handleAddSection}>
               + Add Section
             </button>
+            </ColumnDropArea>
           </>
         )}
       </div>
 
       <div className="resize-handle" onMouseDown={handleResizeStart} />
+    </div>
+  );
+};
+
+// Droppable wrapper for a split part to provide partIndex in DnD over-data
+const SplitPart = ({ columnId, partIndex, children }: { columnId: string; partIndex: number; children: React.ReactNode }) => {
+  const { setNodeRef } = useDroppable({
+    id: `split-part-${columnId}-${partIndex}`,
+    data: { type: 'split-part', columnId, partIndex },
+  });
+  return (
+    <div ref={setNodeRef} className="split-part">
+      {children}
+    </div>
+  );
+};
+
+// Droppable wrapper for normal column content to allow section drops
+const ColumnDropArea = ({ columnId, children }: { columnId: string; children: React.ReactNode }) => {
+  const { setNodeRef } = useDroppable({
+    id: `column-${columnId}`,
+    data: { type: 'column', columnId },
+  });
+  return (
+    <div ref={setNodeRef}>
+      {children}
     </div>
   );
 };

@@ -34,6 +34,7 @@ export const Sidebar = () => {
     canvasMode,
     toggleCanvasMode,
     setCanvasSize,
+    setCustomCanvasSize,
     canvasWidth,
     canvasHeight,
   } = useCanvasStore();
@@ -55,8 +56,13 @@ export const Sidebar = () => {
   };
 
   const handleCanvasSizeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const [width, height] = e.target.value.split('x').map(Number);
-    setCanvasSize(width, height);
+    const val = e.target.value;
+    if (val.includes('x')) {
+      const [width, height] = val.split('x').map(Number);
+      setCustomCanvasSize(width, height);
+    } else {
+      setCanvasSize(val);
+    }
   };
 
   const handleZoomIn = () => setZoom(Math.min(200, zoom + 10));
@@ -81,6 +87,10 @@ export const Sidebar = () => {
           <div className="nav-section-title" onClick={() => setContentCollapsed(!contentCollapsed)}>
             Content
           </div>
+          <button className="nav-item" onClick={handleAddColumn} title="Neue Spalte">
+            <span className="icon">+</span>
+            <span className="label">Neue Spalte</span>
+          </button>
           <button className="nav-item" onClick={() => openModal('showAddBoxModal')} title="Neue Box">
             <span className="icon">📦</span>
             <span className="label">Neue Box</span>
@@ -111,6 +121,10 @@ export const Sidebar = () => {
           <button className="nav-item" onClick={() => openModal('showCategoryModal')} title="Manage Categories">
             <span className="icon">🏷️</span>
             <span className="label">Manage Categories</span>
+          </button>
+          <button className="nav-item" onClick={handleResetCategories} title="Kategorien zurücksetzen">
+            <span className="icon">↺</span>
+            <span className="label">Reset Kategorien</span>
           </button>
         </div>
 

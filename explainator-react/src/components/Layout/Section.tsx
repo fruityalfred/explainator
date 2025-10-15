@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, rectSortingStrategy, useSortable } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import type { SectionData } from '../../types';
 import { Box } from './Box';
@@ -15,9 +15,10 @@ interface SectionProps {
   data: SectionData;
   columnId: string;
   index: number;
+  splitPartIndex?: number;
 }
 
-export const Section = ({ data, columnId, index }: SectionProps) => {
+export const Section = ({ data, columnId, index, splitPartIndex }: SectionProps) => {
   const { updateSection, deleteSection, updateBox, deleteBox, addBox, cloneSection } = useLayoutStore();
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleText, setTitleText] = useState(data.title);
@@ -29,6 +30,19 @@ export const Section = ({ data, columnId, index }: SectionProps) => {
       columnId,
       sectionId: data.id,
       index,
+      splitPartIndex,
+    },
+  });
+
+  // Make whole section draggable/sortable among sections
+  const { attributes, listeners, setNodeRef: setDragRef } = useSortable({
+    id: data.id,
+    data: {
+      type: 'section',
+      columnId,
+      sectionId: data.id,
+      index,
+      splitPartIndex,
     },
   });
 
@@ -72,8 +86,11 @@ export const Section = ({ data, columnId, index }: SectionProps) => {
 
   return (
     <div
+      ref={setDragRef}
       className={`section-group ${isOver ? 'drag-over' : ''}`}
       data-section-id={data.id}
+      {...attributes}
+      {...listeners}
     >
       <div
         className="section-title"

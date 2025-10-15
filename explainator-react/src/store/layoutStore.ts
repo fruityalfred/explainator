@@ -28,13 +28,15 @@ interface LayoutState {
   cloneSection: (columnId: string, sectionId: string) => void;
   deleteSection: (columnId: string, sectionId: string) => void;
   updateSection: (columnId: string, sectionId: string, updates: Partial<SectionData>) => void;
-  moveSection: (fromColumnId: string, toColumnId: string, sectionId: string, toIndex?: number) => void;
+  moveSection: (fromColumnId: string, toColumnId: string, sectionId: string, toPos?: number | { partIndex: number; index?: number }) => void;
+  cloneSectionTo: (fromColumnId: string, sectionId: string, toColumnId: string, toPos?: number | { partIndex: number; index?: number }) => void;
 
   // Box Actions
   addBox: (columnId: string, sectionId: string, boxData: Partial<BoxData>) => void;
   deleteBox: (columnId: string, sectionId: string, boxId: string) => void;
   updateBox: (columnId: string, sectionId: string, boxId: string, updates: Partial<BoxData>) => void;
   moveBox: (fromColumnId: string, fromSectionId: string, toColumnId: string, toSectionId: string, boxId: string, toIndex?: number) => void;
+  cloneBoxTo: (fromColumnId: string, fromSectionId: string, boxId: string, toColumnId: string, toSectionId: string, toIndex?: number) => void;
 
   // Selection Actions
   selectBox: (boxId: string | null) => void;
@@ -454,32 +456,119 @@ export const useLayoutStore = create<LayoutState>()(
       /**
        * Move section between columns
        */
-      moveSection: (fromColumnId: string, toColumnId: string, sectionId: string, toIndex?: number) => {
+      moveSection: (fromColumnId: string, toColumnId: string, sectionId: string, toPos?: number | { partIndex: number; index?: number }) => {
         set((state) => {
           const fromColumn = state.columns.find((col) => col.id === fromColumnId);
           const toColumn = state.columns.find((col) => col.id === toColumnId);
 
           if (!fromColumn || !toColumn) return state;
-          if (Array.isArray(fromColumn.sections[0]) || Array.isArray(toColumn.sections[0])) {
-            return state; // Don't move in split mode
-          }
 
-          const fromSections = fromColumn.sections as SectionData[];
-          const section = fromSections.find((sec) => sec.id === sectionId);
-          if (!section) return state;
+          const removeFrom = (col: any): { section?: SectionData; nextCol: any } => {
+            if (Array.isArray(col.sections[0])) {
+              const parts = col.sections as SectionData[][];
+              for (let p = 0; p < parts.length; p++) {
+                const idx = parts[p].findIndex((s) => s.id === sectionId);
+                if (idx !== -1) {
+                  const section = parts[p][idx];
+                  const newParts = parts.map((arr, i) => (i === p ? arr.filter((_, j) => j !== idx) : arr));
+                  return { section, nextCol: { ...col, sections: newParts } };
+                }
+              }
+              return { nextCol: col };
+            } else {
+              const list = col.sections as SectionData[];
+              const idx = list.findIndex((s) => s.id === sectionId);
+              if (idx === -1) return { nextCol: col };
+              const section = list[idx];
+              const newList = list.filter((_, i) => i !== idx);
+              return { section, nextCol: { ...col, sections: newList } };
+            }
+          };
+
+          const insertTo = (col: any, section: SectionData): any => {
+            if (Array.isArray(col.sections[0])) {
+              const parts = col.sections as SectionData[][];
+              const { partIndex, index } = (toPos && typeof toPos === 'object') ? toPos : { partIndex: 0, index: undefined };
+              const target = parts[partIndex] || [];
+              const insertIndex = index !== undefined ? index : target.length;
+              const newTarget = [...target];
+              newTarget.splice(insertIndex, 0, section);
+              const newParts = parts.map((arr, i) => (i === partIndex ? newTarget : arr));
+              return { ...col, sections: newParts };
+            } else {
+              const list = col.sections as SectionData[];
+              const insertIndex = (typeof toPos === 'number') ? toPos : list.length;
+              const newList = [...list];
+              newList.splice(insertIndex, 0, section);
+              return { ...col, sections: newList };
+            }
+          };
+
+          let movedSection: SectionData | undefined;
+          const afterRemove = state.columns.map((col) => {
+            if (col.id === fromColumnId) {
+              const res = removeFrom(col);
+              movedSection = res.section || movedSection;
+              return res.nextCol;
+            }
+            return col;
+          });
+          const newColumns = afterRemove.map((col) => {
+            if (col.id === toColumnId && movedSection) {
+              return insertTo(col, movedSection);
+            }
+            return col;
+          });
+
+          return { columns: newColumns };
+        });
+      },
+
+      /**
+       * Clone a section into a target column at optional index
+       */
+      cloneSectionTo: (fromColumnId: string, sectionId: string, toColumnId: string, toPos?: number | { partIndex: number; index?: number }) => {
+        set((state) => {
+          const fromColumn = state.columns.find((c) => c.id === fromColumnId);
+          const toColumn = state.columns.find((c) => c.id === toColumnId);
+          if (!fromColumn || !toColumn) return state;
+          const findSource = (col: any): SectionData | undefined => {
+            if (Array.isArray(col.sections[0])) {
+              for (const arr of col.sections as SectionData[][]) {
+                const s = arr.find((x) => x.id === sectionId);
+                if (s) return s;
+              }
+              return undefined;
+            } else {
+              return (col.sections as SectionData[]).find((s) => s.id === sectionId);
+            }
+          };
+          const source = findSource(fromColumn);
+          if (!source) return state;
+          const cloned: SectionData = {
+            ...source,
+            id: generateUuid(),
+            boxes: source.boxes.map((b) => ({ ...b, id: generateUuid() })),
+          };
 
           const newColumns = state.columns.map((col) => {
-            if (col.id === fromColumnId) {
-              return {
-                ...col,
-                sections: fromSections.filter((sec) => sec.id !== sectionId),
-              };
-            }
             if (col.id === toColumnId) {
-              const toSections = [...(col.sections as SectionData[])];
-              const insertIndex = toIndex !== undefined ? toIndex : toSections.length;
-              toSections.splice(insertIndex, 0, section);
-              return { ...col, sections: toSections };
+              if (Array.isArray(col.sections[0])) {
+                const parts = col.sections as SectionData[][];
+                const { partIndex, index } = (toPos && typeof toPos === 'object') ? toPos : { partIndex: 0, index: undefined };
+                const target = parts[partIndex] || [];
+                const insertIndex = index !== undefined ? index : target.length;
+                const newTarget = [...target];
+                newTarget.splice(insertIndex, 0, cloned);
+                const newParts = parts.map((arr, i) => (i === partIndex ? newTarget : arr));
+                return { ...col, sections: newParts };
+              } else {
+                const list = col.sections as SectionData[];
+                const insertIndex = (typeof toPos === 'number') ? toPos : list.length;
+                const newList = [...list];
+                newList.splice(insertIndex, 0, cloned);
+                return { ...col, sections: newList };
+              }
             }
             return col;
           });
@@ -617,6 +706,51 @@ export const useLayoutStore = create<LayoutState>()(
                     const newBoxes = [...sec.boxes];
                     const insertIndex = toIndex !== undefined ? toIndex : newBoxes.length;
                     newBoxes.splice(insertIndex, 0, box);
+                    return { ...sec, boxes: newBoxes };
+                  }
+                  return sec;
+                }),
+              };
+            }
+            return col;
+          });
+
+          return { columns: newColumns };
+        });
+      },
+
+      /**
+       * Clone a box into target section/index
+       */
+      cloneBoxTo: (
+        fromColumnId: string,
+        fromSectionId: string,
+        boxId: string,
+        toColumnId: string,
+        toSectionId: string,
+        toIndex?: number
+      ) => {
+        set((state) => {
+          const fromColumn = state.columns.find((col) => col.id === fromColumnId);
+          const toColumn = state.columns.find((col) => col.id === toColumnId);
+          if (!fromColumn || !toColumn) return state;
+          if (Array.isArray(fromColumn.sections[0]) || Array.isArray(toColumn.sections[0])) {
+            return state; // not supported in split mode yet
+          }
+          const fromSection = (fromColumn.sections as SectionData[]).find((sec) => sec.id === fromSectionId);
+          const srcBox = fromSection?.boxes.find((b) => b.id === boxId);
+          if (!srcBox) return state;
+          const cloned: BoxData = { ...srcBox, id: generateUuid() };
+
+          const newColumns = state.columns.map((col) => {
+            if (col.id === toColumnId) {
+              return {
+                ...col,
+                sections: (col.sections as SectionData[]).map((sec) => {
+                  if (sec.id === toSectionId) {
+                    const newBoxes = [...sec.boxes];
+                    const insertIndex = toIndex !== undefined ? toIndex : newBoxes.length;
+                    newBoxes.splice(insertIndex, 0, cloned);
                     return { ...sec, boxes: newBoxes };
                   }
                   return sec;
