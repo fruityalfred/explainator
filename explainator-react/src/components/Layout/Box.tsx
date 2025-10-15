@@ -42,10 +42,22 @@ export const Box = ({ data, columnId, sectionId, index, onUpdate, onDelete }: Bo
     },
   });
 
+  // Calculate flex value based on width class to override DnD inline styles
+  const getFlexValue = () => {
+    if (data.width === 'half-width') {
+      return '0 0 calc(50% - 3px)';
+    }
+    if (data.width === 'full-width') {
+      return '0 0 100%';
+    }
+    return '0 0 auto';
+  };
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
     opacity: isDragging ? 0.5 : 1,
+    flex: getFlexValue(),
   };
 
   useEffect(() => {
