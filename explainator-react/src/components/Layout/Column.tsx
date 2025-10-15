@@ -328,7 +328,7 @@ const SplitPart = ({ columnId, partIndex, children }: { columnId: string; partIn
     data: { type: 'split-part', columnId, partIndex },
   });
   return (
-    <div ref={setNodeRef} className="split-part">
+    <div ref={setNodeRef} className="split-part" data-split-part={`${columnId}:${partIndex}`}>
       {children}
     </div>
   );

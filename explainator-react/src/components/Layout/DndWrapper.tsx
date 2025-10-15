@@ -25,6 +25,33 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const cloneOnDragRef = useRef(false);
   const altPressedRef = useRef(false);
+  const lastPointerXRef = useRef<number | null>(null);
+  const cueTargetRef = useRef<HTMLElement | null>(null);
+  const placeholderRef = useRef<HTMLElement | null>(null);
+
+  const clearCue = () => {
+    try {
+      cueTargetRef.current?.classList.remove('full-width-cue');
+    } catch {}
+    cueTargetRef.current = null;
+  };
+
+  const ensurePlaceholder = () => {
+    if (!placeholderRef.current) {
+      const el = document.createElement('div');
+      el.className = 'section-placeholder';
+      placeholderRef.current = el;
+    }
+    return placeholderRef.current!;
+  };
+
+  const clearPlaceholder = () => {
+    try {
+      const el = placeholderRef.current;
+      if (el && el.parentElement) el.parentElement.removeChild(el);
+    } catch {}
+    placeholderRef.current = null;
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -40,6 +67,70 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
     const anyEvt = event.activatorEvent as any;
     cloneOnDragRef.current = !!(anyEvt && (anyEvt.ctrlKey || anyEvt.metaKey));
     altPressedRef.current = !!(anyEvt && anyEvt.altKey);
+  };
+
+  const handleDragMove = (event: any) => {
+    const { delta, activatorEvent } = event;
+    if (activatorEvent && typeof (activatorEvent as any).clientX === 'number') {
+      lastPointerXRef.current = (activatorEvent as any).clientX as number;
+    } else if (event && event.over && event.over.rect) {
+      // fallback not always present; keep last known
+    }
+
+    // Update visual Alt cue when hovering normal columns while dragging sections from split
+    try {
+      const activeData = event.active?.data?.current;
+      const overData = event.over?.data?.current;
+      if (!activeData || !overData) return;
+      if (activeData.type !== 'section') { clearCue(); return; }
+      const fromPart = (activeData as any).splitPartIndex;
+      const fromIsSplit = typeof fromPart === 'number';
+      const overType = overData.type as string;
+      const toColumnId = (overData as any).columnId;
+      const targetIsSplit = overType === 'split-part' || (columns.find((c: any) => c.id === toColumnId)?.sections?.[0] && Array.isArray((columns.find((c: any) => c.id === toColumnId) as any).sections[0]));
+      const showCue = fromIsSplit && altPressedRef.current && (overType === 'column' || (overType === 'section' && !targetIsSplit));
+      clearCue();
+      if (showCue) {
+        const colEl = document.querySelector(`[data-column-id="${toColumnId}"] .column-content`) as HTMLElement | null;
+        if (colEl) {
+          cueTargetRef.current = colEl;
+          colEl.classList.add('full-width-cue');
+        }
+      }
+    } catch {}
+
+    // Place a ghost placeholder for section drops to show exact insert
+    try {
+      const activeData = event.active?.data?.current;
+      const overData = event.over?.data?.current;
+      if (!activeData || !overData || activeData.type !== 'section') { clearPlaceholder(); return; }
+      const overType = overData.type as string;
+
+      const ph = ensurePlaceholder();
+
+      if (overType === 'section') {
+        const overSectionId = (overData as any).sectionId as string;
+        const overEl = document.querySelector(`[data-section-id="${overSectionId}"]`) as HTMLElement | null;
+        if (overEl && overEl.parentElement && ph !== overEl) {
+          overEl.parentElement.insertBefore(ph, overEl);
+        }
+      } else if (overType === 'split-part') {
+        const toColumnId = (overData as any).columnId as string;
+        const partIndex = (overData as any).partIndex as number;
+        const partEl = document.querySelector(`[data-split-part="${toColumnId}:${partIndex}"]`) as HTMLElement | null;
+        if (partEl && ph.parentElement !== partEl) {
+          partEl.appendChild(ph);
+        }
+      } else if (overType === 'column') {
+        const toColumnId = (overData as any).columnId as string;
+        const colContent = document.querySelector(`[data-column-id="${toColumnId}"] .column-content`) as HTMLElement | null;
+        if (colContent && ph.parentElement !== colContent) {
+          colContent.appendChild(ph);
+        }
+      } else {
+        clearPlaceholder();
+      }
+    } catch {}
   };
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -85,6 +176,7 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
               if (insertAt !== undefined) insertAt += 1;
             }
           });
+          // keep selection after clone
         } else {
           cloneBoxTo(fromColumnId, fromSectionId, activeId, toColumnId, toSectionId, toIndex);
         }
@@ -114,6 +206,8 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
               if (insertAt !== undefined) insertAt += 1;
             }
           });
+          // clear selection after move
+          document.querySelectorAll('.app-box.selected').forEach(el => el.classList.remove('selected'));
         } else {
           moveBox(fromColumnId, fromSectionId, toColumnId, toSectionId, activeId, toIndex);
         }
@@ -139,13 +233,27 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
           // clone into split part at end or at toIndex if provided
           (cloneSectionTo as any)(fromColumnId, activeId, toColumnId, { partIndex: toPart, index: toIndex });
         } else if (preserveSplit && !targetIsSplit) {
-          // convert target to split with same parts as source (fallback 2)
+          // convert target to split with same parts as source (fallback 2) and choose part by mouse X
           const srcCol = (columns as any[]).find((c: any) => c.id === fromColumnId);
           const parts = (srcCol && (srcCol.splitParts || (Array.isArray(srcCol.sections?.[0]) ? (srcCol.sections as any[]).length : 2))) || 2;
           (splitColumn as any)(toColumnId, parts);
-          (cloneSectionTo as any)(fromColumnId, activeId, toColumnId, { partIndex: 0 });
+          let partIndex = 0;
+          try {
+            const colEl = document.querySelector(`[data-column-id="${toColumnId}"]`) as HTMLElement | null;
+            if (colEl && lastPointerXRef.current != null) {
+              const r = colEl.getBoundingClientRect();
+              const rel = Math.max(0, Math.min(r.width - 1, lastPointerXRef.current - r.left));
+              partIndex = Math.min(parts - 1, Math.max(0, Math.floor(rel / (r.width / parts))));
+            }
+          } catch {}
+          (cloneSectionTo as any)(fromColumnId, activeId, toColumnId, { partIndex });
         } else {
-          cloneSectionTo(fromColumnId, activeId, toColumnId, toIndex);
+          // overType === 'section' inside split or normal; prefer using over index if provided
+          if (typeof (overData as any).splitPartIndex === 'number') {
+            (cloneSectionTo as any)(fromColumnId, activeId, toColumnId, { partIndex: (overData as any).splitPartIndex, index: toIndex });
+          } else {
+            cloneSectionTo(fromColumnId, activeId, toColumnId, toIndex);
+          }
         }
       } else {
         if (overType === 'split-part') {
@@ -154,9 +262,22 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
           const srcCol = (columns as any[]).find((c: any) => c.id === fromColumnId);
           const parts = (srcCol && (srcCol.splitParts || (Array.isArray(srcCol.sections?.[0]) ? (srcCol.sections as any[]).length : 2))) || 2;
           (splitColumn as any)(toColumnId, parts);
-          (moveSection as any)(fromColumnId, toColumnId, activeId, { partIndex: 0 });
+          let partIndex = 0;
+          try {
+            const colEl = document.querySelector(`[data-column-id="${toColumnId}"]`) as HTMLElement | null;
+            if (colEl && lastPointerXRef.current != null) {
+              const r = colEl.getBoundingClientRect();
+              const rel = Math.max(0, Math.min(r.width - 1, lastPointerXRef.current - r.left));
+              partIndex = Math.min(parts - 1, Math.max(0, Math.floor(rel / (r.width / parts))));
+            }
+          } catch {}
+          (moveSection as any)(fromColumnId, toColumnId, activeId, { partIndex });
         } else {
-          moveSection(fromColumnId, toColumnId, activeId, toIndex);
+          if (typeof (overData as any).splitPartIndex === 'number') {
+            (moveSection as any)(fromColumnId, toColumnId, activeId, { partIndex: (overData as any).splitPartIndex, index: toIndex });
+          } else {
+            moveSection(fromColumnId, toColumnId, activeId, toIndex);
+          }
         }
       }
     }
@@ -170,15 +291,17 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
         moveColumn(fromIndex, toIndex);
       }
     }
-    // reset clone flag
+    // reset clone flag and remove cues/placeholders
     cloneOnDragRef.current = false;
+    clearCue();
+    clearPlaceholder();
   };
 
   // Track Alt key state during DnD similar to original
   // eslint-disable-next-line react-hooks/rules-of-hooks
   (function useAltTracking(){
     const add = () => {
-      const down = (e: KeyboardEvent) => { if (e.key === 'Alt') altPressedRef.current = true; };
+      const down = (e: KeyboardEvent) => { if (e.key === 'Alt') altPressedRef.current = true; if (e.key === 'Escape') { document.querySelectorAll('.app-box.selected').forEach(el => el.classList.remove('selected')); } };
       const up = (e: KeyboardEvent) => { if (e.key === 'Alt') altPressedRef.current = false; };
       window.addEventListener('keydown', down);
       window.addEventListener('keyup', up);
@@ -194,6 +317,7 @@ export const DndWrapper = ({ children }: DndWrapperProps) => {
       sensors={sensors}
       collisionDetection={closestCorners}
       onDragStart={handleDragStart}
+      onDragMove={handleDragMove}
       onDragEnd={handleDragEnd}
     >
       {children}

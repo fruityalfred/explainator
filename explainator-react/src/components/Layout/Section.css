@@ -17,6 +17,22 @@
   border-style: solid;
 }
 
+/* Visual cue for Alt full-width mode when dragging from split into normal column */
+.full-width-cue {
+  background: rgba(33, 150, 243, 0.10) !important;
+  border: 2px dashed #2196f3 !important;
+  border-radius: 6px;
+}
+
+/* Placeholder block for section drop position */
+.section-placeholder {
+  background: rgba(0, 128, 0, 0.08);
+  border: 2px dashed #4CAF50;
+  border-radius: 6px;
+  margin: 6px 0;
+  height: 90px;
+}
+
 .section-group.dragging {
   opacity: 0.7;
   transform: rotate(2deg);
