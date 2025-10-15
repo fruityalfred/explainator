@@ -17,7 +17,8 @@
       "Bash(lsof:*)",
       "Bash(xargs -r kill)",
       "Bash(netstat:*)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(cat Explainator.html)"
     ],
     "deny": [],
     "ask": []

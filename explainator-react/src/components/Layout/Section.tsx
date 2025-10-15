@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { SortableContext, rectSortingStrategy } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import type { SectionData } from '../../types';
 import { Box } from './Box';
@@ -104,7 +104,7 @@ export const Section = ({ data, columnId, index }: SectionProps) => {
       </div>
 
       <div ref={setNodeRef} className="box-container">
-        <SortableContext items={data.boxes.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={data.boxes.map((b) => b.id)} strategy={rectSortingStrategy}>
           {data.boxes.map((box, idx) => (
             <Box
               key={box.id}
